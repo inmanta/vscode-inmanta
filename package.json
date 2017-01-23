@@ -1,0 +1,40 @@
+{
+    "name": "inmanta",
+    "displayName": "inmanta",
+    "description": "Inmanta",
+    "version": "0.0.1",
+    "publisher": "Frank Rosquin",
+    "icon": "images/inmanta.ico",
+    "license": "Apache 2.0",
+    "homepage": "https://github.com/inmanta/vscode-inmanta",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/inmanta/vscode-inmanta"
+    },
+    "bugs": {
+        "url": "https://github.com/inmanta/vscode-inmanta/issues"
+    },
+    "keywords": [
+        "inmanta",
+        "syntax"
+    ],
+    "engines": {
+        "vscode": "^1.8.0"
+    },
+    "categories": [
+        "Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "inmanta",
+            "aliases": ["Inmanta", "inmanta"],
+            "extensions": [".cf"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "inmanta",
+            "scopeName": "source.inmanta",
+            "path": "./syntaxes/inmanta.tmLanguage"
+        }]
+    }
+}
