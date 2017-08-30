@@ -1,0 +1,206 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Inmanta",
+  "patterns": [
+    {
+      "comment": "Line comments",
+      "begin": "\\#",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.inmanta"
+        }
+      },
+      "end": "$",
+      "name": "comment.line.hash.inmanta"
+    },
+    {
+      "include": "#docstrings"
+    },
+    {
+      "comment": "Interpreted string literals",
+      "begin": "\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.inmanta"
+        }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.inmanta"
+        }
+      },
+      "name": "string.quoted.double.inmanta",
+      "patterns": [
+        {
+          "include": "#string_escaped_char"
+        },
+        {
+          "include": "#string_placeholder"
+        }
+      ]
+    },
+    {
+      "comment": "Raw string literals",
+      "begin": "`",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.inmanta"
+        }
+      },
+      "end": "`",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.inmanta"
+        }
+      },
+      "name": "string.quoted.raw.go",
+      "patterns": [
+        {
+          "include": "#string_placeholder"
+        }
+      ]
+    },
+    {
+      "captures": {
+        "1": {
+          "name": "keyword.other.import.inmanta"
+        },
+        "2": {
+          "name": "keyword.other.include.inmanta"
+        },
+        "3": {
+          "name": "keyword.other.as.inmanta"
+        }
+      },
+      "match": "\\b(?:(import)|(include)|(as))\\b"
+    },
+    {
+      "include": "#brackets"
+    },
+    {
+      "include": "#special"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#storage_types"
+    },
+    {
+      "include": "#language_variables"
+    },
+    {
+      "include": "#types"
+    }
+  ],
+  "repository": {
+    "brackets": {
+      "patterns": [
+        {
+          "match": "\\{|\\}",
+          "name": "punctuation.other.bracket.curly.inmanta"
+        },
+        {
+          "match": "\\(|\\)",
+          "name": "punctuation.other.bracket.round.inmanta"
+        },
+        {
+          "match": "\\[|\\]",
+          "name": "punctuation.other.bracket.square.inmanta"
+        }
+      ]
+    },
+    "docstrings": {
+      "patterns": [
+        {
+          "begin": "^\\s*(?=[uU]?[rR]?\"\"\")",
+          "end": "(?<=\"\"\")",
+          "name": "comment.block.inmanta",
+          "patterns": [
+            {
+              "include": "#string_quoted_double"
+            }
+          ]
+        }
+      ]
+    },
+    "special": {
+      "patterns": [
+        {
+          "name": "variable.other.inmanta",
+          "match": "\\\\((0-7){3}|(x[a-fA-F0-9]{2})|(c\\S)|([CM]-\\S)|(M-C-\\S)|.)"
+        }
+      ]
+    },
+    "storage_types": {
+      "patterns": [
+        {
+          "match": "\\btypedef\\b",
+          "name": "storage.type.typedef.inmanta"
+        },
+        {
+          "match": "\\b(implement|implementation)\\b",
+          "name": "storage.type.implement.inmanta"
+        },
+        {
+          "match": "\\bentity\\b",
+          "name": "storage.type.entity.inmanta"
+        },
+        {
+          "match": "\\bindex\\b",
+          "name": "storage.type.index.inmanta"
+        },
+        {
+          "match": "\\bend\\b",
+          "name": "storage.type.end.inmanta"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.inmanta",
+          "match": "\\b(using|extends|matching|for|with|when|as)\\b"
+        },
+        {
+          "name": "keyword.operator.inmanta",
+          "match": "\\b(in|or|and|is defined)\\b"
+        }
+      ]
+    },
+    "string_escaped_char": {
+      "patterns": [
+        {
+          "match": "\\\\([0-7]{3}|[abfnrtv\\\\'\"]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})",
+          "name": "constant.character.escape.inmanta"
+        },
+        {
+          "match": "\\\\[^0-7xuUabfnrtv\\'\"]",
+          "name": "invalid.illegal.unknown-escape.inmanta"
+        }
+      ]
+    },
+    "string_placeholder": {
+      "patterns": [
+        {
+          "match": "%(\\[\\d+\\])?([\\+#\\-0\\x20]{,2}((\\d+|\\*)?(\\.?(\\d+|\\*|(\\[\\d+\\])\\*?)?(\\[\\d+\\])?)?))?[vT%tbcdoqxXUbeEfFgGsp]",
+          "name": "constant.other.placeholder.inmanta"
+        }
+      ]
+    },
+    "language_variables": {
+      "match": "\\b(self|cls)\\b",
+      "name": "variable.language.inmanta"
+    },
+    "constants": {
+      "name": "constant.language.inmanta",
+      "match": "\\b(true|false)\\b"
+    },
+    "types": {
+      "name": "support.type.inmanta",
+      "match": "\\b(string|number|bool|list|dict)\\b"
+    }
+  },
+  "scopeName": "source.inmanta"
+}

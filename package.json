@@ -2,7 +2,7 @@
     "name": "inmanta",
     "displayName": "inmanta",
     "description": "Inmanta",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "publisher": "Frank Rosquin",
     "icon": "images/inmanta.ico",
     "license": "Apache 2.0",
@@ -34,7 +34,7 @@
         "grammars": [{
             "language": "inmanta",
             "scopeName": "source.inmanta",
-            "path": "./syntaxes/inmanta.tmLanguage"
+            "path": "./syntaxes/inmanta.json"
         }]
     }
 }

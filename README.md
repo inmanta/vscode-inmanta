@@ -6,7 +6,7 @@ Eliminate Complexity.
 
 End-to-end orchestration of applications and networks.
 
-Inmanta Documentation on [Read the Docs](http://inmanta.readthedocs.io)
+Inmanta Documentation on [Read the Docs](https://inmanta.com/resources/docs/)
 
 ## Features
 
