@@ -26,10 +26,20 @@ None
 
 None ATM
 
+## Authors
+
+- Frank Rosquin
+- Inmanta
+
 ## Release Notes
+
+### 0.2
+
+Syntax updates and publish in marketplace
 
 ### 0.0.1
 
 Initial release
 
 **Enjoy!**
+
