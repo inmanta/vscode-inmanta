@@ -1,40 +1,71 @@
 {
-    "name": "inmanta",
-    "displayName": "inmanta",
-    "description": "Inmanta",
-    "version": "0.2",
-    "publisher": "Inmanta",
-    "icon": "images/inmanta.ico",
-    "license": "Apache 2.0",
-    "homepage": "https://github.com/inmanta/vscode-inmanta",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/inmanta/vscode-inmanta"
-    },
-    "bugs": {
-        "url": "https://github.com/inmanta/vscode-inmanta/issues"
-    },
-    "keywords": [
-        "inmanta",
-        "syntax"
+  "name": "inmanta",
+  "displayName": "inmanta",
+  "description": "Inmanta",
+  "version": "0.2.0",
+  "publisher": "Inmanta",
+  "icon": "images/inmanta.ico",
+  "license": "Apache 2.0",
+  "homepage": "https://github.com/inmanta/vscode-inmanta",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inmanta/vscode-inmanta"
+  },
+  "bugs": {
+    "url": "https://github.com/inmanta/vscode-inmanta/issues"
+  },
+  "keywords": [
+    "inmanta",
+    "syntax"
+  ],
+  "engines": {
+    "vscode": "^1.20.0"
+  },
+  "categories": [
+    "Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "inmanta",
+        "aliases": [
+          "Inmanta",
+          "inmanta"
+        ],
+        "extensions": [
+          ".cf"
+        ],
+        "configuration": "./language-configuration.json"
+      }
     ],
-    "engines": {
-        "vscode": "^1.8.0"
-    },
-    "categories": [
-        "Languages"
-    ],
-    "contributes": {
-        "languages": [{
-            "id": "inmanta",
-            "aliases": ["Inmanta", "inmanta"],
-            "extensions": [".cf"],
-            "configuration": "./language-configuration.json"
-        }],
-        "grammars": [{
-            "language": "inmanta",
-            "scopeName": "source.inmanta",
-            "path": "./syntaxes/inmanta.json"
-        }]
-    }
+    "grammars": [
+      {
+        "language": "inmanta",
+        "scopeName": "source.inmanta",
+        "path": "./syntaxes/inmanta.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "@types/node": "^9.4.5",
+    "vscode": "^1.1.6",
+    "vscode-languageclient": "^3.5.0"
+  },
+  "activationEvents": [
+    "onLanguage:inmanta"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "update-vscode": "node ./node_modules/vscode/bin/install",
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
+  "devDependencies": {
+    "typescript": "^2.6.1",
+    "vscode": "^1.1.6",
+    "@types/node": "^9.4.5",
+    "@types/mocha": "^2.2.42"
+  },
+  "main": "./out/extension"
 }
