@@ -1,12 +1,30 @@
+"""
+    Copyright 2018 Inmanta
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+    Contact: code@inmanta.com
+"""
+
 from tornado.tcpserver import TCPServer
 from tornado import gen
-from typing import Dict
-from tornado.iostream import IOStream, StreamClosedError
+from tornado.iostream import StreamClosedError, BaseIOStream
 import logging
 import json
 from enum import Enum
 from json.decoder import JSONDecodeError
 from tornado.locks import Semaphore
+from tornado.ioloop import IOLoop
 
 
 logger = logging.getLogger(__name__)
@@ -87,27 +105,28 @@ class InvalidParamsException(JsonRpcException):
 
 class JsonRpcServer(TCPServer):
 
-    def __init__(self, ioloop, delegate):
+    def __init__(self, delegate):
         """
-            :param delegate: a class of which an instance is create for each connection, subclass of JsonRpcHandler
+            :param delegate: a class of which an instance is created for each connection, subclass of JsonRpcHandler
         """
-        super(JsonRpcServer, self).__init__(ioloop)
+        super(JsonRpcServer, self).__init__()
         if not issubclass(delegate, JsonRpcHandler):
             raise Exception("delegate must be a subclass of JsonRpcHandler")
         self.delegate = delegate
 
     @gen.coroutine
     def handle_stream(self, stream, address):
-        self.io_loop.add_future(self.delegate(self.io_loop, stream, address).start(), lambda f: f.result())
+        IOLoop.current().add_future(self.delegate(stream, stream, address).start(), lambda f: f.result())
 
 
 class JsonRpcHandler(object):
 
-    def __init__(self, io_loop, stream: IOStream, address):
-        self.stream = stream
+    def __init__(self, instream: BaseIOStream, outstream: BaseIOStream, address):
+        self.instream = instream
+        self.outstream = outstream
         self.address = address
         self.running = True
-        self.io_loop = io_loop
+        self.io_loop = IOLoop.current()
         self.writelock = Semaphore(1)
 
     def assert_field(self, message, field, value=None, id=None):
@@ -123,7 +142,7 @@ class JsonRpcHandler(object):
         header = True
         contentlength = -1
         while header:
-            data = yield self.stream.read_until(rn)
+            data = yield self.instream.read_until(rn)
             data = data.decode("ascii")
             if data == "\r\n":
                 header = False
@@ -147,8 +166,8 @@ class JsonRpcHandler(object):
             length = len(body)
             header = "Content-Length: %d\r\n\r\n" % length
             header = header.encode(encoding='ascii')
-            yield self.stream.write(header)
-            yield self.stream.write(body)
+            yield self.outstream.write(header)
+            yield self.outstream.write(body)
 
     @gen.coroutine
     def return_error(self, excn: JsonRpcException):
@@ -185,14 +204,15 @@ class JsonRpcHandler(object):
                 if length == -1:
                     self.running = False
 
-                body = yield self.stream.read_bytes(length)
+                body = yield self.instream.read_bytes(length)
                 body = body.decode("utf8")
                 future = self.decodeAndDispatch(body)
                 self.io_loop.add_future(future, lambda f: f.result())
         except StreamClosedError:
             pass
         finally:
-            self.stream.close()
+            self.instream.close()
+            self.outstream.close()
 
     @gen.coroutine
     def decodeAndDispatch(self, body):
@@ -226,6 +246,7 @@ class JsonRpcHandler(object):
                 result = yield self.dispatch_method(id, method, params)
                 # if it has no id, it is a notification and we don't send result
                 if id is not None:
+                    logger.debug("dispatching result %s", result)
                     yield self.return_result(id, result)
             except JsonRpcException as e:
                 logger.debug("exception occurred during method handling", exc_info=True)
@@ -240,13 +261,12 @@ class JsonRpcHandler(object):
                     # no exceptions on notifications
                     raise InternalErrorException(str(e), id)
         elif "error" in body:
-            print("error:", id, body)
+            logger.debug("error: %s %s", id, body)
         elif "result" in body:
-            print("result:", id, body)
+            logger.debug("result: %s %s", id, body)
         else:
             raise InvalidRequestException("no method, error or result field", id)
 
     @gen.coroutine
     def dispatch_method(self, id, method, params):
-        print("Call:", id, method, params)
         raise MethodNotFoundException("method %s not found" % method, id)

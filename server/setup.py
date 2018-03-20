@@ -2,28 +2,35 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'inmanta'
+    'inmanta==2018.2a3.dev0',
+    'intervaltree'
 ]
 
 setup(
-    name="inmanta-lsp",
+    name="inmantals",
     package_dir={"" : "src"},
     packages=find_packages("src"),
-    version="2018.2",
+    install_requires=requires,
+    
+    version="0.0.1.alpha.4",
+
     description="Inmanta Language Server",
     author="Inmanta",
     author_email="code@inmanta.com",
     license="Apache Software License",
-
-    package_data={"" : ["misc/*", "docs/*"]},
-    include_package_data=True,
-
-    install_requires=requires,
-    # setup_requires=['tox-setuptools', 'tox'],
-
+    url="https://github.com/inmanta/vscode-inmanta",
+    keywords=["ide","language-server","vscode", "inmanta"],
+    classifiers=["Development Status :: 3 - Alpha", 
+                 "Intended Audience :: Developers",
+                 "Intended Audience :: Telecommunications Industry",
+                 "License :: OSI Approved :: Apache Software License",
+                 "Operating System :: OS Independent",
+                 "Topic :: System :: Systems Administration",
+                 "Topic :: Utilities"],
+    
     entry_points={
     'console_scripts': [
-        'inmanta-lsp = inmanta.lsp:main',
+        'inmanta-language-server-tcp = inmantals.tcpserver:main',
     ],
 },
 )
