@@ -54,6 +54,11 @@
           "default": "python",
           "description": "Path to Python, you can use a custom version of Python by modifying this setting to include the full path.",
           "scope": "resource"
+        },"inmanta.ls.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the language server",
+          "scope": "resource"
         }
       }
     }

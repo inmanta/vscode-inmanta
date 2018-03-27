@@ -2,17 +2,17 @@
 
 provides the bridge between the Inmanta compiler and Visual Studio Code ide, by implementing a Language Server
 
-** This is alpha software, it may or may not work **
+**This is alpha software, it may or may not work**
 
-##Installation
+## Installation
 
 1. mkvirtualenv -p python3 lstesting
-2. pip install --extra-index-url https://test.pypi.org/simple/ --pre --no-cache-dir inmantals
-3. checkout the vscode-inmanta project and open with vscode
-4. press f5
-5. set the setting inmanta.pythonPath to ~/.virtualenvs/lstesting/bin/python3
-6. open an inmanta project directory
-7. navigate the code!
+2. pip install --extra-index-url [https://test.pypi.org/simple/](https://test.pypi.org/simple/) --pre --no-cache-dir inmantals
+3. install the inmanta extension via marketplace
+4. change config for the extension (ctrl+,)
+
+   1. set `inmanta.pythonPath` to the virtual env you just created `~/.virtualenvs/lstesting/bin/python3`
+   2. set `inmanta.ls.enabled` to `true`
 
 ## Features
 
@@ -24,4 +24,5 @@ provides the bridge between the Inmanta compiler and Visual Studio Code ide, by 
 2. work with incorrect models (needs to compile, all or nothing)
 
 ## References
-https://microsoft.github.io/language-server-protocol/specification
+
+[https://microsoft.github.io/language-server-protocol/specification](https://microsoft.github.io/language-server-protocol/specification)
