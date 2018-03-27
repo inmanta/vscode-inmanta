@@ -14,6 +14,10 @@ For now, just basic Syntax Coloring
 
 ![Screenshot](images/screenshot.png)
 
+## Alpha Features
+
+[Code navigation](server/README.md)
+
 ## Requirements
 
 None
