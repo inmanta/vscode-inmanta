@@ -22,7 +22,7 @@
     "vscode": "^1.20.0"
   },
   "categories": [
-    "Languages"
+    "Programming Languages"
   ],
   "contributes": {
     "languages": [
