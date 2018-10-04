@@ -25,11 +25,21 @@ from inmanta import compiler
 from inmanta.util import groupby
 from intervaltree.intervaltree import IntervalTree
 from inmanta.ast import Range
+from concurrent.futures.thread import ThreadPoolExecutor
+from tornado.iostream import BaseIOStream
+from inmanta import resources, export
+from inmanta.agent import handler
+from inmanta.module import Project
 
 logger = logging.getLogger(__name__)
 
 
 class InmantaLSHandler(JsonRpcHandler):
+
+    def __init__(self, instream: BaseIOStream, outstream: BaseIOStream, address):
+        super(InmantaLSHandler, self).__init__(instream, outstream, address)
+        self.threadpool = ThreadPoolExecutor(1)
+        self.anchormap = None
 
     @gen.coroutine
     def initialize(self, rootPath, rootUri, **kwargs):
@@ -59,19 +69,33 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
+    def compile_and_anchor(self):
+        try:
+            #reset all
+            resources.resource.reset()
+            export.Exporter.reset()
+            handler.Commander.reset()
+
+            #fresh project
+            Project.set(Project(self.rootPath))
+
+            anchormap = compiler.anchormap()
+
+            def treeify(iterator):
+                tree = IntervalTree()
+                for f, t in iterator:
+                    start = self.flatten(f.lnr - 1, f.start_char - 1)
+                    end = self.flatten(f.end_lnr - 1, f.end_char - 1)
+                    tree[start:end] = t
+                return tree
+
+            self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
+        except Exception:
+            logger.exception("Compile failed")
+
     @gen.coroutine
     def initialized(self):
-        anchormap = compiler.anchormap()
-
-        def treeify(iterator):
-            tree = IntervalTree()
-            for f, t in iterator:
-                start = self.flatten(f.lnr - 1, f.start_char - 1)
-                end = self.flatten(f.end_lnr - 1, f.end_char - 1)
-                tree[start:end] = t
-            return tree
-
-        self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
+        yield self.threadpool.submit(self.compile_and_anchor)
 
     @gen.coroutine
     def shutdown(self, **kwargs):
@@ -84,6 +108,14 @@ class InmantaLSHandler(JsonRpcHandler):
     @gen.coroutine
     def textDocument_didOpen(self, **kwargs):
         pass
+
+    @gen.coroutine
+    def textDocument_didChange(self, **kwargs):
+        pass
+
+    @gen.coroutine
+    def textDocument_didSave(self, **kwargs):
+        yield self.threadpool.submit(self.compile_and_anchor)
 
     @gen.coroutine
     def textDocument_didClose(self, **kwargs):
@@ -110,6 +142,9 @@ class InmantaLSHandler(JsonRpcHandler):
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
+
+        if self.anchormap is None:
+            return {}
 
         if url not in self.anchormap:
             return {}

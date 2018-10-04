@@ -2,7 +2,7 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'inmanta==2018.2a4.dev0',
+    'inmanta>=2018.2',
     'intervaltree'
 ]
 
@@ -12,7 +12,7 @@ setup(
     packages=find_packages("src"),
     install_requires=requires,
     
-    version="0.0.1.alpha.6",
+    version="0.0.1.alpha.7",
 
     description="Inmanta Language Server",
     author="Inmanta",

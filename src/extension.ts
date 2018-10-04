@@ -2,10 +2,10 @@
 
 import * as net from 'net';
 
-const cp = require("child_process");
+import * as cp from 'child_process';
 
-import { workspace, ExtensionContext, Disposable } from 'vscode';
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, Executable } from 'vscode-languageclient';
+import { workspace, ExtensionContext, Disposable, window } from 'vscode';
+import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 
 export function activate(context: ExtensionContext) {
 
@@ -41,17 +41,91 @@ export function activate(context: ExtensionContext) {
 		return disposable
 	}
 
+	class LsErrorHandler implements ErrorHandler{
+
+		_serverOptions: Executable
+		_child:cp.ChildProcess
+		
+		constructor(serverOptions: Executable){
+			this._serverOptions = serverOptions
+		}
+
+		not_installed(){
+			const pp: string = workspace.getConfiguration('inmanta').pythonPath
+
+			window.showErrorMessage(`Inmanta Language Server not installed, run "${pp} -m pip install inmantals" ?`, 'Yes', 'No').then(
+				(answer) => {
+					if(answer=='Yes'){
+						const child = cp.spawn(pp, ["-m", "pip", "install", "inmantals"])
+						child.on('close',(code, signal)=>{
+							if(code==0){
+								start_pipe()
+							}else{
+								
+								window.showErrorMessage(`Inmanta Language Server install failed with code ${code}`)
+							}
+						})
+					}
+				}
+			)
+		}
+
+		diagnose(){
+			if(this._child != undefined)
+				return
+			
+			const pp: string = workspace.getConfiguration('inmanta').pythonPath
+
+			const script = "import sys\ntry:\n  import inmantals.pipeserver\n  sys.exit(0)\nexcept: sys.exit(3)"
+
+			this._child = cp.spawn(this._serverOptions.command, ["-c", script])
+
+			this._child.on('close', (code) => {
+				if(code == 3){
+					this.not_installed()
+				}else{
+					const data = this._child.stdout.read()
+					window.showErrorMessage("Inmanta Language Server could not start, could not determined cause of failure"+data)
+				}
+				this._child = undefined
+			});
+			
+		}
+
+		error(error: Error, message: Message, count: number): ErrorAction{
+			this.diagnose()
+			return ErrorAction.Shutdown
+		}		
+		
+		closed(): CloseAction {
+			this.diagnose()
+			return CloseAction.DoNotRestart
+		}
+
+		rejected(reason){
+			window.showErrorMessage('Inmanta Language Server: rejected to start'+ reason);
+		}
+
+	}
+
 	function start_pipe() {
 		const pp: string = workspace.getConfiguration('inmanta').pythonPath
 
-		const serverOptions: ServerOptions = {
+		const serverOptions: Executable = {
 			command: pp,
-			args: ["-m", "inmantals.pipeserver"]
+			args: ["-m", "inmantals.pipeserver"],
 		};
+
+		const errorhandler = new LsErrorHandler(serverOptions)
+
 		const clientOptions: LanguageClientOptions = {
-			documentSelector: [{ scheme: 'file', language: 'inmanta' }]
+			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
+			errorHandler: errorhandler,
+			revealOutputChannelOn: RevealOutputChannelOn.Info
 		}
 		let lc = new LanguageClient('inmanta-ls', 'Inmane Language Server', serverOptions, clientOptions);
+		lc.onReady().catch(errorhandler.rejected)
+
 		// Create the language client and start the client.
 		let disposable = lc.start();
 
@@ -63,13 +137,18 @@ export function activate(context: ExtensionContext) {
 
 	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled
 
-	var running: Disposable
+	var running: Disposable = undefined
+
 	if (enable) {
 		running = start_pipe()
 	}
 
 	function stop_if_running() {
-		running.dispose()
+		if(running != undefined){
+			running.dispose()
+			running = undefined
+		}
+		
 	}
 
 	context.subscriptions.push(workspace.onDidChangeConfiguration(e => {
