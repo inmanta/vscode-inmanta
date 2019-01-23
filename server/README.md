@@ -7,7 +7,7 @@ provides the bridge between the Inmanta compiler and Visual Studio Code ide, by 
 ## Installation
 
 1. mkvirtualenv -p python3 lstesting
-2. pip install --extra-index-url [https://test.pypi.org/simple/](https://test.pypi.org/simple/) --pre --no-cache-dir inmantals
+2. pip install inmantals
 3. install the inmanta extension via marketplace
 4. change config for the extension (ctrl+,)
 

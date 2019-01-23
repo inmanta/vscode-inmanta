@@ -3,6 +3,7 @@
 import * as net from 'net';
 
 import * as cp from 'child_process';
+import * as fs from 'fs';
 
 import { workspace, ExtensionContext, Disposable, window } from 'vscode';
 import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
@@ -56,7 +57,7 @@ export function activate(context: ExtensionContext) {
 			window.showErrorMessage(`Inmanta Language Server not installed, run "${pp} -m pip install inmantals" ?`, 'Yes', 'No').then(
 				(answer) => {
 					if(answer=='Yes'){
-						const child = cp.spawn(pp, ["-m", "pip", "install", "inmantals"])
+						const child = cp.spawn(pp, ["-m", "pip", "install", "--pre", "inmantals"])
 						child.on('close',(code, signal)=>{
 							if(code==0){
 								start_pipe()
@@ -75,6 +76,11 @@ export function activate(context: ExtensionContext) {
 				return
 			
 			const pp: string = workspace.getConfiguration('inmanta').pythonPath
+
+			if(!fs.existsSync(pp)){
+				window.showErrorMessage("No python3 interperter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.")
+				return
+			}
 
 			const script = "import sys\ntry:\n  import inmantals.pipeserver\n  sys.exit(0)\nexcept: sys.exit(3)"
 
@@ -110,6 +116,11 @@ export function activate(context: ExtensionContext) {
 
 	function start_pipe() {
 		const pp: string = workspace.getConfiguration('inmanta').pythonPath
+
+		if(!fs.existsSync(pp)){
+			window.showErrorMessage("Inmanta Language Server could not start, no python3 interperter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.")
+			return
+		}
 
 		const serverOptions: Executable = {
 			command: pp,
