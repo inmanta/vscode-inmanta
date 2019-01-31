@@ -32,7 +32,7 @@ export function activate(context: ExtensionContext) {
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }]
 		}
 
-		let lc = new LanguageClient('inmanta-ls', 'Inmane Language Server', serverOptions, clientOptions)
+		let lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions)
 		// Create the language client and start the client.
 		let disposable = lc.start();
 
@@ -78,16 +78,18 @@ export function activate(context: ExtensionContext) {
 			const pp: string = workspace.getConfiguration('inmanta').pythonPath
 
 			if(!fs.existsSync(pp)){
-				window.showErrorMessage("No python3 interperter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.")
+				window.showErrorMessage("No python36 interperter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.")
 				return
 			}
 
-			const script = "import sys\ntry:\n  import inmantals.pipeserver\n  sys.exit(0)\nexcept: sys.exit(3)"
+			const script = "import sys\nif sys.version_info[0] != 3 or sys.version_info[1] != 6:\n  exit(4)\ntry:\n  import inmantals.pipeserver\n  sys.exit(0)\nexcept: sys.exit(3)"
 
 			this._child = cp.spawn(this._serverOptions.command, ["-c", script])
 
 			this._child.on('close', (code) => {
-				if(code == 3){
+				if(code == 4){
+					window.showErrorMessage(`Inmanta Language Server requires python 3.6, the venv provided at ${pp} is not python 3.6`)
+				}else if(code == 3){
 					this.not_installed()
 				}else{
 					const data = this._child.stdout.read()

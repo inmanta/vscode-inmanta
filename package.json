@@ -47,7 +47,7 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "Inmanta Configuration",
+      "title": "Inmanta",
       "properties": {
         "inmanta.pythonPath": {
           "type": "string",
