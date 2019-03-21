@@ -12,7 +12,7 @@ setup(
     packages=find_packages("src"),
     install_requires=requires,
     
-    version="0.0.1.alpha.8",
+    version="0.1.0",
 
     description="Inmanta Language Server",
     author="Inmanta",
