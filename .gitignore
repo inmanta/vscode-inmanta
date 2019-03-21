@@ -1,0 +1,14 @@
+out
+node_modules
+.vscode-test/
+.vsix
+*.pyc
+server/src/inmanta_lsp.egg-info
+.project
+.pydevproject
+.tox
+server/build
+server/dist
+*.egg-info
+*.log
+*.orig

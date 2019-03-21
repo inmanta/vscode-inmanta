@@ -1,40 +1,87 @@
 {
-    "name": "inmanta",
-    "displayName": "inmanta",
-    "description": "Inmanta",
-    "version": "0.2.0",
-    "publisher": "Inmanta",
-    "icon": "images/inmanta.ico",
-    "license": "Apache 2.0",
-    "homepage": "https://github.com/inmanta/vscode-inmanta",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/inmanta/vscode-inmanta"
-    },
-    "bugs": {
-        "url": "https://github.com/inmanta/vscode-inmanta/issues"
-    },
-    "keywords": [
-        "inmanta",
-        "syntax"
+  "name": "inmanta",
+  "displayName": "inmanta",
+  "description": "Inmanta",
+  "version": "0.2.0",
+  "publisher": "Inmanta",
+  "icon": "images/inmanta.ico",
+  "license": "Apache 2.0",
+  "homepage": "https://github.com/inmanta/vscode-inmanta",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inmanta/vscode-inmanta"
+  },
+  "bugs": {
+    "url": "https://github.com/inmanta/vscode-inmanta/issues"
+  },
+  "keywords": [
+    "inmanta",
+    "syntax"
+  ],
+  "engines": {
+    "vscode": "^1.30.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "inmanta",
+        "aliases": [
+          "Inmanta",
+          "inmanta"
+        ],
+        "extensions": [
+          ".cf"
+        ],
+        "configuration": "./language-configuration.json"
+      }
     ],
-    "engines": {
-        "vscode": "^1.8.0"
-    },
-    "categories": [
-        "Languages"
+    "grammars": [
+      {
+        "language": "inmanta",
+        "scopeName": "source.inmanta",
+        "path": "./syntaxes/inmanta.json"
+      }
     ],
-    "contributes": {
-        "languages": [{
-            "id": "inmanta",
-            "aliases": ["Inmanta", "inmanta"],
-            "extensions": [".cf"],
-            "configuration": "./language-configuration.json"
-        }],
-        "grammars": [{
-            "language": "inmanta",
-            "scopeName": "source.inmanta",
-            "path": "./syntaxes/inmanta.json"
-        }]
+    "configuration": {
+      "type": "object",
+      "title": "Inmanta",
+      "properties": {
+        "inmanta.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Path to Python, you can use a custom version of Python by modifying this setting to include the full path.",
+          "scope": "resource"
+        },
+        "inmanta.ls.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the language server",
+          "scope": "resource"
+        }
+      }
     }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^5.2.1"
+  },
+  "activationEvents": [
+    "onLanguage:inmanta"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "update-vscode": "node ./node_modules/vscode/bin/install",
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.42",
+    "@types/node": "^9.6.41",
+    "typescript": "^2.6.1",
+    "vscode": "^1.1.30"
+  },
+  "main": "./out/extension"
 }

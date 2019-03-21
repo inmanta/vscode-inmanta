@@ -14,6 +14,22 @@ For now, just basic Syntax Coloring
 
 ![Screenshot](images/screenshot.png)
 
+## Alpha Features
+
+### Code navigation
+
+To enable ctrl-click for code navigation, take the following steps:
+
+- Open an inmanta project in VSCode
+- remove the `.env` folder in the project
+- create a python36 virtual env (`python3.6 -m venv /home/user/.inmanta-vscode`)
+- Update the inmanta extension configuration (`ctrl+,`, `extensions`, `inmanta`)
+- Set the `Python Path` to the virtual env you just created (`/home/user/.inmanta-vscode/bin/python3`)
+- Set `LS`: to Enabled
+- When prompted to install the extensions, say yes.
+- Wait for the `.env` folder to re-appear
+- `ctrl-click` on a constructor call to jump to the type definition.
+
 ## Requirements
 
 None
