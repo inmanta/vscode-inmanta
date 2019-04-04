@@ -136,7 +136,7 @@ export function activate(context: ExtensionContext) {
 			errorHandler: errorhandler,
 			revealOutputChannelOn: RevealOutputChannelOn.Info
 		}
-		let lc = new LanguageClient('inmanta-ls', 'Inmane Language Server', serverOptions, clientOptions);
+		let lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		lc.onReady().catch(errorhandler.rejected)
 
 		// Create the language client and start the client.
