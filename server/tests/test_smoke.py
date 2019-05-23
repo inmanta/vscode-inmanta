@@ -89,7 +89,7 @@ async def client(server):
     client.ios.close()
 
 
-async def test_lnr(client):
+async def assert_lnr(client):
     path = os.path.join(os.path.dirname(__file__), "project")
     ret = await client.call(
         "textDocument/definition",
@@ -133,7 +133,7 @@ async def test_connection(client, caplog):
     assert "Anchormap took" in caplog.text
     caplog.clear()
 
-    await test_lnr(client)
+    await assert_lnr(client)
 
     ret = await client.call("textDocument/didSave")
     result = await client.assert_one(ret)
@@ -141,7 +141,7 @@ async def test_connection(client, caplog):
     assert "Anchormap took" in caplog.text
     caplog.clear()
 
-    await test_lnr(client)
+    await assert_lnr(client)
 
     ret = await client.call("exit")
     await client.assert_one(ret)
