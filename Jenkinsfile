@@ -31,4 +31,4 @@ pipeline {
             junit 'server/junit*.xml'
         }
     }
-}%        
+}  
