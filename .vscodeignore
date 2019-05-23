@@ -1,0 +1,16 @@
+server
+src/
+.gitignore
+contributing.md
+tsconfig.json
+
+.vscode/**
+**/*.ts
+**/*.map
+
+node_modules/**
+!node_modules/vscode-jsonrpc/**
+!node_modules/vscode-languageclient/**
+!node_modules/vscode-languageserver-protocol/**
+!node_modules/vscode-languageserver-types/**
+!node_modules/semver/**

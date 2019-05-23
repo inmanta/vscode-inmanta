@@ -12,3 +12,5 @@ server/dist
 *.egg-info
 *.log
 *.orig
+.env
+junit-*

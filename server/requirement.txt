@@ -1,2 +1,5 @@
 inmanta
 intervaltree
+pytest
+pytest-asyncio
+pylspclient

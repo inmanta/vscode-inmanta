@@ -1,0 +1,6 @@
+entity Test:
+    string attr
+end
+
+
+Test(attr="a")
