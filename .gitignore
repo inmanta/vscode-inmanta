@@ -12,3 +12,7 @@ server/dist
 *.egg-info
 *.log
 *.orig
+.env
+junit-*
+.pytest_cache
+.idea
