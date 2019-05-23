@@ -110,7 +110,7 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
-        await self.threadpool.submit(self.compile_and_anchor)
+        await asyncio.get_event_loop().run_in_executor(self.threadpool, self.compile_and_anchor)
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass

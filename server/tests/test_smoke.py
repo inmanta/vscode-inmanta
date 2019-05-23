@@ -89,6 +89,23 @@ async def client(server):
     client.ios.close()
 
 
+async def test_lnr(client):
+    path = os.path.join(os.path.dirname(__file__), "project")
+    ret = await client.call(
+        "textDocument/definition",
+        textDocument={"uri": f"file://{path}/main.cf"},
+        position={"line": 5, "character": 2},
+    )
+    result = await client.assert_one(ret)
+    assert result == {
+        "uri": f"file://{path}/main.cf",
+        "range": {
+            "start": {"line": 0, "character": 7},
+            "end": {"line": 0, "character": 11},
+        },
+    }
+
+
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
 async def test_connection(client, caplog):
@@ -116,19 +133,15 @@ async def test_connection(client, caplog):
     assert "Anchormap took" in caplog.text
     caplog.clear()
 
-    ret = await client.call(
-        "textDocument/definition",
-        textDocument={"uri": f"file://{path}/main.cf"},
-        position={"line": 5, "character": 2},
-    )
+    await test_lnr(client)
+
+    ret = await client.call("textDocument/didSave")
     result = await client.assert_one(ret)
-    assert result == {
-        "uri": f"file://{path}/main.cf",
-        "range": {
-            "start": {"line": 0, "character": 7},
-            "end": {"line": 0, "character": 11},
-        },
-    }
+    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
+    assert "Anchormap took" in caplog.text
+    caplog.clear()
+
+    await test_lnr(client)
 
     ret = await client.call("exit")
     await client.assert_one(ret)
