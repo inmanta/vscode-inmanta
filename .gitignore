@@ -14,3 +14,5 @@ server/dist
 *.orig
 .env
 junit-*
+.pytest_cache
+.idea
