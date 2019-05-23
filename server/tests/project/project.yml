@@ -2,5 +2,5 @@ name: basic_test
 description: Testmodel
 modulepath: libs
 downloadpath: libs
-repo: ['git@github.com:inmanta/']
+repo: ['https://github.com/inmanta/{}.git/']
 install_mode: "master"
