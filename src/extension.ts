@@ -88,7 +88,7 @@ export function activate(context: ExtensionContext) {
 
 			this._child.on('close', (code) => {
 				if(code == 4){
-					window.showErrorMessage(`Inmanta Language Server requires python 3.6, the venv provided at ${pp} is not python 3.6`)
+					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pp} is an older version`)
 				}else if(code == 3){
 					this.not_installed()
 				}else{
