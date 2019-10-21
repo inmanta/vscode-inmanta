@@ -82,7 +82,7 @@ export function activate(context: ExtensionContext) {
 				return
 			}
 
-			const script = "import sys\nif sys.version_info[0] != 3 or sys.version_info[1] != 6:\n  exit(4)\ntry:\n  import inmantals.pipeserver\n  sys.exit(0)\nexcept: sys.exit(3)"
+			const script = "import sys\nif sys.version_info[0] != 3 or sys.version_info[1] < 6:\n  exit(4)\ntry:\n  import inmantals.pipeserver\n  sys.exit(0)\nexcept: sys.exit(3)"
 
 			this._child = cp.spawn(this._serverOptions.command, ["-c", script])
 
