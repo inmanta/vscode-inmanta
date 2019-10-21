@@ -82,13 +82,13 @@ export function activate(context: ExtensionContext) {
 				return
 			}
 
-			const script = "import sys\nif sys.version_info[0] != 3 or sys.version_info[1] != 6:\n  exit(4)\ntry:\n  import inmantals.pipeserver\n  sys.exit(0)\nexcept: sys.exit(3)"
+			const script = "import sys\nif sys.version_info[0] != 3 or sys.version_info[1] < 6:\n  exit(4)\ntry:\n  import inmantals.pipeserver\n  sys.exit(0)\nexcept: sys.exit(3)"
 
 			this._child = cp.spawn(this._serverOptions.command, ["-c", script])
 
 			this._child.on('close', (code) => {
 				if(code == 4){
-					window.showErrorMessage(`Inmanta Language Server requires python 3.6, the venv provided at ${pp} is not python 3.6`)
+					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pp} is an older version`)
 				}else if(code == 3){
 					this.not_installed()
 				}else{
