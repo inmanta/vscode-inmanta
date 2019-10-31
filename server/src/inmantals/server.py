@@ -130,7 +130,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 "range": {
                     "start": {"line": loc.lnr - 1, "character": 0},
                     "end": {"line": loc.lnr - 1, "character": 0},
-                    },
+                },
             }
 
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
