@@ -127,7 +127,10 @@ class InmantaLSHandler(JsonRpcHandler):
         else:
             return {
                 "uri": "file://" + loc.file,
-                "range": {"start": {"line": loc.lnr - 1, "character": 0}},
+                "range": {
+                    "start": {"line": loc.lnr - 1, "character": 0},
+                    "end": {"line": loc.lnr - 1, "character": 0},
+                    },
             }
 
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
