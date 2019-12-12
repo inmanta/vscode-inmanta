@@ -124,6 +124,7 @@ async def test_connection(client, caplog):
                 "save": {"includeText": False},
             },
             "definitionProvider": True,
+            "referencesProvider": True,
         }
     }
 
