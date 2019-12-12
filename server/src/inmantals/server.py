@@ -42,6 +42,7 @@ class InmantaLSHandler(JsonRpcHandler):
         super(InmantaLSHandler, self).__init__(instream, outstream, address)
         self.threadpool = ThreadPoolExecutor(1)
         self.anchormap = None
+        self.reverse_anchormap = None
 
     async def initialize(self, rootPath, rootUri, **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
@@ -60,6 +61,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     "save": {"includeText": False},
                 },
                 "definitionProvider": True,
+                "referencesProvider": True,
             }
         }
 
@@ -91,6 +93,24 @@ class InmantaLSHandler(JsonRpcHandler):
                 os.path.realpath(k): treeify(v)
                 for k, v in groupby(anchormap, lambda x: x[0].file)
             }
+
+            def treeify_reverse(iterator):
+                tree = IntervalTree()
+                for f, t in iterator:
+                    if isinstance(t, Range):
+                        start = self.flatten(t.lnr - 1, t.start_char - 1)
+                        end = self.flatten(t.end_lnr - 1, t.end_char - 1)
+                        if start <= end:
+                            tree[start:end] = f
+                return tree
+
+            self.reverse_anchormap = {
+                os.path.realpath(k): treeify_reverse(v)
+                for k, v in groupby(anchormap, lambda x: x[1].file)
+            }
+
+
+
         except Exception:
             logger.exception("Compile failed")
 
@@ -152,6 +172,26 @@ class InmantaLSHandler(JsonRpcHandler):
             return {}
         loc = list(range)[0].data
         return self.convert_location(loc)
+
+    async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803
+        uri = textDocument["uri"]
+
+        url = os.path.realpath(uri.replace("file://", ""))
+
+        if self.reverse_anchormap is None:
+            return {}
+
+        if url not in self.reverse_anchormap:
+            return {}
+
+        tree = self.reverse_anchormap[url]
+
+        range = tree[self.flatten(position["line"], position["character"])]
+
+        if range is None or len(range) == 0:
+            return {}
+
+        return [self.convert_location(loc.data) for loc in range]
 
     # Protocol handling
 
