@@ -109,8 +109,6 @@ class InmantaLSHandler(JsonRpcHandler):
                 for k, v in groupby(anchormap, lambda x: x[1].file)
             }
 
-
-
         except Exception:
             logger.exception("Compile failed")
 

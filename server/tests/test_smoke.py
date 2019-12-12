@@ -105,6 +105,7 @@ async def assert_lnr(client):
         },
     }
 
+
 async def assert_lnr_reverse(client):
     path = os.path.join(os.path.dirname(__file__), "project")
     ret = await client.call(
