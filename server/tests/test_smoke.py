@@ -106,6 +106,24 @@ async def assert_lnr(client):
     }
 
 
+async def assert_lnr_reverse(client):
+    path = os.path.join(os.path.dirname(__file__), "project")
+    ret = await client.call(
+        "textDocument/references",
+        textDocument={"uri": f"file://{path}/main.cf"},
+        position={"line": 0, "character": 8},
+        context={}
+    )
+    result = await client.assert_one(ret)
+    assert result == [{
+        "uri": f"file://{path}/main.cf",
+        "range": {
+            "start": {"line": 5, "character": 0},
+            "end": {"line": 5, "character": 4},
+        },
+    }]
+
+
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
 async def test_connection(client, caplog):
@@ -124,6 +142,7 @@ async def test_connection(client, caplog):
                 "save": {"includeText": False},
             },
             "definitionProvider": True,
+            "referencesProvider": True,
         }
     }
 
@@ -142,6 +161,7 @@ async def test_connection(client, caplog):
     caplog.clear()
 
     await assert_lnr(client)
+    await assert_lnr_reverse(client)
 
     ret = await client.call("exit")
     await client.assert_one(ret)
