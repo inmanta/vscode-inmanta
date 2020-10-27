@@ -26,7 +26,7 @@ from inmantals.jsonrpc import (
 import os
 import types
 from asyncio import Lock
-from typing import Optional
+from typing import Dict, Optional
 from inmanta import compiler
 from inmanta.util import groupby
 from intervaltree.intervaltree import IntervalTree
@@ -125,23 +125,22 @@ class InmantaLSHandler(JsonRpcHandler):
             await self.publish_diagnostics(None)
 
         except CompilerException as e:
-            if ast_export is not None:
-                error: ast_export.Error = e.export()
-                params: Optional[lsp_types.PublishDiagnosticsParams]
-                if error.location is None:
-                    params = None
-                else:
-                    params = lsp_types.PublishDiagnosticsParams(
-                        uri=error.location.uri,
-                        diagnostics=[
-                            lsp_types.Diagnostic(
-                                range=error.location.range,
-                                severity=lsp_types.DiagnosticSeverity.Error,
-                                message=error.message,
-                            )
-                        ],
-                    )
-                await self.publish_diagnostics(params)
+            params: Optional[lsp_types.PublishDiagnosticsParams]
+            if e.location is None:
+                params = None
+            else:
+                location: Dict[str, object] = self.convert_location(e.location)
+                params = lsp_types.PublishDiagnosticsParams(
+                    uri=location["uri"],
+                    diagnostics=[
+                        lsp_types.Diagnostic(
+                            range=location["range"],
+                            severity=lsp_types.DiagnosticSeverity.Error,
+                            message=e.get_message(),
+                        )
+                    ],
+                )
+            await self.publish_diagnostics(params)
             logger.exception("Compile failed")
 
         except Exception:
