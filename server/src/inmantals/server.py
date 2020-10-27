@@ -25,6 +25,7 @@ from inmantals.jsonrpc import (
 )
 import os
 import types
+from asyncio import Lock
 from typing import Optional
 from inmanta import compiler
 from inmanta.util import groupby
@@ -53,6 +54,8 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool = ThreadPoolExecutor(1)
         self.anchormap = None
         self.reverse_anchormap = None
+        self.state_lock: Lock = Lock()
+        self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
 
     async def initialize(self, rootPath, rootUri, **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
@@ -81,6 +84,7 @@ class InmantaLSHandler(JsonRpcHandler):
         return line * 100000 + char
 
     async def compile_and_anchor(self):
+
         try:
             # reset all
             resources.resource.reset()
@@ -119,13 +123,16 @@ class InmantaLSHandler(JsonRpcHandler):
                 for k, v in groupby(anchormap, lambda x: x[1].file)
             }
 
-            # TODO: reset diagnostics by pushing empty list
+            await self.publish_diagnostics(None)
 
         except CompilerException as e:
             if ast_export is not None:
                 error: ast_export.Error = e.export()
-                if error.location is not None:
-                    params: lsp_types.PublishDiagnosticsParams = lsp_types.PublishDiagnosticsParams(
+                params: Optional[lsp_types.PublishDiagnosticsParams]
+                if error.location is None:
+                    params = None
+                else:
+                    params = lsp_types.PublishDiagnosticsParams(
                         uri=error.location.uri,
                         diagnostics=[
                             lsp_types.Diagnostic(
@@ -133,10 +140,11 @@ class InmantaLSHandler(JsonRpcHandler):
                                 severity=lsp_types.DiagnosticSeverity.Error,
                                 message=f"{error.type}: {error.message}",
                             )
-                        ]
+                        ],
                     )
-                    await self.send_notification("textDocument/publishDiagnostics", params.dict(exclude_none=True))
+                await self.publish_diagnostics(params)
             logger.exception("Compile failed")
+
         except Exception:
             logger.exception("Compile failed")
 
@@ -249,3 +257,18 @@ class InmantaLSHandler(JsonRpcHandler):
         await self.send_notification(
             "window/showMessage", {"type": type, "message": message}
         )
+
+    async def publish_diagnostics(self, params: Optional[lsp_types.PublishDiagnosticsParams]) -> None:
+        """
+        Publishes supplied diagnostics and caches it. If params is None, clears previously published diagnostics.
+        """
+        async with self.state_lock:
+            publish_params: lsp_types.PublishDiagnosticsParams
+            if params is None:
+                if self.diagnostics_cache is None:
+                    return
+                publish_params = lsp_types.PublishDiagnosticsParams(uri=self.diagnostics_cache.uri, diagnostics=[])
+            else:
+                publish_params = params
+            await self.send_notification("textDocument/publishDiagnostics", publish_params.dict(exclude_none=True))
+            self.diagnostics_cache = params
