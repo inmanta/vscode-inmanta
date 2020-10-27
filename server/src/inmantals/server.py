@@ -144,6 +144,7 @@ class InmantaLSHandler(JsonRpcHandler):
             logger.exception("Compile failed")
 
         except Exception:
+            await self.publish_diagnostics(None)
             logger.exception("Compile failed")
 
     async def initialized(self):
