@@ -15,24 +15,34 @@
 
     Contact: code@inmanta.com
 """
-import asyncio
 import json
 import logging
+from inmantals import lsp_types
 from inmantals.jsonrpc import (
     JsonRpcHandler,
     MethodNotFoundException,
     InvalidParamsException,
 )
 import os
+import types
+from typing import Optional
 from inmanta import compiler
 from inmanta.util import groupby
 from intervaltree.intervaltree import IntervalTree
-from inmanta.ast import Range
+from inmanta.ast import CompilerException, Range
 from concurrent.futures.thread import ThreadPoolExecutor
 from tornado.iostream import BaseIOStream
 from inmanta import resources
 from inmanta.agent import handler
 from inmanta.module import Project
+
+# This module has only been added in inmanta v2020.3.
+ast_export: Optional[types.ModuleType]
+try:
+    import inmanta.ast.export  # type: ignore
+    ast_export = inmanta.ast.export
+except ModuleNotFoundError:
+    ast_export = None
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +80,13 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
-    def compile_and_anchor(self):
+    async def compile_and_anchor(self):
         try:
             # reset all
             resources.resource.reset()
             handler.Commander.reset()
 
-            # fresh project
+            # fresh project for anchormap
             Project.set(Project(self.rootPath))
 
             anchormap = compiler.anchormap()
@@ -109,11 +119,29 @@ class InmantaLSHandler(JsonRpcHandler):
                 for k, v in groupby(anchormap, lambda x: x[1].file)
             }
 
+            # TODO: reset diagnostics by pushing empty list
+
+        except CompilerException as e:
+            if ast_export is not None:
+                error: ast_export.Error = e.export()
+                if error.location is not None:
+                    params: lsp_types.PublishDiagnosticsParams = lsp_types.PublishDiagnosticsParams(
+                        uri=error.location.uri,
+                        diagnostics=[
+                            lsp_types.Diagnostic(
+                                range=error.location.range,
+                                severity=lsp_types.DiagnosticSeverity.Error,
+                                message=f"{error.type}: {error.message}",
+                            )
+                        ]
+                    )
+                    await self.send_notification("textDocument/publishDiagnostics", params.dict(exclude_none=True))
+            logger.exception("Compile failed")
         except Exception:
             logger.exception("Compile failed")
 
     async def initialized(self):
-        await asyncio.get_event_loop().run_in_executor(self.threadpool, self.compile_and_anchor)
+        await self.compile_and_anchor()
 
     async def shutdown(self, **kwargs):
         pass
@@ -128,7 +156,7 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
-        await asyncio.get_event_loop().run_in_executor(self.threadpool, self.compile_and_anchor)
+        await self.compile_and_anchor()
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass
