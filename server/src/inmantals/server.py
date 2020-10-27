@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+import asyncio
 import json
 import logging
 from inmantals import lsp_types
@@ -25,7 +26,6 @@ from inmantals.jsonrpc import (
 )
 import os
 import types
-from asyncio import Lock
 from typing import Dict, Optional
 from inmanta import compiler
 from inmanta.util import groupby
@@ -54,7 +54,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool = ThreadPoolExecutor(1)
         self.anchormap = None
         self.reverse_anchormap = None
-        self.state_lock: Lock = Lock()
+        self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
 
     async def initialize(self, rootPath, rootUri, **kwargs):  # noqa: N803
@@ -83,8 +83,8 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
-    async def compile_and_anchor(self):
-        try:
+    async def compile_and_anchor(self) -> None:
+        def sync_compile_and_anchor() -> None:
             # reset all
             resources.resource.reset()
             handler.Commander.reset()
@@ -122,6 +122,9 @@ class InmantaLSHandler(JsonRpcHandler):
                 for k, v in groupby(anchormap, lambda x: x[1].file)
             }
 
+        try:
+            # run synchronous part in executor to allow context switching while awaiting
+            await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
             await self.publish_diagnostics(None)
 
         except CompilerException as e:
