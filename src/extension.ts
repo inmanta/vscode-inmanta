@@ -42,42 +42,43 @@ export function activate(context: ExtensionContext) {
 		return disposable
 	}
 
-	class LsErrorHandler implements ErrorHandler{
+	function installLanguageServer(pythonPath: string, start_server?: boolean): void {
+		const child = cp.spawnSync(pythonPath, ["-m", "pip", "install", "inmantals"]);
+		if (child.status != 0) {
+			window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
+		} else if (start_server) {
+			start_pipe();
+		}
+	}
+
+	class LsErrorHandler implements ErrorHandler {
 
 		_serverOptions: Executable
-		_child:cp.ChildProcess
-		
-		constructor(serverOptions: Executable){
+		_child: cp.ChildProcess
+
+		constructor(serverOptions: Executable) {
 			this._serverOptions = serverOptions
 		}
 
-		not_installed(){
+		not_installed() {
 			const pp: string = workspace.getConfiguration('inmanta').pythonPath
 
 			window.showErrorMessage(`Inmanta Language Server not installed, run "${pp} -m pip install inmantals" ?`, 'Yes', 'No').then(
 				(answer) => {
-					if(answer=='Yes'){
-						const child = cp.spawn(pp, ["-m", "pip", "install", "--pre", "inmantals"])
-						child.on('close',(code, signal)=>{
-							if(code==0){
-								start_pipe()
-							}else{
-								
-								window.showErrorMessage(`Inmanta Language Server install failed with code ${code}`)
-							}
-						})
+					if (answer == 'Yes') {
+						installLanguageServer(pp, true);
 					}
 				}
 			)
 		}
 
-		diagnose(){
-			if(this._child != undefined)
+		diagnose() {
+			if (this._child != undefined)
 				return
-			
+
 			const pp: string = createVenvIfNotExists();
 
-			if(!fs.existsSync(pp)){
+			if (!fs.existsSync(pp)) {
 				window.showErrorMessage("No python36 interpreter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.")
 				return
 			}
@@ -87,35 +88,35 @@ export function activate(context: ExtensionContext) {
 			this._child = cp.spawn(this._serverOptions.command, ["-c", script])
 
 			this._child.on('close', (code) => {
-				if(code == 4){
+				if (code == 4) {
 					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pp} is an older version`)
-				}else if(code == 3){
+				} else if (code == 3) {
 					this.not_installed()
-				}else{
+				} else {
 					const data = this._child.stdout.read()
-					window.showErrorMessage("Inmanta Language Server could not start, could not determined cause of failure"+data)
+					window.showErrorMessage("Inmanta Language Server could not start, could not determined cause of failure" + data)
 				}
 				this._child = undefined
 			});
-			
+
 		}
 
-		error(error: Error, message: Message, count: number): ErrorAction{
+		error(error: Error, message: Message, count: number): ErrorAction {
 			this.diagnose()
 			return ErrorAction.Shutdown
-		}		
-		
+		}
+
 		closed(): CloseAction {
 			this.diagnose()
 			return CloseAction.DoNotRestart
 		}
 
-		rejected(reason){
-			window.showErrorMessage('Inmanta Language Server: rejected to start'+ reason);
+		rejected(reason) {
+			window.showErrorMessage('Inmanta Language Server: rejected to start' + reason);
 		}
 
 	}
-	
+
 	function start_pipe() {
 		const pp: string = createVenvIfNotExists();
 
@@ -148,23 +149,19 @@ export function activate(context: ExtensionContext) {
 	function createVenvIfNotExists() {
 		const pp: string = workspace.getConfiguration('inmanta').pythonPath;
 		if (pp && fs.existsSync(pp)) {
-			window.showInformationMessage(`Using Python Interpreter at ${pp}`);
 			return pp;
 		} else {
 			window.showInformationMessage(`No Python3 interpreter found at "${pp}". Falling back to default virtual environment`);
 		}
-		const venvDir = Uri.joinPath(context.globalStorageUri, ".env").fsPath;
+		const venvBaseDir = Uri.joinPath(context.globalStorageUri, ".env").fsPath;
 		const venvPath = Uri.joinPath(context.globalStorageUri, ".env", "bin", "python3").fsPath;
 
-		if (!fs.existsSync(venvDir)) {
-			const venvProcess = cp.spawnSync("python3", ["-m", "venv", venvDir ]);
+		if (!fs.existsSync(venvBaseDir)) {
+			const venvProcess = cp.spawnSync("python3", ["-m", "venv", venvBaseDir]);
 			if (venvProcess.status != 0) {
-				window.showErrorMessage(`Virtual env creation at ${venvDir} failed with code ${venvProcess.status}, ${venvProcess.stderr}`);
+				window.showErrorMessage(`Virtual env creation at ${venvBaseDir} failed with code ${venvProcess.status}, ${venvProcess.stderr}`);
 			}
-			const child = cp.spawnSync(venvPath, ["-m", "pip", "install", "--pre", "inmantals"]);
-			if (child.status != 0) {
-				window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
-			}
+			installLanguageServer(venvPath);
 		}
 		workspace.getConfiguration("inmanta").update("pythonPath", venvPath, true);
 		return venvPath;
@@ -177,11 +174,11 @@ export function activate(context: ExtensionContext) {
 	}
 
 	function stop_if_running() {
-		if(running != undefined){
+		if (running != undefined) {
 			running.dispose()
 			running = undefined
 		}
-		
+
 	}
 
 	context.subscriptions.push(workspace.onDidChangeConfiguration(e => {
