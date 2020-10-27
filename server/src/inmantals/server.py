@@ -84,13 +84,12 @@ class InmantaLSHandler(JsonRpcHandler):
         return line * 100000 + char
 
     async def compile_and_anchor(self):
-
         try:
             # reset all
             resources.resource.reset()
             handler.Commander.reset()
 
-            # fresh project for anchormap
+            # fresh project
             Project.set(Project(self.rootPath))
 
             anchormap = compiler.anchormap()
