@@ -5,7 +5,7 @@ import * as net from 'net';
 import * as cp from 'child_process';
 import * as fs from 'fs';
 
-import { workspace, ExtensionContext, Disposable, window } from 'vscode';
+import { workspace, ExtensionContext, Disposable, window, Uri } from 'vscode';
 import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 
 export function activate(context: ExtensionContext) {
@@ -75,10 +75,10 @@ export function activate(context: ExtensionContext) {
 			if(this._child != undefined)
 				return
 			
-			const pp: string = workspace.getConfiguration('inmanta').pythonPath
+			const pp: string = createVenvIfNotExists();
 
 			if(!fs.existsSync(pp)){
-				window.showErrorMessage("No python36 interperter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.")
+				window.showErrorMessage("No python36 interpreter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.")
 				return
 			}
 
@@ -115,14 +115,9 @@ export function activate(context: ExtensionContext) {
 		}
 
 	}
-
+	
 	function start_pipe() {
-		const pp: string = workspace.getConfiguration('inmanta').pythonPath
-
-		if(!fs.existsSync(pp)){
-			window.showErrorMessage("Inmanta Language Server could not start, no python3 interperter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.")
-			return
-		}
+		const pp: string = createVenvIfNotExists();
 
 		const serverOptions: Executable = {
 			command: pp,
@@ -150,10 +145,35 @@ export function activate(context: ExtensionContext) {
 
 	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled
 
+	function createVenvIfNotExists() {
+		const pp: string = workspace.getConfiguration('inmanta').pythonPath;
+		if (pp && fs.existsSync(pp)) {
+			window.showInformationMessage(`Using Python Interpreter at ${pp}`);
+			return pp;
+		} else {
+			window.showInformationMessage(`No Python3 interpreter found at "${pp}". Falling back to default virtual environment`);
+		}
+		const venvDir = Uri.joinPath(context.globalStorageUri, ".env").fsPath;
+		const venvPath = Uri.joinPath(context.globalStorageUri, ".env", "bin", "python3").fsPath;
+
+		if (!fs.existsSync(venvDir)) {
+			const venvProcess = cp.spawnSync("python3", ["-m", "venv", venvDir ]);
+			if (venvProcess.status != 0) {
+				window.showErrorMessage(`Virtual env creation at ${venvDir} failed with code ${venvProcess.status}, ${venvProcess.stderr}`);
+			}
+			const child = cp.spawnSync(venvPath, ["-m", "pip", "install", "--pre", "inmantals"]);
+			if (child.status != 0) {
+				window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
+			}
+		}
+		workspace.getConfiguration("inmanta").update("pythonPath", venvPath, true);
+		return venvPath;
+	}
+
 	var running: Disposable = undefined
 
 	if (enable) {
-		running = start_pipe()
+		running = start_pipe();
 	}
 
 	function stop_if_running() {
