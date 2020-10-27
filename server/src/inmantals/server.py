@@ -137,7 +137,7 @@ class InmantaLSHandler(JsonRpcHandler):
                             lsp_types.Diagnostic(
                                 range=error.location.range,
                                 severity=lsp_types.DiagnosticSeverity.Error,
-                                message=f"{error.type}: {error.message}",
+                                message=error.message,
                             )
                         ],
                     )
