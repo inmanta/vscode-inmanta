@@ -12,7 +12,7 @@ implement Person using std::none
 john = Person(name="John", age=20)
 mike = Person(name="Mike", age=21)
 jane = Person(name="Jane", age=19)
-lucy = Person(name="John", age=23)
+lucy = Person(name="Lucy", age=23)
 
 john.friends += mike
 john.friends += jane
