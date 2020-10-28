@@ -60,7 +60,7 @@ export function activate(context: ExtensionContext) {
 						const child = cp.spawn(pp, ["-m", "pip", "install", "--pre", "inmantals"])
 						child.on('close',(code, signal)=>{
 							if(code==0){
-								start_pipe()
+								startPipe()
 							}else{
 								
 								window.showErrorMessage(`Inmanta Language Server install failed with code ${code}`)
@@ -82,18 +82,25 @@ export function activate(context: ExtensionContext) {
 				return
 			}
 
-			const script = "import sys\nif sys.version_info[0] != 3 or sys.version_info[1] < 6:\n  exit(4)\ntry:\n  import inmantals.pipeserver\n  sys.exit(0)\nexcept: sys.exit(3)"
+			const script = "import sys\n" +
+				"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
+				"  exit(4)\n" + 
+				"try:\n" + 
+				"  import inmantals.pipeserver\n" + 
+				"  sys.exit(0)\n" +
+				"except:\n" + 
+				"  sys.exit(3)"
 
 			this._child = cp.spawn(this._serverOptions.command, ["-c", script])
 
 			this._child.on('close', (code) => {
-				if(code == 4){
+				if (code == 4) {
 					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pp} is an older version`)
-				}else if(code == 3){
+				} else if (code == 3) {
 					this.not_installed()
-				}else{
+				} else {
 					const data = this._child.stdout.read()
-					window.showErrorMessage("Inmanta Language Server could not start, could not determined cause of failure"+data)
+					window.showErrorMessage("Inmanta Language Server could not start, could not determined cause of failure" + data)
 				}
 				this._child = undefined
 			});
@@ -111,12 +118,12 @@ export function activate(context: ExtensionContext) {
 		}
 
 		rejected(reason){
-			window.showErrorMessage('Inmanta Language Server: rejected to start'+ reason);
+			window.showErrorMessage('Inmanta Language Server: rejected to start' + reason);
 		}
 
 	}
 
-	function start_pipe() {
+	function startPipe() {
 		const pp: string = workspace.getConfiguration('inmanta').pythonPath
 
 		if(!fs.existsSync(pp)){
@@ -153,10 +160,10 @@ export function activate(context: ExtensionContext) {
 	var running: Disposable = undefined
 
 	if (enable) {
-		running = start_pipe()
+		running = startPipe()
 	}
 
-	function stop_if_running() {
+	function stopIfRunning() {
 		if(running != undefined){
 			running.dispose()
 			running = undefined
@@ -168,10 +175,10 @@ export function activate(context: ExtensionContext) {
 		if (e.affectsConfiguration('inmanta')) {
 			const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled
 
-			stop_if_running()
+			stopIfRunning()
 
 			if (enable) {
-				start_pipe()
+				startPipe()
 			}
 		}
 	}));
