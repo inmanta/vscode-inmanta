@@ -26,7 +26,7 @@ from inmantals.jsonrpc import (
 )
 import os
 import types
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
 from inmanta import compiler
 from inmanta.util import groupby
 from intervaltree.intervaltree import IntervalTree
@@ -56,13 +56,23 @@ class InmantaLSHandler(JsonRpcHandler):
         self.reverse_anchormap = None
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
+        self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = set(
+            map(lsp_types.SymbolKind, range(lsp_types.SymbolKind.File.value, lsp_types.SymbolKind.Array.value + 1))
+        )
 
-    async def initialize(self, rootPath, rootUri, **kwargs):  # noqa: N803
+    async def initialize(self, rootPath, rootUri, capabilities, **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
 
         self.rootPath = rootPath
         self.rootUrl = rootUri
         os.chdir(rootPath)
+
+        try:
+            self.supported_symbol_kinds = set(
+                map(lsp_types.SymbolKind, capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"])
+            )
+        except KeyError:
+            pass
 
         return {
             "capabilities": {
@@ -75,6 +85,9 @@ class InmantaLSHandler(JsonRpcHandler):
                 },
                 "definitionProvider": True,
                 "referencesProvider": True,
+                "workspaceSymbolProvider": {
+                    "workDoneProgress": False,
+                }
             }
         }
 
