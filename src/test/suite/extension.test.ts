@@ -3,12 +3,7 @@ import { after, before } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
-import { Uri, window, commands, extensions, Extension, workspace, TextDocument } from 'vscode';
-// import * as myExtension from '../../extension';
-import { activate } from './helpers'
-import { fstat } from 'fs';
+import { Uri, window, commands, workspace, TextDocument } from 'vscode';
 
 
 suite('Model compile tests', () => {
