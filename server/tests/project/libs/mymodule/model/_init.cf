@@ -1,9 +1,0 @@
-entity Test:
-    string test_attribute
-end
-
-implementation test for Test:
-    local_test_var = 0
-end
-
-test = Test(test_attribute="a")

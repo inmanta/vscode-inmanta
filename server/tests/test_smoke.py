@@ -194,67 +194,67 @@ async def test_symbol_provider(client: JsonRPC) -> None:
 
     await initialize_project(client, "project")
 
-    ret = await client.call("workspace/symbol", query="test")
+    ret = await client.call("workspace/symbol", query="symbol")
     result = await client.assert_one(ret)
     assert isinstance(result, list)
     symbol_info: List[lsp_types.SymbolInformation] = [lsp_types.SymbolInformation.parse_obj(symbol) for symbol in result]
 
     project_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "project"))
     uri_main: str = "file://%s" % os.path.join(project_dir, "main.cf")
-    mymodule_dir: str = os.path.join(project_dir, "libs", "mymodule")
-    uri_mymodule_model: str = "file://%s" % os.path.join(mymodule_dir, "model", "_init.cf")
-    uri_mymodule_plugins: str = "file://%s" % os.path.join(mymodule_dir, "plugins", "__init__.py")
+    testmodule_dir: str = os.path.join(project_dir, "libs", "testmodule")
+    uri_testmodule_model: str = "file://%s" % os.path.join(testmodule_dir, "model", "_init.cf")
+    uri_testmodule_plugins: str = "file://%s" % os.path.join(testmodule_dir, "plugins", "__init__.py")
 
     assert symbol_info == [
         lsp_types.SymbolInformation(
-            name="__config__::my_test_type",
+            name="__config__::my_symbol_test_type",
             kind=lsp_types.SymbolKind.Class,
             location=lsp_types.Location(
                 uri=uri_main,
                 range=lsp_types.Range(
-                    start=lsp_types.Position(line=1, character=8), end=lsp_types.Position(line=1, character=20)
+                    start=lsp_types.Position(line=8, character=8), end=lsp_types.Position(line=8, character=27)
                 ),
             ),
         ),
         lsp_types.SymbolInformation(
-            name="mymodule::Test",
+            name="testmodule::SymbolTest",
             kind=lsp_types.SymbolKind.Class,
             location=lsp_types.Location(
-                uri=uri_mymodule_model,
+                uri=uri_testmodule_model,
                 range=lsp_types.Range(
-                    start=lsp_types.Position(line=0, character=7), end=lsp_types.Position(line=0, character=11)
+                    start=lsp_types.Position(line=0, character=7), end=lsp_types.Position(line=0, character=17)
                 ),
             ),
         ),
         lsp_types.SymbolInformation(
-            name="mymodule::test",
+            name="testmodule::symbolTest",
             kind=lsp_types.SymbolKind.Constructor,
             location=lsp_types.Location(
-                uri=uri_mymodule_model,
+                uri=uri_testmodule_model,
                 range=lsp_types.Range(
-                    start=lsp_types.Position(line=4, character=15), end=lsp_types.Position(line=4, character=19)
+                    start=lsp_types.Position(line=4, character=15), end=lsp_types.Position(line=4, character=25)
                 ),
             ),
         ),
         lsp_types.SymbolInformation(
-            name="mymodule::plugin_test",
+            name="testmodule::plugin_symbol_test",
             kind=lsp_types.SymbolKind.Function,
             location=lsp_types.Location(
-                uri=uri_mymodule_plugins,
+                uri=uri_testmodule_plugins,
                 range=lsp_types.Range(
                     start=lsp_types.Position(line=4, character=0), end=lsp_types.Position(line=4, character=1)
                 ),
             ),
         ),
         lsp_types.SymbolInformation(
-            name="test_attribute",
+            name="symbol",
             kind=lsp_types.SymbolKind.Field,
             location=lsp_types.Location(
-                uri=uri_mymodule_model,
+                uri=uri_testmodule_model,
                 range=lsp_types.Range(
                     start=lsp_types.Position(line=1, character=0), end=lsp_types.Position(line=1, character=0)
                 ),
             ),
-            containerName="mymodule::Test",
+            containerName="testmodule::SymbolTest",
         ),
     ]

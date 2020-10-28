@@ -1,5 +1,15 @@
-# leave these lines at the top to prevent line number failures in test case
-typedef my_test_type as string matching /[a-zA-Z]*/
-my_test_value = 0
+entity Test:
+    string attr
+end
 
-import mymodule
+
+Test(attr="a")
+
+
+typedef my_symbol_test_type as string matching /[a-zA-Z]*/
+my_symbol_test_value = 0
+
+
+import testmodule
+
+# don't add anything above this line to prevent line number failures in test case
