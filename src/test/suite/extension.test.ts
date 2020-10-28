@@ -20,7 +20,7 @@ suite('Model compile tests', () => {
 		const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace/'))
 		const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
-
+		const folder = await commands.executeCommand('vscode.openFolder', workspaceUri);
 		const doc: TextDocument = await workspace.openTextDocument(modelUri);
 		await doc.save()
 		const editor = await window.showTextDocument(doc);
