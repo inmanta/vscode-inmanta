@@ -20,7 +20,7 @@
     `LSP spec 3.15 <https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/>`__
 """
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from inmanta.data.model import BaseModel
 
@@ -72,6 +72,8 @@ class Diagnostic(BaseModel):
 
 
 class SymbolKind(Enum):
+
+    # supported by default
     File: int = 1
     Module: int = 2
     Namespace: int = 3
@@ -90,6 +92,8 @@ class SymbolKind(Enum):
     Number: int = 16
     Boolean: int = 17
     Array: int = 18
+
+    # only supported if explicitly included in client capabilities
     Object: int = 19
     Key: int = 20
     Null: int = 21
@@ -123,12 +127,15 @@ class PublishDiagnosticsParams(BaseModel):
     diagnostics: List[Diagnostic]
 
 
+ProgressToken = Union[int, str]
+
+
 class WorkDoneProgressParams(BaseModel):
     """
     Parameters related to work done progress.
     """
 
-    workDoneToken: Optional[object]
+    workDoneToken: Optional[ProgressToken]
 
 
 class PartialResultParams(BaseModel):
@@ -136,7 +143,7 @@ class PartialResultParams(BaseModel):
     Parameters related to partial result progress.
     """
 
-    partialResultToken: Optional[object]
+    partialResultToken: Optional[ProgressToken]
 
 
 class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams):

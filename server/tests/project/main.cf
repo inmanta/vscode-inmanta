@@ -1,6 +1,5 @@
-entity Test:
-    string attr
-end
+# leave these lines at the top to prevent line number failures in test case
+typedef my_test_type as string matching /[a-zA-Z]*/
+my_test_value = 0
 
-
-Test(attr="a")
+import mymodule

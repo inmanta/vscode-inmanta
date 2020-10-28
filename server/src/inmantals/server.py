@@ -18,24 +18,31 @@
 import asyncio
 import json
 import logging
+import os
+import types
+from intervaltree.intervaltree import IntervalTree
+from itertools import chain
+from typing import Dict, Iterator, List, Optional, Set, Tuple
+
 from inmantals import lsp_types
 from inmantals.jsonrpc import (
     JsonRpcHandler,
     MethodNotFoundException,
     InvalidParamsException,
 )
-import os
-import types
-from typing import Dict, Optional, Set
+import inmanta.ast.type as inmanta_type
 from inmanta import compiler
 from inmanta.util import groupby
-from intervaltree.intervaltree import IntervalTree
 from inmanta.ast import CompilerException, Range
 from concurrent.futures.thread import ThreadPoolExecutor
 from tornado.iostream import BaseIOStream
 from inmanta import resources
 from inmanta.agent import handler
+from inmanta.ast.attribute import Attribute
+from inmanta.ast.entity import Entity, EntityLike, Implementation
+from inmanta.execute import scheduler
 from inmanta.module import Project
+from inmanta.plugins import Plugin
 
 # This module has only been added in inmanta v2020.3.
 ast_export: Optional[types.ModuleType]
@@ -54,13 +61,12 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool = ThreadPoolExecutor(1)
         self.anchormap = None
         self.reverse_anchormap = None
+        self.types: Optional[Dict[str, inmanta_type.Type]] = None
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
-        self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = set(
-            map(lsp_types.SymbolKind, range(lsp_types.SymbolKind.File.value, lsp_types.SymbolKind.Array.value + 1))
-        )
+        self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = None
 
-    async def initialize(self, rootPath, rootUri, capabilities, **kwargs):  # noqa: N803
+    async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
 
         self.rootPath = rootPath
@@ -68,9 +74,8 @@ class InmantaLSHandler(JsonRpcHandler):
         os.chdir(rootPath)
 
         try:
-            self.supported_symbol_kinds = set(
-                map(lsp_types.SymbolKind, capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"])
-            )
+            value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
+            self.supported_symbol_kinds = set(map(lsp_types.SymbolKind, value_set))
         except KeyError:
             pass
 
@@ -105,7 +110,11 @@ class InmantaLSHandler(JsonRpcHandler):
             # fresh project
             Project.set(Project(self.rootPath))
 
-            anchormap = compiler.anchormap()
+            compiler_instance: compiler.Compiler = compiler.Compiler()
+            (statements, blocks) = compiler_instance.compile()
+            scheduler_instance = scheduler.Scheduler()
+            anchormap = scheduler_instance.anchormap(compiler_instance, statements, blocks)
+            self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
                 tree = IntervalTree()
@@ -241,6 +250,54 @@ class InmantaLSHandler(JsonRpcHandler):
             return {}
 
         return [self.convert_location(loc.data) for loc in range]
+
+    async def workspace_symbol(self, query: str) -> List[Dict[str, object]]:
+        if self.types is None:
+            return []
+
+        query_upper: str = query.upper()
+        matching_types: List[Tuple[str, inmanta_type.NamedType]] = [
+            (name, tp)
+            for name, tp in self.types.items()
+            if isinstance(tp, inmanta_type.NamedType) and query_upper in name.upper()
+        ]
+
+        def get_symbol_kind(tp: inmanta_type.NamedType) -> lsp_types.SymbolKind:
+            def if_supported(then: lsp_types.SymbolKind, otherwise: lsp_types.SymbolKind) -> lsp_types.SymbolKind:
+                return then if (self.supported_symbol_kinds is not None and then in self.supported_symbol_kinds) else otherwise
+
+            if isinstance(tp, Plugin):
+                return lsp_types.SymbolKind.Function
+            if isinstance(tp, inmanta_type.ConstraintType):
+                return lsp_types.SymbolKind.Class
+            if isinstance(tp, EntityLike):
+                return lsp_types.SymbolKind.Class
+            if isinstance(tp, Implementation):
+                return lsp_types.SymbolKind.Constructor
+
+            logger.exception("Unknown type %s, using default symbol kind" % tp)
+            return if_supported(lsp_types.SymbolKind.Object, lsp_types.SymbolKind.Variable)
+
+        type_symbols: Iterator[lsp_types.SymbolInformation] = (
+            lsp_types.SymbolInformation(
+                name=name, kind=get_symbol_kind(tp), location=self.convert_location(tp.location)
+            )
+            for name, tp
+            in matching_types
+        )
+
+        attribute_symbols: Iterator[lsp_types.SymbolInformation] = (
+            lsp_types.SymbolInformation(
+                name=attribute_name,
+                kind=lsp_types.SymbolKind.Field,
+                location=self.convert_location(attribute.location),
+                containerName=entity_name,
+            )
+            for entity_name, entity in matching_types if isinstance(entity, Entity)
+            for attribute_name, attribute in entity.attributes.items()
+        )
+
+        return [symbol.dict(exclude_none=True) for symbol in chain(type_symbols, attribute_symbols)]
 
     # Protocol handling
 
