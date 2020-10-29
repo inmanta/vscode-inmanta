@@ -264,6 +264,12 @@ class InmantaLSHandler(JsonRpcHandler):
 
         def get_symbol_kind(tp: inmanta_type.NamedType) -> lsp_types.SymbolKind:
             def if_supported(then: lsp_types.SymbolKind, otherwise: lsp_types.SymbolKind) -> lsp_types.SymbolKind:
+                """
+                Returns `then` iff the client can handle it, otherwise returns `otherwise`.
+                If the client explicitly specifies its supported symbol kinds, it is expected to gracefully handle symbol kinds
+                outside of this set. If it doesn't specify its supported symbol kinds, it must support all symbol kinds up to
+                Array.
+                """
                 return then if (self.supported_symbol_kinds is not None and then in self.supported_symbol_kinds) else otherwise
 
             if isinstance(tp, Plugin):
