@@ -93,10 +93,12 @@ class InmantaLSHandler(JsonRpcHandler):
             resources.resource.reset()
             handler.Commander.reset()
 
+            # fresh project
             if self.compiler_venv_path:
                 logger.debug("Using venv path " + str(self.compiler_venv_path))
-            # fresh project
-            Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
+                Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
+            else:
+                Project.set(Project(self.rootPath))
 
             anchormap = compiler.anchormap()
 
