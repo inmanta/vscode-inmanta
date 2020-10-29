@@ -1,12 +1,10 @@
-# Change Log
+# v 0.2.1 (?)
+Changes in this release:
+- Added language server to client diagnostics notifications to highlight errors (#18)
 
-[Changelog](https://github.com/inmanta/vscode-inmanta/server/CHANGELOG.md)
+# v 0.2.0
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [0.3.3]
-
-### Engineering
+## Engineering
 * Use native coroutines instead of tornado decorators
 * Made pep8 compatible
 * Added basic smoke test
