@@ -38,7 +38,6 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from tornado.iostream import BaseIOStream
 from inmanta import resources
 from inmanta.agent import handler
-from inmanta.ast.attribute import Attribute
 from inmanta.ast.entity import Entity, EntityLike, Implementation
 from inmanta.execute import scheduler
 from inmanta.module import Project
