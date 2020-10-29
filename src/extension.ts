@@ -5,7 +5,7 @@ import * as net from 'net';
 import * as cp from 'child_process';
 import * as fs from 'fs';
 
-import { workspace, ExtensionContext, Disposable, window, Uri } from 'vscode';
+import { workspace, ExtensionContext, Disposable, window, Uri, commands } from 'vscode';
 import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 
 export function activate(context: ExtensionContext) {
@@ -167,6 +167,16 @@ export function activate(context: ExtensionContext) {
 		return venvPath;
 	}
 
+	function register_export_command(){
+                const command_id = 'inmanta.exportToServer';
+
+                const commandHandler = (name: string = 'world') => {
+                        console.log(`Hello ${name}!!!`);
+                };
+
+                context.subscriptions.push(commands.registerCommand(command_id, commandHandler));
+        }
+
 	var running: Disposable = undefined
 
 	if (enable) {
@@ -192,5 +202,6 @@ export function activate(context: ExtensionContext) {
 			}
 		}
 	}));
+	register_export_command()
 
 }
