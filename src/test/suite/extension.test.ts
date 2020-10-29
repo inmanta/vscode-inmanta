@@ -16,9 +16,25 @@ suite('Model compile tests', () => {
 
 	const logPath: string = '/tmp/vscode-inmanta.log'
 
-	before(() => {
-		console.log("Preparing test, cleaning out...");
+	function waitForCompile(): Promise<boolean> {
+		return new Promise<boolean>(resolve => {
+			const readLogInterval = setInterval(() => {
+				fs.readFile(logPath, 'utf-8', (err, data) => {
+					if (err) {
+						console.log(err);
+					} else if (data.includes('Compile succeeded')) {
+						clearInterval(readLogInterval);
+						resolve(true);
+					} else if (data.includes('Compile failed')) {
+						clearInterval(readLogInterval);
+						resolve(false);
+					}
+				});
+			}, 500);
+		});
+	}
 
+	before(() => {
 		// Ensuring project is clean
 		fs.removeSync(libsPath);
 		fs.removeSync(envPath);
@@ -43,22 +59,8 @@ suite('Model compile tests', () => {
 		const editor = await window.showTextDocument(doc);
 
 		// Waiting for the compilation to happen
-		await new Promise(async resolve => {
-			const readLogInterval = setInterval(() => {
-				fs.readFile(logPath, 'utf-8', (err, data) => {
-					if (err) {
-						console.log(err);
-					} else if (data.includes('Compile succeeded')) {
-						clearInterval(readLogInterval);
-						resolve();
-					} else if (data.includes('Compile failed')) {
-						clearInterval(readLogInterval);
-						assert.strictEqual(false, true, "The compilation failed");
-						resolve();
-					}
-				});
-			}, 500);
-		});
+		const succeeded = await waitForCompile();
+		assert.strictEqual(succeeded, true, "The compilation didn't succeed");
 
 		const libsExists = fs.pathExistsSync(libsPath);
 		assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
@@ -69,8 +71,6 @@ suite('Model compile tests', () => {
 
 	after(() => {
 		window.showInformationMessage('All tests done!');
-		console.log("Tests done, cleaning out...");
-
 		// Clean out created directories
 		fs.removeSync(libsPath);
 		fs.removeSync(envPath);
