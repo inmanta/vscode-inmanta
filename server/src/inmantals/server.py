@@ -96,16 +96,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
             project_signature = inspect.signature(Project.__init__)
             # fresh project
-            if (
-                "venv_path" not in project_signature.parameters.keys()
-                and self.compiler_venv_path
-            ):
-                logger.info(
-                    "Compiler virtual env path specified, but "
-                    "the current version of Inmanta doesn't support it, using the default"
-                )
-                Project.set(Project(self.rootPath))
-            elif self.compiler_venv_path:
+            if "venv_path" in project_signature.parameters.keys() and self.compiler_venv_path:
                 logger.debug("Using venv path " + str(self.compiler_venv_path))
                 Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
             else:

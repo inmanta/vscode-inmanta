@@ -64,13 +64,14 @@
         "inmanta.compilerVenv": {
           "type": "string",
           "default": "",
-          "description": "Path to the Python virtual environment used by the compiler. Leave empty to use the default.",
-          "scope": "resource"
+          "description": "Path to the Python virtual environment used by the compiler. Leave empty to use the default. Only available when using Inmanta versions higher than 2020.5 in the language server environment.",
+          "scope": "window"
         }
       }
     }
   },
   "dependencies": {
+    "vsce": "^1.81.1",
     "vscode-languageclient": "^6.1.3"
   },
   "activationEvents": [
