@@ -126,6 +126,7 @@ class InmantaLSHandler(JsonRpcHandler):
             # run synchronous part in executor to allow context switching while awaiting
             await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
             await self.publish_diagnostics(None)
+            logger.info("Compile succeeded")
 
         except CompilerException as e:
             params: Optional[lsp_types.PublishDiagnosticsParams]
@@ -144,11 +145,13 @@ class InmantaLSHandler(JsonRpcHandler):
                     ],
                 )
             await self.publish_diagnostics(params)
-            logger.exception("Compile failed")
+            await self.send_show_message(1, "Compilation failed")
+            logger.exception("Compilation failed")
 
         except Exception:
             await self.publish_diagnostics(None)
-            logger.exception("Compile failed")
+            await self.send_show_message(1, "Compilation failed")
+            logger.exception("Compilation failed")
 
     async def initialized(self):
         await self.compile_and_anchor()
@@ -255,7 +258,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
         return result
 
-    async def send_show_message(self, type, message):
+    async def send_show_message(self, type: int, message: str):
         await self.send_notification(
             "window/showMessage", {"type": type, "message": message}
         )
