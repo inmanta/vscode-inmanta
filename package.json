@@ -60,6 +60,12 @@
           "default": false,
           "description": "Enable the language server",
           "scope": "resource"
+        },
+        "inmanta.compilerVenv": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Python virtual environment used by the compiler. Leave empty to use the default.",
+          "scope": "resource"
         }
       }
     }

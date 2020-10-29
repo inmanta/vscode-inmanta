@@ -127,10 +127,18 @@ export function activate(context: ExtensionContext) {
 
 		const errorhandler = new LsErrorHandler(serverOptions)
 
+		let compilerVenv = workspace.getConfiguration('inmanta').compilerVenv;
+		if (!compilerVenv) {
+			compilerVenv = Uri.joinPath(context.globalStorageUri, "compiler-venv").fsPath;
+		}
+
 		const clientOptions: LanguageClientOptions = {
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
 			errorHandler: errorhandler,
-			revealOutputChannelOn: RevealOutputChannelOn.Info
+			revealOutputChannelOn: RevealOutputChannelOn.Info,
+			initializationOptions: {
+				compilerVenv: compilerVenv
+			}
 		}
 		let lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		lc.onReady().catch(errorhandler.rejected)

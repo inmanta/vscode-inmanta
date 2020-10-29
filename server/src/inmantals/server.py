@@ -56,6 +56,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.reverse_anchormap = None
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
+        self.compiler_venv_path: Optional[str] = None
 
     async def initialize(self, rootPath, rootUri, **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
@@ -63,6 +64,9 @@ class InmantaLSHandler(JsonRpcHandler):
         self.rootPath = rootPath
         self.rootUrl = rootUri
         os.chdir(rootPath)
+        init_options = kwargs.get("initializationOptions", None)
+        if init_options:
+            self.compiler_venv_path = init_options.get("compilerVenv", None)
 
         return {
             "capabilities": {
@@ -89,8 +93,10 @@ class InmantaLSHandler(JsonRpcHandler):
             resources.resource.reset()
             handler.Commander.reset()
 
+            if self.compiler_venv_path:
+                logger.debug("Using venv path " + str(self.compiler_venv_path))
             # fresh project
-            Project.set(Project(self.rootPath))
+            Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
 
             anchormap = compiler.anchormap()
 
