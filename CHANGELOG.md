@@ -1,8 +1,6 @@
-# Change Log
+# v 0.3.5 (?)
+Changes in this release:
+- Added error highlighting (#18)
 
-[Changelog](https://github.com/inmanta/vscode-inmanta/CHANGELOG.md)
-
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [0.0.1]
+# v 0.0.1
 - Initial release
