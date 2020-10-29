@@ -72,11 +72,20 @@ class InmantaLSHandler(JsonRpcHandler):
         self.rootUrl = rootUri
         os.chdir(rootPath)
 
+        value_set: List[int]
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
-            self.supported_symbol_kinds = set(map(lsp_types.SymbolKind, value_set))
         except KeyError:
-            pass
+            value_set = []
+
+        def to_symbol_kind(value: int) -> Optional[lsp_types.SymbolKind]:
+            try:
+                return lsp_types.SymbolKind(value)
+            except ValueError:
+                logging.warning("Client specified unsupported symbol kind %s" % value)
+                return None
+
+        self.supported_symbol_kinds = {symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None}
 
         return {
             "capabilities": {
@@ -281,7 +290,7 @@ class InmantaLSHandler(JsonRpcHandler):
             if isinstance(tp, Implementation):
                 return lsp_types.SymbolKind.Constructor
 
-            logger.exception("Unknown type %s, using default symbol kind" % tp)
+            logger.warning("Unknown type %s, using default symbol kind" % tp)
             return if_supported(lsp_types.SymbolKind.Object, lsp_types.SymbolKind.Variable)
 
         type_symbols: Iterator[lsp_types.SymbolInformation] = (
