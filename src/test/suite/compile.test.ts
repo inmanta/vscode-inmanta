@@ -79,9 +79,6 @@ describe('Compile checks', () => {
 							assert.strictEqual(envExists, true, "The .env folder hasn't been created");
 
 							done();
-						}).catch((error: Error) => {
-							console.log(error);
-							done();
 						});
 					});
 				});
