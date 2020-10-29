@@ -4,7 +4,7 @@ import { runTests } from 'vscode-test';
 
 async function main() {
 	try {
-		const workspace = path.resolve(__dirname, './workspace')
+		const workspace = path.resolve(__dirname, './workspace');
 
 		// The folder containing the Extension Manifest package.json
 		// Passed to `--extensionDevelopmentPath`

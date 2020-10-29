@@ -9,16 +9,16 @@ import { Uri, window, commands, workspace, TextDocument } from 'vscode';
 suite('Model compile tests', () => {
 	window.showInformationMessage('Start compile tests.');
 
-	const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace/'))
-	const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs')
-	const envPath: string = path.resolve(workspaceUri.fsPath, '.env')
+	const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace/'));
+	const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
+	const envPath: string = path.resolve(workspaceUri.fsPath, '.env');
 
 	before(() => {
-		console.log("Preparing test, cleaning out...")
+		console.log("Preparing test, cleaning out...");
 
 		// Ensuring project is clean
-		fs.removeSync(libsPath)
-		fs.removeSync(envPath)
+		fs.removeSync(libsPath);
+		fs.removeSync(envPath);
 	});
 
 	test('Valid model test', async () => {
@@ -27,7 +27,7 @@ suite('Model compile tests', () => {
 
 		const folder = await commands.executeCommand('vscode.openFolder', workspaceUri);
 		const doc: TextDocument = await workspace.openTextDocument(modelUri);
-		await doc.save()
+		await doc.save();
 		const editor = await window.showTextDocument(doc);
 
 		// Waiting for the compilation to happen
