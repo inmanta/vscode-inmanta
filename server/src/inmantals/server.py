@@ -259,6 +259,14 @@ class InmantaLSHandler(JsonRpcHandler):
         return result
 
     async def send_show_message(self, type: int, message: str):
+        """
+        Show a pop up message to the user, type gives the level of the message, message is the content
+        Available types are:
+         * 1: Error
+         * 2: Warning
+         * 3: Info
+         * 4: Debug
+        """
         await self.send_notification(
             "window/showMessage", {"type": type, "message": message}
         )
