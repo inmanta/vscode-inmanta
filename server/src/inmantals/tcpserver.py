@@ -23,13 +23,17 @@ import logging
 
 
 def main():
-    stream = logging.StreamHandler()
+    stream = logging.FileHandler("/tmp/vscode-inmanta.log")
     stream.setLevel(logging.DEBUG)
+    stream2 = logging.StreamHandler()
+    stream2.setLevel(logging.DEBUG)
     logging.root.handlers = []
     logging.root.addHandler(stream)
+    logging.root.addHandler(stream2)
     logging.root.setLevel(0)
 
     logging.basicConfig(level=logging.DEBUG)
+    
     server = JsonRpcServer(InmantaLSHandler)
     server.listen(5432)
     IOLoop.current().start()
