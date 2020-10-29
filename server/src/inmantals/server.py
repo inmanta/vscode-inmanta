@@ -145,7 +145,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     ],
                 )
             await self.publish_diagnostics(params)
-            await self.send_show_message(1, "Compilation failed")
+            await self.send_show_message(1, "Compilation failed: " + e.get_message())
             logger.exception("Compilation failed")
 
         except Exception:
