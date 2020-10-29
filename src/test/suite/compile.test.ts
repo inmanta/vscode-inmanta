@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { describe, it, beforeEach } from 'mocha';
+import { after, before, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
@@ -41,15 +41,21 @@ describe('Compile checks', () => {
 		{ source: 'valid.cf', succeed: true },
 		{ source: 'invalid.cf', succeed: false }
 	]
+	
+	before((done) => {
+		commands.executeCommand('vscode.openFolder', workspaceUri).then(done);
+	});
 
-	beforeEach(() => {
-		// Removing log file
-		fs.removeSync(logPath)
-
-		// Ensuring project is clean
-		fs.removeSync(libsPath);
-		fs.removeSync(envPath);
-		fs.removeSync(modelUri.fsPath);
+	beforeEach((done) => {
+		Promise.all([
+			fs.remove(logPath),
+			fs.remove(libsPath),
+			fs.remove(envPath),
+			fs.remove(modelUri.fsPath)
+		]).then(values => {
+			console.error("values: " + values);
+			done()
+		});
 	});
 
 	tests.forEach(test => {
@@ -59,28 +65,28 @@ describe('Compile checks', () => {
 			const source: string = path.resolve(workspaceUri.fsPath, test.source)
 			fs.copyFileSync(source, modelUri.fsPath);
 
-			commands.executeCommand('vscode.openFolder', workspaceUri).then(result => {
-				workspace.openTextDocument(modelUri).then((doc: TextDocument) => {
-					doc.save().then((result) => {
-						window.showTextDocument(doc).then((editor: TextEditor) => {
-							waitForCompile(10000).then((succeeded: boolean) => {
-								assert.strictEqual(succeeded, test.succeed);
 
-								const libsExists = fs.pathExistsSync(libsPath);
-								assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
+			workspace.openTextDocument(modelUri).then((doc: TextDocument) => {
+				doc.save().then((result) => {
+					window.showTextDocument(doc).then((editor: TextEditor) => {
+						waitForCompile(10000).then((succeeded: boolean) => {
+							assert.strictEqual(succeeded, test.succeed);
 
-								const envExists = fs.pathExistsSync(envPath);
-								assert.strictEqual(envExists, true, "The .env folder hasn't been created");
+							const libsExists = fs.pathExistsSync(libsPath);
+							assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
 
-								done();
-							}).catch((error: Error) => {
-								console.log(error);
-								done();
-							});
+							const envExists = fs.pathExistsSync(envPath);
+							assert.strictEqual(envExists, true, "The .env folder hasn't been created");
+
+							done();
+						}).catch((error: Error) => {
+							console.log(error);
+							done();
 						});
 					});
 				});
 			});
+
 
 		}).timeout(0);
 	});
