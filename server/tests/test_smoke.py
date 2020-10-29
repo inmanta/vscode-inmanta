@@ -186,6 +186,25 @@ async def test_connection(client, caplog):
     await client.assert_one(ret)
 
 
+def test_lsp_type_serialization() -> None:
+    """
+    LSP spec names are camel case while Python conventions are to use snake case.
+    """
+
+    class MyLspType(lsp_types.LspModel):
+        snake_case_name: int
+        optional: Optional[int]
+
+    spec_compatible: Dict = {"snakeCaseName": 0}
+
+    v1 = MyLspType(snake_case_name=0)
+    v2 = MyLspType(snakeCaseName=0)
+    v3 = MyLspType.parse_obj(spec_compatible)
+
+    for v in [v1, v2, v3]:
+        assert v.dict() == spec_compatible
+
+
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
 async def test_symbol_provider(client: JsonRPC) -> None:
@@ -255,6 +274,6 @@ async def test_symbol_provider(client: JsonRPC) -> None:
                     start=lsp_types.Position(line=1, character=0), end=lsp_types.Position(line=1, character=0)
                 ),
             ),
-            containerName="testmodule::SymbolTest",
+            container_name="testmodule::SymbolTest",
         ),
     ]

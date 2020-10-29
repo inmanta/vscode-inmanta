@@ -297,13 +297,13 @@ class InmantaLSHandler(JsonRpcHandler):
                 name=attribute_name,
                 kind=lsp_types.SymbolKind.Field,
                 location=self.convert_location(attribute.location),
-                containerName=entity_name,
+                container_name=entity_name,
             )
             for entity_name, entity in matching_types if isinstance(entity, Entity)
             for attribute_name, attribute in entity.attributes.items()
         )
 
-        return [symbol.dict(exclude_none=True) for symbol in chain(type_symbols, attribute_symbols)]
+        return [symbol.dict() for symbol in chain(type_symbols, attribute_symbols)]
 
     # Protocol handling
 
@@ -348,5 +348,5 @@ class InmantaLSHandler(JsonRpcHandler):
                 publish_params = lsp_types.PublishDiagnosticsParams(uri=self.diagnostics_cache.uri, diagnostics=[])
             else:
                 publish_params = params
-            await self.send_notification("textDocument/publishDiagnostics", publish_params.dict(exclude_none=True))
+            await self.send_notification("textDocument/publishDiagnostics", publish_params.dict())
             self.diagnostics_cache = params

@@ -20,14 +20,30 @@
     `LSP spec 3.15 <https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/>`__
 """
 from enum import Enum
-from typing import List, Optional, Union
+from functools import partial
+from typing import Any, Dict, List, Optional, Union
+import re
 
 from inmanta.data.model import BaseModel
 
 
+class LspModel(BaseModel):
+    """
+    Base model for the LSP spec.
+    """
+
+    class Config:
+        alias_generator = partial(re.sub, r"_([a-z])", lambda match: match.group(1).upper())
+        allow_population_by_field_name = True
+
+    def dict(self, *args: object, **kwargs: Any) -> Dict[str, object]:
+        extended_kwargs: Dict[str, Any] = {"by_alias": True, "exclude_none": True, **kwargs}
+        return super().dict(*args, **extended_kwargs)
+
+
 # Data types
 
-class Position(BaseModel):
+class Position(LspModel):
     """
     Position in a file.
     """
@@ -36,7 +52,7 @@ class Position(BaseModel):
     character: int
 
 
-class Range(BaseModel):
+class Range(LspModel):
     """
     Range in a file.
     """
@@ -45,7 +61,7 @@ class Range(BaseModel):
     end: Position
 
 
-class Location(BaseModel):
+class Location(LspModel):
     """
     Location: file and range within that file.
     """
@@ -61,7 +77,7 @@ class DiagnosticSeverity(Enum):
     Hint: int = 4
 
 
-class Diagnostic(BaseModel):
+class Diagnostic(LspModel):
     """
     Diagnostic, such as a compiler error or warning. This type is more restrictive than the spec: it drops some optional fields.
     """
@@ -104,7 +120,7 @@ class SymbolKind(Enum):
     TypeParameter: int = 26
 
 
-class SymbolInformation(BaseModel):
+class SymbolInformation(LspModel):
     """
     Information about language constructs like variables, entities etc.
     """
@@ -113,12 +129,12 @@ class SymbolInformation(BaseModel):
     kind: SymbolKind
     deprecated: Optional[bool]
     location: Location
-    containerName: Optional[str]
+    container_name: Optional[str]
 
 
 # Message parameters
 
-class PublishDiagnosticsParams(BaseModel):
+class PublishDiagnosticsParams(LspModel):
     """
     Parameters for the textDocument/publishDiagnostics method.
     """
@@ -130,20 +146,20 @@ class PublishDiagnosticsParams(BaseModel):
 ProgressToken = Union[int, str]
 
 
-class WorkDoneProgressParams(BaseModel):
+class WorkDoneProgressParams(LspModel):
     """
     Parameters related to work done progress.
     """
 
-    workDoneToken: Optional[ProgressToken]
+    work_done_token: Optional[ProgressToken]
 
 
-class PartialResultParams(BaseModel):
+class PartialResultParams(LspModel):
     """
     Parameters related to partial result progress.
     """
 
-    partialResultToken: Optional[ProgressToken]
+    partial_result_token: Optional[ProgressToken]
 
 
 class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams):
