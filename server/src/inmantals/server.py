@@ -99,6 +99,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 "definitionProvider": True,
                 "referencesProvider": True,
                 "workspaceSymbolProvider": {
+                    # the language server does not report work done progress for workspace symbol requests
                     "workDoneProgress": False,
                 }
             }
