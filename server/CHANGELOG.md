@@ -1,8 +1,8 @@
-# v 0.2.1 (?)
+# v 0.2.2 (?)
 Changes in this release:
 - Added language server to client diagnostics notifications to highlight errors (#18)
 
-# v 0.2.0
+# v 0.2.1 (2019-10-31)
 
 ## Engineering
 * Use native coroutines instead of tornado decorators
