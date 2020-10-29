@@ -7,7 +7,7 @@ Person.friends [0:] -- Person
 
 index Person(name)
 
-implement Person using potato
+implement Person using std::none
 
 john = Person(name="John", age=20)
 mike = Person(name="Mike", age=21)

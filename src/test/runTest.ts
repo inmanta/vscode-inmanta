@@ -4,8 +4,6 @@ import { runTests } from 'vscode-test';
 
 async function main() {
 	try {
-		const workspace = path.resolve(__dirname, './workspace');
-
 		// The folder containing the Extension Manifest package.json
 		// Passed to `--extensionDevelopmentPath`
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../');
@@ -18,7 +16,6 @@ async function main() {
 		await runTests({ 
 			extensionDevelopmentPath: extensionDevelopmentPath, 
 			extensionTestsPath: extensionTestsPath,
-			launchArgs: [ workspace ]
 		});
 	} catch (err) {
 		console.error('Failed to run tests');
