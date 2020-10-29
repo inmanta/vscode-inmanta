@@ -110,6 +110,7 @@ class InmantaLSHandler(JsonRpcHandler):
             # fresh project
             Project.set(Project(self.rootPath))
 
+            # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
             (statements, blocks) = compiler_instance.compile()
             scheduler_instance = scheduler.Scheduler()
