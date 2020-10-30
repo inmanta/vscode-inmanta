@@ -4,8 +4,9 @@ import * as net from 'net';
 
 import * as cp from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
 
-import { workspace, ExtensionContext, Disposable, window, Uri } from 'vscode';
+import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
 import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 
 export function activate(context: ExtensionContext) {
@@ -14,9 +15,9 @@ export function activate(context: ExtensionContext) {
 
 	function startTCP() {
 		// have to start server by hand, debugging only
-		let serverOptions: ServerOptions = function () {
+		const serverOptions: ServerOptions = function () {
 			return new Promise((resolve, reject) => {
-				var client = new net.Socket();
+				const client = new net.Socket();
 				client.connect(5432, "127.0.0.1", function () {
 					resolve({
 						reader: client,
@@ -27,16 +28,16 @@ export function activate(context: ExtensionContext) {
 		};
 
 		// Options to control the language client
-		let clientOptions: LanguageClientOptions = {
+		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }]
 		};
 
-		let lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
+		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		// Create the language client and start the client.
-		let disposable = lc.start();
+		const disposable = lc.start();
 
-		// Push the disposable to the context's subscriptions so that the 
+		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
 		return disposable;
@@ -135,18 +136,23 @@ export function activate(context: ExtensionContext) {
 
 		const errorhandler = new LsErrorHandler(serverOptions);
 
+		const compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv || Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
+
 		const clientOptions: LanguageClientOptions = {
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
 			errorHandler: errorhandler,
-			revealOutputChannelOn: RevealOutputChannelOn.Info
+			revealOutputChannelOn: RevealOutputChannelOn.Info,
+			initializationOptions: {
+				compilerVenv: compilerVenv
+			}
 		};
-		let lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
+		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		lc.onReady().catch(errorhandler.rejected);
 
 		// Create the language client and start the client.
-		let disposable = lc.start();
+		const disposable = lc.start();
 
-		// Push the disposable to the context's subscriptions so that the 
+		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
 		return disposable;
@@ -175,7 +181,44 @@ export function activate(context: ExtensionContext) {
 		return venvPath;
 	}
 
-	var running: Disposable = undefined;
+	function registerExportCommand() {
+		const commandId = 'inmanta.exportToServer';
+
+		const commandHandler = (openedFileObj: object) => {
+			const pathOpenedFile: string = String(openedFileObj);
+			const cwdCommand: string = path.dirname(pathOpenedFile).replace(/^file:\/\//, "");
+			const pythonPath: string = workspace.getConfiguration('inmanta').pythonPath;
+			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
+
+			if(exportToServerChannel === null) {
+				exportToServerChannel = window.createOutputChannel("export to inmanta server");
+			}
+
+			// Clear the log and show the `export to inmanta server` log window to the user
+			exportToServerChannel.clear();
+			exportToServerChannel.show();
+
+			child.stdout.on('data', (data) => {
+				exportToServerChannel.appendLine(`stdout: ${data}`);
+			});
+
+			child.stderr.on('data', (data) => {
+				exportToServerChannel.appendLine(`stderr: ${data}`);
+			});
+
+			child.on('close', (code) => {
+				if (code === 0) {
+					exportToServerChannel.appendLine("Export successful");
+				} else {
+					exportToServerChannel.appendLine(`Export failed (exitcode=${code})`);
+				}
+			});
+		};
+
+		context.subscriptions.push(commands.registerCommand(commandId, commandHandler));
+    }
+
+	let running: Disposable = undefined;
 
 	if (enable) {
 		running = startPipe();
@@ -201,4 +244,6 @@ export function activate(context: ExtensionContext) {
 		}
 	}));
 
+	let exportToServerChannel: OutputChannel = null;
+	registerExportCommand();
 }
