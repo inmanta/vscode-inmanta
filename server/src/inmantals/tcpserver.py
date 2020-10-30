@@ -33,7 +33,7 @@ def main():
     logging.root.setLevel(0)
 
     logging.basicConfig(level=logging.DEBUG)
-    
+
     server = JsonRpcServer(InmantaLSHandler)
     server.listen(5432)
     IOLoop.current().start()
