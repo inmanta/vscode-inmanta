@@ -4,8 +4,9 @@ import * as net from 'net';
 
 import * as cp from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
 
-import { workspace, ExtensionContext, Disposable, window, Uri, commands } from 'vscode';
+import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
 import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 
 export function activate(context: ExtensionContext) {
@@ -36,7 +37,7 @@ export function activate(context: ExtensionContext) {
 		// Create the language client and start the client.
 		let disposable = lc.start();
 
-		// Push the disposable to the context's subscriptions so that the 
+		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
 		return disposable
@@ -138,7 +139,7 @@ export function activate(context: ExtensionContext) {
 		// Create the language client and start the client.
 		let disposable = lc.start();
 
-		// Push the disposable to the context's subscriptions so that the 
+		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
 		return disposable
@@ -168,14 +169,36 @@ export function activate(context: ExtensionContext) {
 	}
 
 	function register_export_command(){
-                const command_id = 'inmanta.exportToServer';
+		const command_id = 'inmanta.exportToServer';
 
-                const commandHandler = (name: string = 'world') => {
-                        console.log(`Hello ${name}!!!`);
-                };
+		const commandHandler = (opened_file_obj: object) => {
+			const path_opened_file: string = String(opened_file_obj);
+			const cwd_command: string = path.dirname(path_opened_file).replace(/^file:\/\//, "");
+			const pythonPath: string = workspace.getConfiguration('inmanta').pythonPath;
+			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwd_command}`});
 
-                context.subscriptions.push(commands.registerCommand(command_id, commandHandler));
-        }
+			// Show the `export to inmanta server` log window to the user
+			export_to_server_channel.show()
+
+			child.stdout.on('data', (data) => {
+				export_to_server_channel.appendLine(`stdout: ${data}`);
+			});
+
+			child.stderr.on('data', (data) => {
+				export_to_server_channel.appendLine(`stderr: ${data}`);
+			});
+
+			child.on('close', (code) => {
+				if(code == 0){
+					window.showInformationMessage("Export successful");
+				} else{
+					window.showErrorMessage(`Export failed (exitcode=${code})`);
+				}
+			});
+		};
+
+		context.subscriptions.push(commands.registerCommand(command_id, commandHandler));
+    }
 
 	var running: Disposable = undefined
 
@@ -202,6 +225,8 @@ export function activate(context: ExtensionContext) {
 			}
 		}
 	}));
+
+	const export_to_server_channel: OutputChannel = window.createOutputChannel("export to inmanta server");
 	register_export_command()
 
 }
