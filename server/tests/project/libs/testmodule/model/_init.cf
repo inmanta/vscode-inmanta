@@ -1,0 +1,9 @@
+entity SymbolTest:
+    string symbol
+end
+
+implementation symbolTest for SymbolTest:
+    local_symbol_test_var = 0
+end
+
+symbol = SymbolTest(symbol="a")
