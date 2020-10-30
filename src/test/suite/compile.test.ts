@@ -3,9 +3,9 @@ import { after, before, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-import { Uri, window, commands, workspace, TextDocument, TextEditor } from 'vscode';
+import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString } from 'vscode';
 
-const logPath: string = '/tmp/vscode-inmanta.log'
+const logPath: string = '/tmp/vscode-inmanta.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 const envPath: string = path.resolve(workspaceUri.fsPath, '.env');
@@ -23,10 +23,10 @@ function waitForCompile(timeout: number): Promise<boolean> {
 				fs.readFile(logPath, 'utf-8', (err, data) => {
 					if (err) {
 						console.log(err);
-					} else if (data.includes('Compile succeeded')) {
+					} else if (data.includes('Compilation succeeded')) {
 						clearInterval(readLogInterval);
 						resolve(true);
-					} else if (data.includes('Compile failed')) {
+					} else if (data.includes('Compilation failed')) {
 						clearInterval(readLogInterval);
 						resolve(false);
 					}
@@ -40,51 +40,67 @@ describe('Compile checks', () => {
 	const tests = [
 		{ source: 'valid.cf', succeed: true },
 		{ source: 'invalid.cf', succeed: false }
-	]
-	
+	];
+
 	before((done) => {
 		commands.executeCommand('vscode.openFolder', workspaceUri).then(done);
 	});
 
 	beforeEach((done) => {
 		Promise.all([
-			fs.remove(logPath),
+			fs.writeFile(logPath, ""),
 			fs.remove(libsPath),
 			fs.remove(envPath),
-			fs.remove(modelUri.fsPath)
-		]).then(values => {
-			console.error("values: " + values);
-			done()
+			fs.remove(modelUri.fsPath),
+		]).then(async values => {
+			await commands.executeCommand('workbench.action.closeActiveEditor');
+			done();
 		});
 	});
 
 	tests.forEach(test => {
-		it(`Check that ${test.source} ${test.succeed ? "does" : "doesn't"} compile`, (done) => {
+		it(`Check that ${test.source} ${test.succeed ? "does" : "doesn't"} compile`, () => {
+			return new Promise(async resolve => {
+				// Copy model into main.cf
+				const source: string = path.resolve(workspaceUri.fsPath, test.source);
+				await fs.copyFile(source, modelUri.fsPath);
+				
+				// Wait one second to let vscode notice we closed the previous editor
+				await new Promise(resolve => setTimeout(resolve, 1000));
 
-			// Copy model into main.cf
-			const source: string = path.resolve(workspaceUri.fsPath, test.source)
-			fs.copyFileSync(source, modelUri.fsPath);
+				// Opening model file
+				const doc: TextDocument = await workspace.openTextDocument(modelUri);
+				const edit: TextEditor = await window.showTextDocument(doc);
 
+				// Making file dirty and save it
+				const position: Position = new Position(0, 0);
+				const snippet: SnippetString = new SnippetString("\n");
+				await edit.insertSnippet(snippet, position);
+				assert.strictEqual(doc.isDirty, true, "The file should be dirty, but isn't");
+				await doc.save();
 
-			workspace.openTextDocument(modelUri).then((doc: TextDocument) => {
-				doc.save().then((result) => {
-					window.showTextDocument(doc).then((editor: TextEditor) => {
-						waitForCompile(10000).then((succeeded: boolean) => {
-							assert.strictEqual(succeeded, test.succeed);
+				const succeeded = await waitForCompile(10000);
+				assert.strictEqual(succeeded, test.succeed);
 
-							const libsExists = fs.pathExistsSync(libsPath);
-							assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
+				const libsExists = fs.pathExistsSync(libsPath);
+				assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
 
-							const envExists = fs.pathExistsSync(envPath);
-							assert.strictEqual(envExists, true, "The .env folder hasn't been created");
+				const envExists = fs.pathExistsSync(envPath);
+				assert.strictEqual(envExists, true, "The .env folder hasn't been created");
 
-							done();
-						});
-					});
-				});
+				resolve();
 			});
-
-
 		}).timeout(0);
+	});
+
+	after((done) => {
+		Promise.all([
+			fs.writeFile(logPath, ""),
+			fs.remove(libsPath),
+			fs.remove(envPath),
+			fs.remove(modelUri.fsPath),
+		]).then(values => {
+			done();
+		});
 	});
 });

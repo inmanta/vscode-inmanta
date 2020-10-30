@@ -126,7 +126,7 @@ class InmantaLSHandler(JsonRpcHandler):
             # run synchronous part in executor to allow context switching while awaiting
             await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
             await self.publish_diagnostics(None)
-            logger.info("Compile succeeded")
+            logger.info("Compilation succeeded")
 
         except CompilerException as e:
             params: Optional[lsp_types.PublishDiagnosticsParams]
