@@ -53,6 +53,18 @@ class DiagnosticSeverity(Enum):
     Hint: int = 4
 
 
+class MessageType(Enum):
+    """
+    Message type.
+    `LSP spec 3.15 <https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#window_showMessage>`__
+    """
+
+    Error: int = 1
+    Warning: int = 2
+    Info: int = 3
+    Debug: int = 4
+
+
 class Diagnostic(BaseModel):
     """
     Diagnostic, such as a compiler error or warning. Based on the

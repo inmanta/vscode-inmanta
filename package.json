@@ -64,9 +64,6 @@
       }
     }
   },
-  "mocha": {
-    "exit": true
-  },
   "dependencies": {
     "vscode-languageclient": "^6.1.3"
   },
