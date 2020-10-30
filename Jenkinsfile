@@ -26,7 +26,7 @@ pipeline {
         }
         stage('Extension tests') {
             steps {
-                sh 'rm -rf node_modules; npm i --also=dev; xvfb-run -a npm run test'
+                sh 'rm -rf node_modules; npm i --also=dev; xvfb-run npm run test'
             }
         }
     }
