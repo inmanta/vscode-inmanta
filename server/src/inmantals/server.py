@@ -67,7 +67,7 @@ class InmantaLSHandler(JsonRpcHandler):
         os.chdir(rootPath)
         init_options = kwargs.get("initializationOptions", None)
         if init_options:
-            self.compiler_venv_path = init_options.get("compilerVenv", ".env-ls-compiler")
+            self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
 
         return {
             "capabilities": {
