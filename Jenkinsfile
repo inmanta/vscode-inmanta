@@ -26,6 +26,7 @@ pipeline {
         }
         stage('Extension tests') {
             steps {
+                sh 'mkdir -p src/test/workspace/.vscode/; jo -p inmanta.ls.enabled=true inmanta.pythonPath=$INMANTA_TEST_ENV > src/test/workspace/.vscode/settings.json'
                 sh 'rm -rf node_modules; npm i --also=dev; xvfb-run npm run test'
             }
         }
