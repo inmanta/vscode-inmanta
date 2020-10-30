@@ -56,7 +56,6 @@ class DiagnosticSeverity(Enum):
 class MessageType(Enum):
     """
     Message type.
-    `LSP spec 3.15 <https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#window_showMessage>`__
     """
 
     Error: int = 1
