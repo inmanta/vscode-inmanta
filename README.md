@@ -14,7 +14,7 @@ Inmanta Documentation on [Read the Docs](https://inmanta.com/resources/docs/)
 ### Syntax coloring
 ![Syntax coloring screenshot](images/screenshot-syntax-coloring.png)
 
-### CTRL + Click navigation
+### Code navigation
 ![Navigation screenshot](images/screenshot-ctrl-click.png)
 
 ### Compilation error reporting
