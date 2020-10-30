@@ -129,7 +129,7 @@ export function activate(context: ExtensionContext) {
 
 		let compilerVenv = workspace.getConfiguration('inmanta').compilerVenv;
 		if (!compilerVenv) {
-			compilerVenv = Uri.joinPath(context.globalStorageUri, "compiler-venv").fsPath;
+			compilerVenv = Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
 		}
 
 		const clientOptions: LanguageClientOptions = {
