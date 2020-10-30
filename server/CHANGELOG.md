@@ -1,4 +1,4 @@
-# v 0.2.2 (?)
+# v 1.0.0 (?)
 Changes in this release:
 - Added language server to client diagnostics notifications to highlight errors (#18)
 

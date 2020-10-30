@@ -1,4 +1,4 @@
-# v 0.3.5 (?)
+# v 1.0.0 (?)
 Changes in this release:
 - Added error highlighting (#18)
 

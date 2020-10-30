@@ -18,7 +18,7 @@ setup(
     packages=find_packages("src"),
     install_requires=requires,
 
-    version="0.2.2",
+    version="1.0.0",
 
     description="Inmanta Language Server",
     long_description=long_description,
@@ -28,7 +28,7 @@ setup(
     license="Apache Software License",
     url="https://github.com/inmanta/vscode-inmanta",
     keywords=["ide","language-server","vscode", "inmanta"],
-    classifiers=["Development Status :: 3 - Alpha",
+    classifiers=["Development Status :: 5 - Stable",
                  "Intended Audience :: Developers",
                  "Intended Audience :: Telecommunications Industry",
                  "License :: OSI Approved :: Apache Software License",
