@@ -4,8 +4,9 @@ import * as net from 'net';
 
 import * as cp from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
 
-import { workspace, ExtensionContext, Disposable, window, Uri } from 'vscode';
+import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
 import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 
 export function activate(context: ExtensionContext) {
@@ -36,7 +37,7 @@ export function activate(context: ExtensionContext) {
 		// Create the language client and start the client.
 		let disposable = lc.start();
 
-		// Push the disposable to the context's subscriptions so that the 
+		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
 		return disposable
@@ -146,7 +147,7 @@ export function activate(context: ExtensionContext) {
 		// Create the language client and start the client.
 		let disposable = lc.start();
 
-		// Push the disposable to the context's subscriptions so that the 
+		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
 		return disposable
@@ -175,6 +176,43 @@ export function activate(context: ExtensionContext) {
 		return venvPath;
 	}
 
+	function register_export_command(){
+		const command_id = 'inmanta.exportToServer';
+
+		const commandHandler = (opened_file_obj: object) => {
+			const path_opened_file: string = String(opened_file_obj);
+			const cwd_command: string = path.dirname(path_opened_file).replace(/^file:\/\//, "");
+			const pythonPath: string = workspace.getConfiguration('inmanta').pythonPath;
+			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwd_command}`});
+
+			if(export_to_server_channel == null){
+				export_to_server_channel = window.createOutputChannel("export to inmanta server");
+			}
+
+			// Clear the log and show the `export to inmanta server` log window to the user
+			export_to_server_channel.clear();
+			export_to_server_channel.show();
+
+			child.stdout.on('data', (data) => {
+				export_to_server_channel.appendLine(`stdout: ${data}`);
+			});
+
+			child.stderr.on('data', (data) => {
+				export_to_server_channel.appendLine(`stderr: ${data}`);
+			});
+
+			child.on('close', (code) => {
+				if(code == 0){
+					export_to_server_channel.appendLine("Export successful");
+				} else{
+					export_to_server_channel.appendLine(`Export failed (exitcode=${code})`);
+				}
+			});
+		};
+
+		context.subscriptions.push(commands.registerCommand(command_id, commandHandler));
+    }
+
 	var running: Disposable = undefined
 
 	if (enable) {
@@ -201,4 +239,6 @@ export function activate(context: ExtensionContext) {
 		}
 	}));
 
+	var export_to_server_channel: OutputChannel = null;
+	register_export_command();
 }

@@ -68,6 +68,22 @@
           "scope": "window"
         }
       }
+    },
+    "commands": [
+      {
+        "command": "inmanta.exportToServer",
+        "title": "Export to server",
+        "category": "inmanta"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "editorLangId == inmanta",
+          "command": "inmanta.exportToServer",
+          "group": "navigation"
+        }
+      ]
     }
   },
   "dependencies": {
@@ -75,7 +91,8 @@
     "vscode-languageclient": "^6.1.3"
   },
   "activationEvents": [
-    "onLanguage:inmanta"
+    "onLanguage:inmanta",
+    "onCommand:inmanta.exportToServer"
   ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
