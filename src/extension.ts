@@ -182,8 +182,8 @@ export function activate(context: ExtensionContext) {
 			}
 
 			// Clear the log and show the `export to inmanta server` log window to the user
-			export_to_server_channel.clear()
-			export_to_server_channel.show()
+			export_to_server_channel.clear();
+			export_to_server_channel.show();
 
 			child.stdout.on('data', (data) => {
 				export_to_server_channel.appendLine(`stdout: ${data}`);
@@ -195,9 +195,9 @@ export function activate(context: ExtensionContext) {
 
 			child.on('close', (code) => {
 				if(code == 0){
-					window.showInformationMessage("Export successful");
+					export_to_server_channel.appendLine("Export successful");
 				} else{
-					window.showErrorMessage(`Export failed (exitcode=${code})`);
+					export_to_server_channel.appendLine(`Export failed (exitcode=${code})`);
 				}
 			});
 		};
