@@ -1,8 +1,8 @@
-# Change Log
+# v 1.0.0 (?)
+Changes in this release:
+- Added error highlighting (#18)
+- Added export to server button (#8)
+- Use separate virtual env for the compiler (#9)
 
-[Changelog](https://github.com/inmanta/vscode-inmanta/CHANGELOG.md)
-
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [0.0.1]
+# v 0.0.1
 - Initial release

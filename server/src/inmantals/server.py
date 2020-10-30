@@ -16,6 +16,7 @@
     Contact: code@inmanta.com
 """
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -64,6 +65,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
         self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = None
+        self.compiler_venv_path: Optional[str] = None
 
     async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
@@ -71,6 +73,9 @@ class InmantaLSHandler(JsonRpcHandler):
         self.rootPath = rootPath
         self.rootUrl = rootUri
         os.chdir(rootPath)
+        init_options = kwargs.get("initializationOptions", None)
+        if init_options:
+            self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
 
         value_set: List[int]
         try:
@@ -116,8 +121,13 @@ class InmantaLSHandler(JsonRpcHandler):
             resources.resource.reset()
             handler.Commander.reset()
 
+            project_signature = inspect.signature(Project.__init__)
             # fresh project
-            Project.set(Project(self.rootPath))
+            if "venv_path" in project_signature.parameters.keys() and self.compiler_venv_path:
+                logger.debug("Using venv path " + str(self.compiler_venv_path))
+                Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
+            else:
+                Project.set(Project(self.rootPath))
 
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
