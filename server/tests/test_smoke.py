@@ -93,17 +93,14 @@ async def client(server) -> AsyncIterator[JsonRPC]:
     client.ios.close()
 
 
-async def initialize_project(client: JsonRPC, project: str, client_capabilities: Optional[Dict[str, object]] = None) -> None:
+async def initialize(client: JsonRPC, project: str, client_capabilities: Optional[Dict[str, object]] = None) -> None:
     """
     Initializes the server with the basic_test project.
     """
     if client_capabilities is None:
         client_capabilities = {}
-    path = os.path.join(os.path.dirname(__file__), "project")
+    path = os.path.join(os.path.dirname(__file__), project)
     ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", capabilities=client_capabilities)
-    await client.assert_one(ret)
-
-    ret = await client.call("initialized")
     await client.assert_one(ret)
 
 
@@ -207,11 +204,40 @@ def test_lsp_type_serialization() -> None:
 
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
+async def test_diagnostics(client: JsonRPC) -> None:
+    project_name: str = "project_diagnostics"
+    await initialize(client, project_name)
+
+    await client.call("initialized")
+
+    notification: Dict = json.loads(await client.read_one())
+    assert notification["method"] == "textDocument/publishDiagnostics"
+    diagnostics: lsp_types.PublishDiagnosticsParams = lsp_types.PublishDiagnosticsParams(**notification["params"])
+
+    assert diagnostics == lsp_types.PublishDiagnosticsParams(
+        uri="file://%s" % os.path.join(os.path.dirname(__file__), project_name, "main.cf"),
+        diagnostics=[
+            lsp_types.Diagnostic(
+                range=lsp_types.Range(
+                    start=lsp_types.Position(line=5, character=21), end=lsp_types.Position(line=5, character=46)
+                ),
+                severity=lsp_types.DiagnosticSeverity.Error,
+                message="could not find type nonExistantImplementation in namespace __config__",
+            )
+        ],
+    )
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.asyncio
 async def test_symbol_provider(client: JsonRPC) -> None:
     ret: int
     result: object
 
-    await initialize_project(client, "project")
+    await initialize(client, "project")
+
+    ret = await client.call("initialized")
+    await client.assert_one(ret)
 
     ret = await client.call("workspace/symbol", query="symbol")
     result = await client.assert_one(ret)
