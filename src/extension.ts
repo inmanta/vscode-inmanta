@@ -177,7 +177,12 @@ export function activate(context: ExtensionContext) {
 			const pythonPath: string = workspace.getConfiguration('inmanta').pythonPath;
 			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwd_command}`});
 
-			// Show the `export to inmanta server` log window to the user
+			if(export_to_server_channel == null){
+				export_to_server_channel = window.createOutputChannel("export to inmanta server");
+			}
+
+			// Clear the log and show the `export to inmanta server` log window to the user
+			export_to_server_channel.clear()
 			export_to_server_channel.show()
 
 			child.stdout.on('data', (data) => {
@@ -226,7 +231,6 @@ export function activate(context: ExtensionContext) {
 		}
 	}));
 
-	const export_to_server_channel: OutputChannel = window.createOutputChannel("export to inmanta server");
-	register_export_command()
-
+	var export_to_server_channel: OutputChannel = null;
+	register_export_command();
 }
