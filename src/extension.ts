@@ -73,8 +73,9 @@ export function activate(context: ExtensionContext) {
 		}
 
 		diagnose() {
-			if (this._child !== undefined)
-				{return;}
+			if (this._child !== undefined) {
+				return;
+			}
 
 			const pp: string = createVenvIfNotExists();
 
