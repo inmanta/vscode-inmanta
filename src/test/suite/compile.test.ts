@@ -8,7 +8,7 @@ import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, S
 const logPath: string = '/tmp/vscode-inmanta.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
-const envPath: string = path.resolve(workspaceUri.fsPath, '.env');
+const envPath: string = workspace.getConfiguration('inmanta').compilerVenv || path.resolve(workspaceUri.fsPath, '.env-ls-compiler');
 
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
@@ -86,7 +86,7 @@ describe('Compile checks', () => {
 				assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
 
 				const envExists = fs.pathExistsSync(envPath);
-				assert.strictEqual(envExists, true, "The .env folder hasn't been created");
+				assert.strictEqual(envExists, true, `The environment folder ("${envPath}") hasn't been created`);
 
 				resolve();
 			});
