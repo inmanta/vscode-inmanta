@@ -16,12 +16,16 @@ pipeline {
     } 
 
     stages {
-        stage('Test') {
+        stage('Server tests') {
             steps {
                 sh 'rm -rf $INMANTA_TEST_ENV; python3 -m venv $INMANTA_TEST_ENV; $INMANTA_TEST_ENV/bin/python3 -m pip install -U tox tox_venv'
                 dir("server"){
                     sh "$INMANTA_TEST_ENV/bin/python3 -m tox --recreate"
                 }
+            }
+        }
+        stage('Extension tests') {
+            steps {
                 sh 'rm -rf node_modules; npm i --also=dev; xvfb-run npm run test'
             }
         }
