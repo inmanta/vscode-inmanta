@@ -16,6 +16,7 @@
     Contact: code@inmanta.com
 """
 import asyncio
+import inspect
 import json
 import logging
 from inmantals import lsp_types
@@ -56,6 +57,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.reverse_anchormap = None
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
+        self.compiler_venv_path: Optional[str] = None
 
     async def initialize(self, rootPath, rootUri, **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
@@ -63,6 +65,9 @@ class InmantaLSHandler(JsonRpcHandler):
         self.rootPath = rootPath
         self.rootUrl = rootUri
         os.chdir(rootPath)
+        init_options = kwargs.get("initializationOptions", None)
+        if init_options:
+            self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
 
         return {
             "capabilities": {
@@ -89,8 +94,13 @@ class InmantaLSHandler(JsonRpcHandler):
             resources.resource.reset()
             handler.Commander.reset()
 
+            project_signature = inspect.signature(Project.__init__)
             # fresh project
-            Project.set(Project(self.rootPath))
+            if "venv_path" in project_signature.parameters.keys() and self.compiler_venv_path:
+                logger.debug("Using venv path " + str(self.compiler_venv_path))
+                Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
+            else:
+                Project.set(Project(self.rootPath))
 
             anchormap = compiler.anchormap()
 
