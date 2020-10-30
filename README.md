@@ -10,9 +10,15 @@ Inmanta Documentation on [Read the Docs](https://inmanta.com/resources/docs/)
 
 ## Features
 
-For now, just basic Syntax Coloring
 
-![Screenshot](images/screenshot.png)
+### Syntax coloring
+![Syntax coloring screenshot](images/screenshot-syntax-coloring.png)
+
+### CTRL + Click navigation
+![Navigation screenshot](images/screenshot-ctrl-click.png)
+
+### Compilation error reporting
+![Error reporting screenshot](images/screenshot-error-reporting.png)
 
 ## Alpha Features
 
@@ -36,7 +42,11 @@ None
 
 ## Extension Settings
 
-None
+![Settings screenshot](images/screenshot-settings.png)
+
+The extension currently has two settings:
+ - inmanta.ls.enabled: Whether or not activate the Inmanta Language server (you probably want to).
+ - inmanta.pythonPath: Python path the extension should use.
 
 ## Known Issues
 
