@@ -22,6 +22,7 @@ pipeline {
                 dir("server"){
                     sh "$INMANTA_TEST_ENV/bin/python3 -m tox --recreate"
                 }
+                sh 'rm -rf node_modules; npm i --also=dev; npm run test'
             }
         }
     }
