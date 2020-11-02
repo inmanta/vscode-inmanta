@@ -31,7 +31,7 @@ The extension adds a button in the upper right corner of the editing panel of an
 
 ```
 [config]
-fact-expire = 1800
+fact-expire=1800
 environment=f2f6ac46-10a2-4e75-897d-b91c51c78df2  # Replace this by the right environment uuid
 
 [compiler_rest_transport]
