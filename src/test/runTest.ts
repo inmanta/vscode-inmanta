@@ -1,9 +1,28 @@
 import * as path from 'path';
 
 import { runTests } from 'vscode-test';
+import * as fs from 'fs-extra';
 
 async function main() {
+
 	try {
+		// Loading config of testing workspace
+		const pythonPath = process.env.INMANTA_PYTHON_PATH;
+		const compilerVenv = process.env.INMANTA_COMPILER_VENV;
+		if (pythonPath === undefined) throw new Error("INMANTA_PYTHON_PATH has to be set");
+		if (compilerVenv === undefined) throw new Error("INMANTA_COMPILER_VENV has to be set");
+
+		const settings = {
+			"inmanta.ls.enabled": true,
+			"inmanta.pythonPath": pythonPath,
+			"inmanta.compilerVenv": compilerVenv
+		}
+
+		// Saving settings of testing workspace to file
+		const workspaceSettingsPath = path.resolve(__dirname, './workspace/.vscode/settings.json');
+		await fs.ensureFile(workspaceSettingsPath);
+		await fs.writeJSON(workspaceSettingsPath, settings);
+
 		// The folder containing the Extension Manifest package.json
 		// Passed to `--extensionDevelopmentPath`
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../');
@@ -18,7 +37,7 @@ async function main() {
 			extensionTestsPath: extensionTestsPath,
 		});
 	} catch (err) {
-		console.error('Failed to run tests');
+		console.error('Failed to run tests: ' + err);
 		process.exit(1);
 	}
 }
