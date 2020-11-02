@@ -19,7 +19,7 @@ async function main() {
 		}
 
 		// Saving settings of testing workspace to file
-		const workspaceSettingsPath = path.resolve(__dirname, './workspace/.vscode/settings.json');
+		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/workspace/.vscode/settings.json');
 		await fs.ensureFile(workspaceSettingsPath);
 		await fs.writeJSON(workspaceSettingsPath, settings);
 
