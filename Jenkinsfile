@@ -35,7 +35,7 @@ pipeline {
                 sh 'rm -rf node_modules'
                 sh 'npm i --also=dev'
                 sh '$INMANTA_PYTHON_PATH -m pip install -e $INMANTA_SERVER_PATH'
-                sh 'INMANTA_COMPILER_VENV="" xvfb-run npm run test'
+                sh 'xvfb-run npm run test'
             }
         }
     }
