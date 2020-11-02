@@ -17,7 +17,7 @@ The extension makes your life easier by coloring syntax keywords or the Inmanta 
 ![Syntax coloring screenshot](images/screenshot-syntax-coloring.png)
 
 ### Code navigation
-The extension allows you to navigate to the Definition of types used by using the shortcut `Ctrl + Click` when you hover the element.  And will show an overview of the Entity if you don't click.
+When pressing on `Ctrl` and hovering an element, and overview of its type Entity is shown.  If you click on it (while still having `Ctrl` pressed on) you can navigate to the definition of the entity.
 
 ![Navigation screenshot](images/screenshot-ctrl-click.png)
 
@@ -31,7 +31,6 @@ The extension adds a button in the upper right corner of the editing panel of an
 
 ```
 [config]
-fact-expire=1800
 environment=f2f6ac46-10a2-4e75-897d-b91c51c78df2  # Replace this by the right environment uuid
 
 [compiler_rest_transport]
