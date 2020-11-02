@@ -38,12 +38,12 @@ def main():
     stdin = PipeIOStream(sys.stdin.fileno())
     stdout = PipeIOStream(sys.stdout.fileno())
     handler = InmantaLSHandler(stdin, stdout, "0.0.0.0")
-    sys.stderr.write("starting")
+    sys.stderr.write("starting\n")
     sys.stderr.flush()
 
     IOLoop.current().run_sync(handler.start)
 
-    sys.stderr.write("stopped")
+    sys.stderr.write("stopped\n")
     sys.stderr.flush()
 
 

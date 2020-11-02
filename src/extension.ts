@@ -87,11 +87,11 @@ export function activate(context: ExtensionContext) {
 
 			const script = "import sys\n" +
 				"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
-				"  exit(4)\n" + 
-				"try:\n" + 
-				"  import inmantals.pipeserver\n" + 
+				"  exit(4)\n" +
+				"try:\n" +
+				"  import inmantals.pipeserver\n" +
 				"  sys.exit(0)\n" +
-				"except:\n" + 
+				"except:\n" +
 				"  sys.exit(3)";
 
 			this._child = cp.spawn(this._serverOptions.command, ["-c", script]);
@@ -136,7 +136,14 @@ export function activate(context: ExtensionContext) {
 
 		const errorhandler = new LsErrorHandler(serverOptions);
 
-		const compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv || Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
+		let compilerVenv = workspace.getConfiguration('inmanta').compilerVenv;
+		if (!compilerVenv) {
+			if(context.storageUri == undefined){
+				window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
+				return undefined;
+			}
+			compilerVenv = Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
+		}
 
 		const clientOptions: LanguageClientOptions = {
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
