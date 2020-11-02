@@ -1,0 +1,9 @@
+entity Test:
+    string attr
+end
+
+
+implement Test using nonExistantImplementation
+
+
+# don't add anything above this line to prevent line number failures in test case
