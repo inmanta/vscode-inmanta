@@ -77,6 +77,17 @@ class DiagnosticSeverity(Enum):
     Hint: int = 4
 
 
+class MessageType(Enum):
+    """
+    Message type.
+    """
+
+    Error: int = 1
+    Warning: int = 2
+    Info: int = 3
+    Debug: int = 4
+
+
 class Diagnostic(LspModel):
     """
     Diagnostic, such as a compiler error or warning. This type is more restrictive than the spec: it drops some optional fields.
