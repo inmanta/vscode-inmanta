@@ -26,7 +26,7 @@ pipeline {
                     $INMANTA_LS_TEST_ENV/bin/python3 -m pip install -U tox tox_venv
                 '''
                 dir("server"){
-                    sh "$INMANTA_TEST_ENV/bin/python3 -m tox --recreate"
+                    sh "$INMANTA_LS_TEST_ENV/bin/python3 -m tox --recreate"
                 }
             }
         }
