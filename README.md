@@ -19,10 +19,16 @@ The extension makes your life easier by highlighting syntax keywords or the Inma
 ### Code navigation
 When pressing on `Ctrl` and hovering an element, and overview of its type Entity is shown.  If you click on it (while still having `Ctrl` pressed on) you can navigate to the definition of the entity.
 
+> :bulb: To work properly, this feature requires the Inmanta Language Server to be running:  
+> In the inmanta extension configuration (`ctrl+, > extensions > inmanta`), set `LS`: to Enabled
+
 ![Navigation screenshot](images/screenshot-ctrl-click.png)
 
 ### Compilation error reporting
 The extension will run a pre-compilation every time you save your file.  Making it easier for you to spot syntax and basic model errors.  When hovering the problematic bit, an explaination message is shown, and more details can be found in the **Output** panel (when selecting *Inmanta Server Language* in the expandable list on the right).
+
+> :bulb: To work properly, this feature requires the Inmanta Language Server to be running:  
+> In the inmanta extension configuration (`ctrl+, > extensions > inmanta`), set `LS`: to Enabled
 
 ![Error reporting screenshot](images/screenshot-error-reporting.png)
 
@@ -41,19 +47,6 @@ port=8888                                         # Replace this by the port on 
 host=10.0.0.102                                   # Replace this by the address of the host
 port=8888                                         # Replace this by the port on which the server is listening
 ```
-
-## Installation
-
-To enable ctrl-click for code navigation, a few extra steps are required:
-
-- Open an inmanta project in VSCode
-- Create a python36 virtual env (`python3.6 -m venv /home/user/.inmanta-vscode`)
-- Update the inmanta extension configuration (`ctrl+,`, `extensions`, `inmanta`)
-  - Set the `Python Path` to the virtual env you just created (`/home/user/.inmanta-vscode/bin/python3`)
-  - Set `LS`: to Enabled
-- When prompted to install the extensions, say yes.
-- Wait for a notification to notify you that the compilation suceeded (or failed).
-- `ctrl-click` on a constructor call to jump to the type definition.
 
 ## Requirements
 
