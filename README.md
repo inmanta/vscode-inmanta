@@ -17,7 +17,7 @@ The extension makes your life easier by highlighting syntax keywords or the Inma
 ![Syntax coloring screenshot](images/screenshot-syntax-coloring.png)
 
 ### Code navigation
-When pressing on `Ctrl` and hovering an element, and overview of its type Entity is shown.  If you click on it (while still having `Ctrl` pressed on) you can navigate to the definition of the entity.
+When you hover an element while pressing `Ctrl`, an overview of its Entity type is shown. If you click it (while still having `Ctrl` pressed) you can navigate to the definition of the entity.
 
 > :bulb: To work properly, this feature requires the Inmanta Language Server to be running:  
 > In the inmanta extension configuration (`ctrl+, > extensions > inmanta`), set `LS`: to Enabled
