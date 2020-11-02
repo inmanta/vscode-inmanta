@@ -13,14 +13,17 @@ pipeline {
 
     environment {
       INMANTA_TEST_ENV="${env.WORKSPACE}/env"
+      INMANTA_SERVER_PATH="${env.WORKSPACE}/server"
+      INMANTA_PYTHON_PATH="${env.WORKSPACE}/env/bin/python3"
+      INMANTA_COMPILER_VENV=""
     } 
 
     stages {
         stage('Server tests') {
             steps {
-                sh 'rm -rf $INMANTA_TEST_ENV; python3 -m venv $INMANTA_TEST_ENV; $INMANTA_TEST_ENV/bin/python3 -m pip install -U tox tox_venv'
+                sh 'rm -rf $INMANTA_TEST_ENV; python3 -m venv $INMANTA_TEST_ENV; $INMANTA_PYTHON_PATH -m pip install -U tox tox_venv'
                 dir("server"){
-                    sh "$INMANTA_TEST_ENV/bin/python3 -m tox --recreate"
+                    sh "$INMANTA_PYTHON_PATH -m tox --recreate"
                 }
             }
         }
@@ -28,8 +31,8 @@ pipeline {
             steps {
                 sh 'rm -rf node_modules'
                 sh 'npm i --also=dev'
-                sh '$INMANTA_TEST_ENV/bin/python3 -m pip install -e "${env.WORKSPACE}/server"'
-                sh 'INMANTA_PYTHON_PATH="$INMANTA_TEST_ENV/bin/python3" INMANTA_COMPILER_VENV="" xvfb-run npm run test'
+                sh '$INMANTA_PYTHON_PATH -m pip install -e $INMANTA_SERVER_PATH'
+                sh 'xvfb-run npm run test'
             }
         }
     }
