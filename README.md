@@ -69,7 +69,7 @@ You can find the settings of the extension, in the Settings panel, under `Extens
 The extension currently has three settings:
  - inmanta.compilerVenv: Path to the virtual environment the compiler should use.
  - inmanta.ls.enabled: Whether or not activate the Inmanta Language server (you probably want to).
- - inmanta.pythonPath: Python path the extension should use.
+ - inmanta.pythonPath: Python path the extension should use to run the language server.
 
 ## Known Issues
 
@@ -91,4 +91,3 @@ Syntax updates and publish in marketplace
 Initial release
 
 **Enjoy!**
-
