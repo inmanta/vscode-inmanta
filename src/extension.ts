@@ -15,9 +15,9 @@ export function activate(context: ExtensionContext) {
 
 	function startTCP() {
 		// have to start server by hand, debugging only
-		let serverOptions: ServerOptions = function () {
+		const serverOptions: ServerOptions = function () {
 			return new Promise((resolve, reject) => {
-				var client = new net.Socket();
+				const client = new net.Socket();
 				client.connect(5432, "127.0.0.1", function () {
 					resolve({
 						reader: client,
@@ -28,14 +28,14 @@ export function activate(context: ExtensionContext) {
 		};
 
 		// Options to control the language client
-		let clientOptions: LanguageClientOptions = {
+		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }]
 		};
 
-		let lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
+		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		// Create the language client and start the client.
-		let disposable = lc.start();
+		const disposable = lc.start();
 
 		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
@@ -74,8 +74,9 @@ export function activate(context: ExtensionContext) {
 		}
 
 		diagnose() {
-			if (this._child !== undefined)
-				{return;}
+			if (this._child !== undefined) {
+				return;
+			}
 
 			const pp: string = createVenvIfNotExists();
 
@@ -135,10 +136,7 @@ export function activate(context: ExtensionContext) {
 
 		const errorhandler = new LsErrorHandler(serverOptions);
 
-		let compilerVenv = workspace.getConfiguration('inmanta').compilerVenv;
-		if (!compilerVenv) {
-			compilerVenv = Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
-		}
+		const compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv || Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
 
 		const clientOptions: LanguageClientOptions = {
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
@@ -147,12 +145,12 @@ export function activate(context: ExtensionContext) {
 			initializationOptions: {
 				compilerVenv: compilerVenv
 			}
-		}
-		let lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
+		};
+		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		lc.onReady().catch(errorhandler.rejected);
 
 		// Create the language client and start the client.
-		let disposable = lc.start();
+		const disposable = lc.start();
 
 		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
@@ -183,44 +181,44 @@ export function activate(context: ExtensionContext) {
 		return venvPath;
 	}
 
-	function register_export_command(){
-		const command_id = 'inmanta.exportToServer';
+	function registerExportCommand() {
+		const commandId = 'inmanta.exportToServer';
 
-		const commandHandler = (opened_file_obj: object) => {
-			const path_opened_file: string = String(opened_file_obj);
-			const cwd_command: string = path.dirname(path_opened_file).replace(/^file:\/\//, "");
+		const commandHandler = (openedFileObj: object) => {
+			const pathOpenedFile: string = String(openedFileObj);
+			const cwdCommand: string = path.dirname(pathOpenedFile).replace(/^file:\/\//, "");
 			const pythonPath: string = workspace.getConfiguration('inmanta').pythonPath;
-			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwd_command}`});
+			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
 
-			if(export_to_server_channel == null){
-				export_to_server_channel = window.createOutputChannel("export to inmanta server");
+			if(exportToServerChannel === null) {
+				exportToServerChannel = window.createOutputChannel("export to inmanta server");
 			}
 
 			// Clear the log and show the `export to inmanta server` log window to the user
-			export_to_server_channel.clear();
-			export_to_server_channel.show();
+			exportToServerChannel.clear();
+			exportToServerChannel.show();
 
 			child.stdout.on('data', (data) => {
-				export_to_server_channel.appendLine(`stdout: ${data}`);
+				exportToServerChannel.appendLine(`stdout: ${data}`);
 			});
 
 			child.stderr.on('data', (data) => {
-				export_to_server_channel.appendLine(`stderr: ${data}`);
+				exportToServerChannel.appendLine(`stderr: ${data}`);
 			});
 
 			child.on('close', (code) => {
-				if(code == 0){
-					export_to_server_channel.appendLine("Export successful");
-				} else{
-					export_to_server_channel.appendLine(`Export failed (exitcode=${code})`);
+				if (code === 0) {
+					exportToServerChannel.appendLine("Export successful");
+				} else {
+					exportToServerChannel.appendLine(`Export failed (exitcode=${code})`);
 				}
 			});
 		};
 
-		context.subscriptions.push(commands.registerCommand(command_id, commandHandler));
+		context.subscriptions.push(commands.registerCommand(commandId, commandHandler));
     }
 
-	var running: Disposable = undefined
+	let running: Disposable = undefined;
 
 	if (enable) {
 		running = startPipe();
@@ -246,6 +244,6 @@ export function activate(context: ExtensionContext) {
 		}
 	}));
 
-	var export_to_server_channel: OutputChannel = null;
-	register_export_command();
+	let exportToServerChannel: OutputChannel = null;
+	registerExportCommand();
 }

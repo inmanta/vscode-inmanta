@@ -187,12 +187,12 @@ class InmantaLSHandler(JsonRpcHandler):
                     ],
                 )
             await self.publish_diagnostics(params)
-            await self.send_show_message(1, "Compilation failed: " + e.get_message())
+            await self.send_show_message(lsp_types.MessageType.Error, "Compilation failed: " + e.get_message())
             logger.exception("Compilation failed")
 
         except Exception:
             await self.publish_diagnostics(None)
-            await self.send_show_message(1, "Compilation failed")
+            await self.send_show_message(lsp_types.MessageType.Error, "Compilation failed")
             logger.exception("Compilation failed")
 
     async def initialized(self):
@@ -354,14 +354,9 @@ class InmantaLSHandler(JsonRpcHandler):
 
         return result
 
-    async def send_show_message(self, type: int, message: str):
+    async def send_show_message(self, type: lsp_types.MessageType, message: str):
         """
         Show a pop up message to the user, type gives the level of the message, message is the content
-        Available types are:
-         * 1: Error
-         * 2: Warning
-         * 3: Info
-         * 4: Debug
         """
         await self.send_notification(
             "window/showMessage", {"type": type, "message": message}
