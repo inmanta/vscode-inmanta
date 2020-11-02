@@ -86,9 +86,6 @@
       ]
     }
   },
-  "mocha": {
-    "exit": true
-  },
   "dependencies": {
     "vsce": "^1.81.1",
     "vscode-languageclient": "^6.1.3"
