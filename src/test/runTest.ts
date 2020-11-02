@@ -9,14 +9,18 @@ async function main() {
 		// Loading config of testing workspace
 		const pythonPath = process.env.INMANTA_PYTHON_PATH;
 		const compilerVenv = process.env.INMANTA_COMPILER_VENV;
-		if (pythonPath === undefined) throw new Error("INMANTA_PYTHON_PATH has to be set");
-		if (compilerVenv === undefined) throw new Error("INMANTA_COMPILER_VENV has to be set");
+		if (pythonPath === undefined) {
+			throw new Error("INMANTA_PYTHON_PATH has to be set");
+		}
+		if (compilerVenv === undefined) {
+			throw new Error("INMANTA_COMPILER_VENV has to be set");
+		}
 
 		const settings = {
 			"inmanta.ls.enabled": true,
 			"inmanta.pythonPath": pythonPath,
 			"inmanta.compilerVenv": compilerVenv
-		}
+		};
 
 		// Saving settings of testing workspace to file
 		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/workspace/.vscode/settings.json');

@@ -15,7 +15,6 @@ pipeline {
       INMANTA_TEST_ENV="${env.WORKSPACE}/env"
       INMANTA_SERVER_PATH="${env.WORKSPACE}/server"
       INMANTA_PYTHON_PATH="${env.WORKSPACE}/env/bin/python3"
-      INMANTA_COMPILER_VENV=""
     } 
 
     stages {
@@ -32,7 +31,7 @@ pipeline {
                 sh 'rm -rf node_modules'
                 sh 'npm i --also=dev'
                 sh '$INMANTA_PYTHON_PATH -m pip install -e $INMANTA_SERVER_PATH'
-                sh 'xvfb-run npm run test'
+                sh 'INMANTA_COMPILER_VENV="" xvfb-run npm run test'
             }
         }
     }
