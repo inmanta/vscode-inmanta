@@ -297,7 +297,7 @@ async def test_symbol_provider(client: JsonRPC) -> None:
             location=lsp_types.Location(
                 uri=uri_testmodule_model,
                 range=lsp_types.Range(
-                    start=lsp_types.Position(line=1, character=0), end=lsp_types.Position(line=1, character=0)
+                    start=lsp_types.Position(line=1, character=0), end=lsp_types.Position(line=2, character=0)
                 ),
             ),
             container_name="testmodule::SymbolTest",

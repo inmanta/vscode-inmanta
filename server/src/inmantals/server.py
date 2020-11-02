@@ -230,7 +230,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 "uri": "file://" + loc.file,
                 "range": {
                     "start": {"line": loc.lnr - 1, "character": 0},
-                    "end": {"line": loc.lnr - 1, "character": 0},
+                    "end": {"line": loc.lnr, "character": 0},
                 },
             }
 
