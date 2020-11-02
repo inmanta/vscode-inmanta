@@ -26,7 +26,10 @@ pipeline {
         }
         stage('Extension tests') {
             steps {
-                sh 'rm -rf node_modules; npm i --also=dev; INMANTA_PYTHON_PATH="$INMANTA_TEST_ENV/bin/python3" INMANTA_COMPILER_VENV="" xvfb-run npm run test'
+                sh 'rm -rf node_modules'
+                sh 'npm i --also=dev'
+                sh '$INMANTA_TEST_ENV/bin/python3 -m pip install -e "${env.WORKSPACE}/server"'
+                sh 'INMANTA_PYTHON_PATH="$INMANTA_TEST_ENV/bin/python3" INMANTA_COMPILER_VENV="" xvfb-run npm run test'
             }
         }
     }
