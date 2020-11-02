@@ -27,7 +27,21 @@ The extension will run a pre-compilation every time you save your file.  Making 
 ![Error reporting screenshot](images/screenshot-error-reporting.png)
 
 ### Model export
+The extension adds a button in the upper right corner of the editing panel of any inmanta model file (ending in `.cf`): **Export to server**.  This buttons allows you to easily export the current open model to an Inmanta server running.  Note that for this to work, you need to have previously configured the server, and added the following informations in the `.inmanta` configuration file at the root of the project:
 
+```
+[config]
+fact-expire = 1800
+environment=f2f6ac46-10a2-4e75-897d-b91c51c78df2  # Replace this by the right environment uuid
+
+[compiler_rest_transport]
+host=10.0.0.102                                   # Replace this by the address of the host
+port=8888                                         # Replace this by the port on which the server is listening
+
+[cmdline_rest_transport]
+host=10.0.0.102                                   # Replace this by the address of the host
+port=8888                                         # Replace this by the port on which the server is listening
+```
 
 ## Installation
 
