@@ -20,7 +20,11 @@ pipeline {
     stages {
         stage('Server tests') {
             steps {
-                sh 'rm -rf $INMANTA_TEST_ENV; python3 -m venv $INMANTA_TEST_ENV; $INMANTA_PYTHON_PATH -m pip install -U tox tox_venv'
+                sh '''
+                    rm -rf $INMANTA_TEST_ENV
+                    python3 -m venv $INMANTA_TEST_ENV
+                    $INMANTA_PYTHON_PATH -m pip install -U tox tox_venv
+                '''
                 dir("server"){
                     sh "$INMANTA_PYTHON_PATH -m tox --recreate"
                 }
