@@ -33,6 +33,8 @@ describe('Compile checks', () => {
 				if (pythonPath !== "" && compilerVenv !== "") {
 					clearInterval(refresh);
 					resolve();
+				} else {
+					console.log(`PythonPath="${pythonPath}"\nCompilerVenv="${compilerVenv}"\nWaiting for extension to be ready...\n`);
 				}
 			}, 100);
 		});
