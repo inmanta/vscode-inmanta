@@ -82,9 +82,9 @@ export async function activate(context: ExtensionContext) {
 			}, 500);
 		});
 		
-		const serverDisposable = new Disposable(function disposeOfServerProcess(){
-			serverProcess.kill()
-		})
+		const serverDisposable = new Disposable(function disposeOfServerProcess() {
+			serverProcess.kill();
+		});
 		let serverOptions: ServerOptions = function () {
 			let client = net.connect({ port: serverPort, host: host});
 			const streamInfo = {
@@ -92,7 +92,7 @@ export async function activate(context: ExtensionContext) {
 				writer: client
 			};
 			return Promise.resolve(streamInfo);
-		}
+		};
 
 		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		// Create the language client and start the client.
@@ -104,14 +104,21 @@ export async function activate(context: ExtensionContext) {
 		const commonDisposable = new Disposable(function() {
 			clientDisposable.dispose();
 			serverDisposable.dispose();
-		})
+		});
 		context.subscriptions.push(commonDisposable);
 		
 		return commonDisposable;
 	}
 
 	function installLanguageServer(pythonPath: string, startServer?: boolean): void {
-		const child = cp.spawnSync(pythonPath, ["-m", "pip", "install", "inmantals"]);
+		const args = ["-m", "pip", "install"];
+		if (process.env.INMANTA_LANGUAGE_SERVER_PATH) {
+			args.push("-e", process.env.INMANTA_LANGUAGE_SERVER_PATH);
+			console.log("Installing Language Server from local source: " + process.env.INMANTA_LANGUAGE_SERVER_PATH);
+		} else {
+			args.push("inmantals");
+		}
+		const child = cp.spawnSync(pythonPath, args);
 		if (child.status !== 0) {
 			window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
 		} else if (startServer) {
