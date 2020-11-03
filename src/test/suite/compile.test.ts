@@ -5,13 +5,12 @@ import * as fs from 'fs-extra';
 
 import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString, extensions } from 'vscode';
 
-import { waitForCompile } from './helpers';
+import { waitForCompile, getInmantaVersion, compareVersions } from './helpers';
 
 
 const logPath: string = '/tmp/vscode-inmanta.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
-const envPath: string = process.env.INMANTA_COMPILER_VENV;
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
 
@@ -21,8 +20,14 @@ describe('Compile checks', () => {
 		{ source: 'invalid.cf', succeed: false }
 	];
 
-	before((done) => {
-		commands.executeCommand('vscode.openFolder', workspaceUri).then(done);
+	let envPath: string = undefined;
+
+	before(async () => {
+		const pythonPath = workspace.getConfiguration('inmanta').pythonPath;
+		const compilerVenv = workspace.getConfiguration('inmanta').compilervenv;
+		const inmantaVersion = await getInmantaVersion(pythonPath);
+		envPath = compareVersions(inmantaVersion, "2020.5") <= 0 ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
+		await commands.executeCommand('vscode.openFolder', workspaceUri);
 	});
 
 	beforeEach((done) => {

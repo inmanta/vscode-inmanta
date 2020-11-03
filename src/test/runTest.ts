@@ -74,24 +74,18 @@ function compareVersions(a: string, b: string): number {
 async function main() {
 
 	try {
-		// Loading config of testing workspace
-		if (process.env.INMANTA_PYTHON_PATH === undefined) {
-			throw new Error("INMANTA_PYTHON_PATH has to be set");
-		}
-		const inmantaVersion = await getInmantaVersion(process.env.INMANTA_PYTHON_PATH);
-
-		if (compareVersions(inmantaVersion, "2020.5") <= 0) {
-			console.warn(`Installed Inmanta version is too old (${inmantaVersion} <= 2020.5), forcing INMANTA_COMPILER_VENV value`);
-			process.env.INMANTA_COMPILER_VENV = path.resolve(__dirname, '../../src/test/workspace/.env');
-		} else if (process.env.INMANTA_COMPILER_VENV === undefined) {
-			throw new Error("INMANTA_COMPILER_VENV as to be set");
-		}
-
 		const settings = {
 			"inmanta.ls.enabled": true,
-			"inmanta.pythonPath": process.env.INMANTA_PYTHON_PATH,
-			"inmanta.compilerVenv": process.env.INMANTA_COMPILER_VENV,
 		};
+
+		if (process.env.INMANTA_PYTHON_PATH) {
+			settings["inmanta.pythonPath"] = process.env.INMANTA_PYTHON_PATH;
+		}
+
+		if (process.env.INMANTA_COMPILER_VENV) {
+			settings["inmanta.compilerVenv"] = process.env.INMANTA_COMPILER_VENV;
+		}
+		
 
 		// Saving settings of testing workspace to file
 		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/workspace/.vscode/settings.json');

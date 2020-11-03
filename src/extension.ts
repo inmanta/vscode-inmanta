@@ -137,6 +137,7 @@ export function activate(context: ExtensionContext) {
 		const errorhandler = new LsErrorHandler(serverOptions);
 
 		const compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv || Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
+		workspace.getConfiguration('inmanta').update('compilerVenv', compilerVenv, true);
 
 		const clientOptions: LanguageClientOptions = {
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],

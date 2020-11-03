@@ -15,7 +15,6 @@ pipeline {
       INMANTA_LS_TEST_ENV="${env.WORKSPACE}/ls-venv"
       INMANTA_LS_PATH="${env.WORKSPACE}/server"
       INMANTA_EXTENSION_TEST_ENV="${env.WORKSPACE}/extension-venv"
-      WORKSPACE="${env.WORKSPACE}"
     } 
 
     stages {
@@ -50,4 +49,4 @@ pipeline {
             junit 'server/junit*.xml'
         }
     }
-}  
+}
