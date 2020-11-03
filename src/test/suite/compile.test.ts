@@ -55,37 +55,33 @@ describe('Compile checks', () => {
 	});
 
 	tests.forEach(test => {
-		it(`Check that ${test.source} ${test.succeed ? "does" : "doesn't"} compile`, () => {
-			return new Promise(async resolve => {
-				// Copy model into main.cf
-				const source: string = path.resolve(workspaceUri.fsPath, test.source);
-				await fs.copyFile(source, modelUri.fsPath);
-				
-				// Wait one second to let vscode notice we closed the previous editor
-				await new Promise(resolve => setTimeout(resolve, 1000));
+		it(`Check that ${test.source} ${test.succeed ? "does" : "doesn't"} compile`, async () => {
+			// Copy model into main.cf
+			const source: string = path.resolve(workspaceUri.fsPath, test.source);
+			await fs.copyFile(source, modelUri.fsPath);
+			
+			// Wait one second to let vscode notice we closed the previous editor
+			await new Promise(resolve => setTimeout(resolve, 1000));
 
-				// Opening model file
-				const doc: TextDocument = await workspace.openTextDocument(modelUri);
-				const edit: TextEditor = await window.showTextDocument(doc);
+			// Opening model file
+			const doc: TextDocument = await workspace.openTextDocument(modelUri);
+			const edit: TextEditor = await window.showTextDocument(doc);
 
-				// Making file dirty and save it
-				const position: Position = new Position(0, 0);
-				const snippet: SnippetString = new SnippetString("\n");
-				await edit.insertSnippet(snippet, position);
-				assert.strictEqual(doc.isDirty, true, "The file should be dirty, but isn't");
-				await doc.save();
+			// Making file dirty and save it
+			const position: Position = new Position(0, 0);
+			const snippet: SnippetString = new SnippetString("\n");
+			await edit.insertSnippet(snippet, position);
+			assert.strictEqual(doc.isDirty, true, "The file should be dirty, but isn't");
+			await doc.save();
 
-				const succeeded = await waitForCompile(logPath, 10000);
-				assert.strictEqual(succeeded, test.succeed);
+			const succeeded = await waitForCompile(logPath, 10000);
+			assert.strictEqual(succeeded, test.succeed);
 
-				const libsExists = fs.pathExistsSync(libsPath);
-				assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
+			const libsExists = fs.pathExistsSync(libsPath);
+			assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
 
-				const envExists = fs.pathExistsSync(envPath);
-				assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);
-
-				resolve();
-			});
+			const envExists = fs.pathExistsSync(envPath);
+			assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);
 		}).timeout(0);
 	});
 
