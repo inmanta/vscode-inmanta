@@ -180,8 +180,9 @@ pipeline {
                 }
             }
             steps {
-                // TODO: withCredentials -> variable VSCODE_PERSONAL_ACCESS_TOKEN
-                sh '$(npm bin)/vsce publish -p "${VSCODE_PERSONAL_ACCESS_TOKEN}"'
+                withCredentials([string(credentialsId: 'vscode_marketplace_access_token', variable: 'VSCODE_PERSONAL_ACCESS_TOKEN')]) {
+                    sh '$(npm bin)/vsce publish -p "${VSCODE_PERSONAL_ACCESS_TOKEN}"'
+                }
             }
         }
 
