@@ -1,0 +1,5 @@
+pipeline_template: ci/inmanta-tools/Jenkinsfile-pyp
+repo_name: vscode-inmanta
+project_dir: server
+tag_prefix: ls-
+public: true
