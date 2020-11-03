@@ -48,6 +48,7 @@ export async function activate(context: ExtensionContext) {
 		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()]);
 		let serverStdout = '';
 		serverProcess.stdout.on('data', (data) => {
+			lsOutputChannel.appendLine(`stdout: ${data}`);
 			serverStdout += data;
 		});
 
@@ -56,9 +57,6 @@ export async function activate(context: ExtensionContext) {
 		}
 		serverProcess.stderr.on('data', (data) => {
 			lsOutputChannel.appendLine(`stderr: ${data}`);
-		});
-		serverProcess.stdout.on('data', (data) => {
-			lsOutputChannel.appendLine(`stdout: ${data}`);
 		});
 
 		const timeout: number = 10000;
