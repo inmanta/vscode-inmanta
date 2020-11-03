@@ -15,6 +15,7 @@ pipeline {
       INMANTA_LS_TEST_ENV="${env.WORKSPACE}/ls-venv"
       INMANTA_LS_PATH="${env.WORKSPACE}/server"
       INMANTA_EXTENSION_TEST_ENV="${env.WORKSPACE}/extension-venv"
+      WORKSPACE="${env.WORKSPACE}"
     } 
 
     stages {
@@ -37,7 +38,7 @@ pipeline {
                     npm i --also=dev
                     rm -rf $INMANTA_EXTENSION_TEST_ENV
                     python3 -m venv $INMANTA_EXTENSION_TEST_ENV
-                    INMANTA_PYTHON_PATH="$INMANTA_EXTENSION_TEST_ENV/bin/python3" xvfb-run npm run test
+                    INMANTA_PYTHON_PATH="$INMANTA_EXTENSION_TEST_ENV/bin/python3" INMANTA_COMPILER_VENV="$WORKSPACE/compiler-venv" xvfb-run npm run test
                 '''
             }
         }
