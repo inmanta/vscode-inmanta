@@ -57,7 +57,7 @@
         },
         "inmanta.ls.enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Enable the language server",
           "scope": "resource"
         },
