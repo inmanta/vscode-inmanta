@@ -36,7 +36,7 @@ pipeline {
             }
             steps {
                 build(
-                    job: "/releases/python-packages/vscode-inmanta/${env.BRANCH_NAME}",
+                    job: "/releases/python-packages/vscode-inmanta-ls-pypi-release/${env.BRANCH_NAME}",
                     parameters: [
                         string(name: 'release_type', value: 'stable'),
                         string(name: 'version_increment', value: server_version_increment),
@@ -52,7 +52,7 @@ pipeline {
             }
             steps {
                 build(
-                    job: "/releases/npm/vscode-inmanta/${env.BRANCH_NAME}",
+                    job: "/releases/npm/vscode-inmanta-extension-release/${env.BRANCH_NAME}",
                     parameters: [
                         string(name: 'version_increment', value: extension_version_increment),
                         booleanParam(name: 'run_job', value: true),
