@@ -83,19 +83,16 @@ describe('Extension virtual environment check', () => {
 
 
 describe('Compiler virtual environment check', () => {
+	if (inmantaVersion === undefined) {
+		console.warn("Could not determine inmanta version, skipping compiler env tests.");
+		return;
+	}
+	const envPath: string = compareVersions(inmantaVersion, "2020.5") <= 0
+		? path.resolve(workspaceUri.fsPath, '.env') 
+		: process.env.INMANTA_COMPILER_VENV;
 
-	let envPath: string = undefined;
-	
 	before(async function () {
 		this.timeout(0);
-		if (inmantaVersion === undefined) {
-			console.warn("Could not determine inmanta version, skipping compiler env tests.");
-			this.skip();
-		}
-		envPath = compareVersions(inmantaVersion, "2020.5") <= 0
-			? path.resolve(workspaceUri.fsPath, '.env') 
-			: process.env.INMANTA_COMPILER_VENV;
-
 		await Promise.all([
 			commands.executeCommand('vscode.openFolder', workspaceUri),
 			fs.writeFile(logPath, ""),
@@ -126,25 +123,18 @@ describe('Compiler virtual environment check', () => {
 		assert.strictEqual(succeeded, true);
 	});
 
-	it(`Checking that the compiler created the virtual environment folder`, async function () {
-		if (inmantaVersion === undefined) {
-			this.skip();
-		}
+	it(`Checking that the compiler created the virtual environment folder`, async () => {
 		const libsExists = fs.pathExistsSync(envPath);
 		assert.strictEqual(libsExists, true, `The virtual environment folder (${envPath})hasn't been created`);
 	});
 
-	after(function (done) {
-		if (inmantaVersion === undefined) {
+	after((done) => {
+		Promise.all([
+			fs.writeFile(logPath, ""),
+			fs.remove(envPath),
+			fs.remove(modelUri.fsPath),
+		]).then(values => {
 			done();
-		} else {
-			Promise.all([
-				fs.writeFile(logPath, ""),
-				fs.remove(envPath),
-				fs.remove(modelUri.fsPath),
-			]).then(values => {
-				done();
-			});
-		}
+		});
 	});
 });
