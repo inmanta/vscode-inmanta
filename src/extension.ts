@@ -42,14 +42,18 @@ export async function activate(context: ExtensionContext) {
 	}
 	
 	async function startTcp(clientOptions: LanguageClientOptions) {
+		const host = "localhost";
 		const pp: string = createVenvIfNotExists();
-		const serverPort = await getPort();
+		// Get a random free port on localhost
+		const serverPort = await getPort({ host: host });
 		
 		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()]);
-		let serverStdout = '';
+		let started = false;
 		serverProcess.stdout.on('data', (data) => {
 			lsOutputChannel.appendLine(`stdout: ${data}`);
-			serverStdout += data;
+			if (data.includes("starting")) {
+				started = true;
+			}
 		});
 
 		if (lsOutputChannel === null) {
@@ -66,9 +70,10 @@ export async function activate(context: ExtensionContext) {
 			const interval = setInterval(() => {
 				if (Date.now() - start > timeout) {
 					window.showErrorMessage("Couldn't start language server");
+					clearInterval(interval);
 					reject();
 				}
-				if (serverStdout.includes("starting")) {
+				if (started) {
 					clearInterval(interval);
 					resolve();
 				}
@@ -79,7 +84,7 @@ export async function activate(context: ExtensionContext) {
 			serverProcess.kill()
 		})
 		let serverOptions: ServerOptions = function () {
-			let client = net.connect({port: serverPort});
+			let client = net.connect({ port: serverPort, host: host});
 			const streamInfo = {
 				reader: client,
 				writer: client
@@ -221,7 +226,7 @@ export async function activate(context: ExtensionContext) {
 		const venvPath = getDefaultVenvPath();
 
 		if (!fs.existsSync(venvBaseDir)) {
-			const venvProcess = cp.spawnSync("python", ["-m", "venv", venvBaseDir]);
+			const venvProcess = cp.spawnSync("python3", ["-m", "venv", venvBaseDir]);
 			if (venvProcess.status !== 0) {
 				window.showErrorMessage(`Virtual env creation at ${venvBaseDir} failed with code ${venvProcess.status}, ${venvProcess.stderr}`);
 			}

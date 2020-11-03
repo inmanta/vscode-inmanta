@@ -44,7 +44,7 @@ def main():
     sys.stdout.flush()
     sys.stdout.write(f"Log file can be found at {logfile}")
     sys.stdout.flush()
-    server.listen(port)
+    server.listen(port, address="localhost")
     IOLoop.current().start()
 
 
