@@ -50,12 +50,15 @@ export async function activate(context: ExtensionContext) {
 		serverProcess.stdout.on('data', (data) => {
 			serverStdout += data;
 		});
-		// Get the same output as with the pipe server
+
 		if (lsOutputChannel === null) {
 			lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
 		}
 		serverProcess.stderr.on('data', (data) => {
-			lsOutputChannel.appendLine(data);
+			lsOutputChannel.appendLine(`stderr: ${data}`);
+		});
+		serverProcess.stdout.on('data', (data) => {
+			lsOutputChannel.appendLine(`stdout: ${data}`);
 		});
 
 		const timeout: number = 10000;
@@ -68,7 +71,6 @@ export async function activate(context: ExtensionContext) {
 					reject();
 				}
 				if (serverStdout.includes("starting")) {
-					window.showInformationMessage(`Running on port ${serverPort}`);
 					clearInterval(interval);
 					resolve();
 				}
