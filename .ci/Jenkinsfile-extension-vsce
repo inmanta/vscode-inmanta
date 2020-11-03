@@ -48,7 +48,6 @@ pipeline {
                             npm install vsce
 
                             # checkout appropriate branch
-                            git checkout next
                             if [ "${version_increment}" == "none" ] || [ "${version_increment}" == "patch" ]; then
                                 git checkout next
                             else
