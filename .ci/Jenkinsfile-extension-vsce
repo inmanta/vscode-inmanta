@@ -1,0 +1,216 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(
+            name: 'version_increment',
+            choices: ['none', 'patch', 'minor', 'major'],
+            description: 'Indicates what kind of version bump should be done for the extension.',
+        )
+        booleanParam(
+            name: 'run_job',
+            defaultValue: false,
+            description: 'Triggering the build job with run_job == false doesn't run the actual job.',
+        )
+        booleanParam(
+            name: 'upload',
+            defaultValue: false,
+            description: 'Publish the vsix package to the VS Code marketplace.',
+        )
+    }
+
+    options {
+        disableConcurrentBuilds()
+        checkoutToSubdirectory('vscode-inmanta')
+        skipDefaultCheckout()
+    }
+
+    environment {
+        GIT_ASKPASS="${WORKSPACE}/ASK_PASS"
+    }
+
+    stages {
+        stage("Setup environment") {
+            when {
+                expression { "${run_job}" == "true" }
+            }
+            steps {
+                deleteDir()
+                dir('vscode-inmanta') {
+                    checkout scm
+                    withCredentials([string(credentialsId: 'fff7ef7e-cb20-4fb2-a93b-c5139463c6bf', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
+                            # set up git ASK_PASS
+                            echo 'echo \${GITHUB_TOKEN}' > ${GIT_ASKPASS}
+                            chmod u+x ${GIT_ASKPASS}
+
+                            # install vsce for building and publishing the extension
+                            npm install vsce
+
+                            # checkout appropriate branch
+                            git checkout next
+                            if [ "${version_increment}" == "none" ] || [ "${version_increment}" == "patch" ]; then
+                                git checkout next
+                            else
+                                git checkout master
+                            fi
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage("Setup next branch for major or minor release") {
+            when{
+                allOf {
+                    expression { "${run_job}" == "true" }
+                    anyOf {
+                        expression { "${version_increment}" == "major" }
+                        expression { "${version_increment}" == "minor" }
+                    }
+                }
+            }
+            steps{
+                dir('vscode-inmanta') {
+                    withCredentials([string(credentialsId: 'fff7ef7e-cb20-4fb2-a93b-c5139463c6bf', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
+                            git checkout -b issue/version-bump-extension
+
+                            # bump version if major release
+                            if [ "${version_increment}" == "major" ]; then
+                                npm version major --no-git-tag-version
+                                new_version=$(jq -r '.version' package.json)
+                                sed -i "1s/\\(# v\\)[0-9.]\\+/\\1 ${new_version}/" CHANGELOG.md
+                                git commit -a -v -m "Bump extension version: ${new_version}"
+                            fi
+
+                            # set release date
+                            release_date=$(date --utc +'%Y-%m-%d')
+                            sed -i "1s/\\?/${release_date}/" CHANGELOG.md
+                            git commit -m "set release date: ${release_date}" CHANGELOG.md
+
+                            git push origin issue/version-bump-extension
+
+                            # Merge into next
+                            git checkout next
+                            git pull
+                            git merge -X theirs issue/version-bump-extension
+                            git push origin next
+
+                            # Create a pull request to bump the version on master
+                            git checkout issue/version-bump-extension
+                            npm version minor --no-git-tag-version
+                            new_version=$(jq -r '.version' package.json)
+                            content_changelog=$(cat CHANGELOG.md)
+                            echo -e "# v ${new_version} (?)\\nChanges in this release:\\n\\n${content_changelog}" > CHANGELOG.md
+                            git commit -a -m "Bump extension version: ${new_version}"
+                            git push origin issue/version-bump-extension
+                            request_data="{\\"title\\": \\"Bump extension version: ${new_version}\\", \\"body\\": \\"\\", \\"head\\": \\"issue/version-bump-extension\\", \\"base\\": \\"master\\"}"
+                            curl -XPOST -H "Content-Type: application/json" -H "Authorization: token ${GITHUB_TOKEN}" --data "${request_data}" "https://api.github.com/repos/inmanta/vscode-inmanta/pulls"
+
+                            # Build package from next branch
+                            git checkout next
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage("Setup next branch for patch release") {
+            when {
+                allOf {
+                    expression { "${run_job}" == "true" }
+                    expression { "${version_increment}" == "patch" }
+                }
+            }
+            steps {
+                dir('vscode-inmanta') {
+                    withCredentials([string(credentialsId: 'fff7ef7e-cb20-4fb2-a93b-c5139463c6bf', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
+                            # Cherry-picking the patch commits on the next branch and setting
+                            # the changelog correctly is done manually before this job runs.
+
+                            # Bump version
+                            npm version patch --no-git-tag-version
+                            new_version=$(jq -r '.version' package.json)
+                            git commit -a -v -m "Bump extension version: ${new_version}"
+                            git push origin next
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage("Add tag") {
+            when {
+                expression { "${run_job}" == "true" }
+            }
+            steps{
+                dir('vscode-inmanta') {
+                    withCredentials([string(credentialsId: 'fff7ef7e-cb20-4fb2-a93b-c5139463c6bf', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
+                            current_version=$(jq -r '.version' package.json)
+                            tag="extension-v${current_version}"
+                            git fetch --tags
+                            if [ -z "$(git tag -l ${tag})" ]; then
+                                # The tag was not yet set
+                                git tag -a -m "Release: extension-${current_version}" ${tag}
+                                git push origin ${tag}
+                            fi
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage("Build") {
+            when {
+                expression { "${run_job}" == "true" }
+            }
+            steps {
+                sh '$(npm bin)/vsce package'
+            }
+        }
+
+        stage("Publish to VS Code marketplace") {
+            when {
+                allOf {
+                    expression { "${run_job}" == "true" }
+                    expression { "${upload}" == "true" }
+                }
+            }
+            steps {
+                // TODO: withCredentials -> variable VSCODE_PERSONAL_ACCESS_TOKEN
+                sh '$(npm bin)/vsce publish -p "${VSCODE_PERSONAL_ACCESS_TOKEN}"'
+            }
+        }
+
+        stage("Sync latest branch with next") {
+            when {
+                allOf {
+                    expression { "${run_job}" == "true" }
+                    expression { "${release_type}" == "stable" }
+                }
+            }
+            steps {
+                dir('vscode-inmanta') {
+                    withCredentials([string(credentialsId: 'fff7ef7e-cb20-4fb2-a93b-c5139463c6bf', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
+                            git checkout latest
+                            git pull
+                            git merge -X theirs next
+                            git push origin latest
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            archiveArtifacts artifacts: "vscode-inmanta/*.vsix,
+            allowEmptyArchive: true,
+        }
+    }
+}
