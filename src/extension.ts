@@ -42,9 +42,9 @@ export async function activate(context: ExtensionContext) {
 	}
 	
 	async function startTcp(clientOptions: LanguageClientOptions) {
-		const host = "localhost";
+		const host = "127.0.0.1";
 		const pp: string = createVenvIfNotExists();
-		// Get a random free port on localhost
+		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
 		
 		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()]);
