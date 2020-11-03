@@ -205,7 +205,6 @@ export async function activate(context: ExtensionContext) {
 		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
-
 		return disposable;
 	}
 
@@ -280,7 +279,6 @@ export async function activate(context: ExtensionContext) {
 
 	if (enable) {
 		running = await startServerAndClient();
-		process.env.INMANTA_EXTENSION_RUNNING = "true";
 	}
 
 	function stopIfRunning() {
@@ -288,8 +286,6 @@ export async function activate(context: ExtensionContext) {
 			running.dispose();
 			running = undefined;
 		}
-
-		process.env.INMANTA_EXTENSION_RUNNING = "false";
 	}
 
 	context.subscriptions.push(workspace.onDidChangeConfiguration(async e => {
@@ -300,7 +296,6 @@ export async function activate(context: ExtensionContext) {
 
 			if (enable) {
 				running = await startServerAndClient();
-				process.env.INMANTA_EXTENSION_RUNNING = "true";
 			}
 		}
 	}));
