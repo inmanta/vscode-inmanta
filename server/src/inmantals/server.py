@@ -217,9 +217,10 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     def convert_location(self, loc):
+        prefix = "file:///" if os.name == "nt" else "file://"
         if isinstance(loc, Range):
             return {
-                "uri": "file://" + loc.file,
+                "uri": prefix + loc.file,
                 "range": {
                     "start": {"line": loc.lnr - 1, "character": loc.start_char - 1},
                     "end": {"line": loc.end_lnr - 1, "character": loc.end_char - 1},
@@ -227,7 +228,7 @@ class InmantaLSHandler(JsonRpcHandler):
             }
         else:
             return {
-                "uri": "file://" + loc.file,
+                "uri": prefix + loc.file,
                 "range": {
                     "start": {"line": loc.lnr - 1, "character": 0},
                     "end": {"line": loc.lnr, "character": 0},
@@ -359,7 +360,7 @@ class InmantaLSHandler(JsonRpcHandler):
         Show a pop up message to the user, type gives the level of the message, message is the content
         """
         await self.send_notification(
-            "window/showMessage", {"type": type, "message": message}
+            "window/showMessage", {"type": type.value, "message": message}
         )
 
     async def publish_diagnostics(self, params: Optional[lsp_types.PublishDiagnosticsParams]) -> None:

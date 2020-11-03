@@ -2,6 +2,7 @@
 Changes in this release:
 - Added language server to client diagnostics notifications to highlight errors (#18)
 - Added symbol provider (#34)
+- Extended language server support on Windows (#26)
 
 # v 0.2.1 (2019-10-31)
 
