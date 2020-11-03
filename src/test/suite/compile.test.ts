@@ -9,7 +9,6 @@ const logPath: string = '/tmp/vscode-inmanta.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 
-
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
 function waitForCompile(timeout: number): Promise<boolean> {
