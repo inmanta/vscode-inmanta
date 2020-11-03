@@ -1,7 +1,14 @@
 import * as fs from 'fs-extra';
 import { exec } from 'child_process';
 
-
+/**
+ * Read a lloging file waiting for a message annoucing the end of the compilation
+ * 
+ * @param logPath The path to the logging file
+ * @param timeout A timeout (in ms) before the end of which the compilation should be done
+ * 
+ * @returns whether or not the compilation suceeded
+ */
 export function waitForCompile(logPath: string, timeout: number): Promise<boolean> {
 	const start = Date.now();
 	return new Promise<boolean>((resolve, reject) => {

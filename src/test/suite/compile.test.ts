@@ -22,9 +22,21 @@ describe('Compile checks', () => {
 
 	let envPath: string = undefined;
 
-	before(async () => {
-		const pythonPath = workspace.getConfiguration('inmanta').pythonPath;
-		const compilerVenv = workspace.getConfiguration('inmanta').compilervenv;
+	before(async function() {
+		this.timeout(10000);
+		let pythonPath: string = "";
+		let compilerVenv: string = "";
+		await new Promise(resolve => {
+			const refresh = setInterval(() => {
+				pythonPath = workspace.getConfiguration('inmanta').pythonPath;
+				compilerVenv = workspace.getConfiguration('inmanta').compilervenv;
+				if (pythonPath !== "" && compilerVenv !== "") {
+					clearInterval(refresh);
+					resolve();
+				}
+			}, 100);
+		});
+		
 		const inmantaVersion = await getInmantaVersion(pythonPath);
 		envPath = compareVersions(inmantaVersion, "2020.5") <= 0 ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
 		await commands.executeCommand('vscode.openFolder', workspaceUri);
