@@ -20,33 +20,16 @@ describe('Compile checks', () => {
 		{ source: 'invalid.cf', succeed: false }
 	];
 
-	let envPath: string = undefined;
+	let envPath: string = "";
 
 	before(async function() {
-		this.timeout(10000);
 		await commands.executeCommand('vscode.openFolder', workspaceUri);
-		await extensions.getExtension('Inmanta.inmanta').activate();
-		
-		await new Promise(resolve => {
-			const refresh = setInterval(() => {
-				if (process.env.INMANTA_EXTENSION_RUNNING === "true") {
-					clearInterval(refresh);
-					resolve();
-				}
-			}, 100);
-		});
-
-		const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
-		const compilerVenv: string = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
-		const inmantaVersion: string = await getInmantaVersion(pythonPath);
-		envPath = compareVersions(inmantaVersion, "2020.5") <= 0 ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
 	});
 
 	beforeEach((done) => {
 		Promise.all([
 			fs.writeFile(logPath, ""),
 			fs.remove(libsPath),
-			fs.remove(envPath),
 			fs.remove(modelUri.fsPath),
 		]).then(async values => {
 			await commands.executeCommand('workbench.action.closeActiveEditor');
@@ -79,6 +62,11 @@ describe('Compile checks', () => {
 
 			const libsExists = fs.pathExistsSync(libsPath);
 			assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
+
+			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
+			const compilerVenv: string = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
+			const inmantaVersion: string = await getInmantaVersion(pythonPath);
+			envPath = compareVersions(inmantaVersion, "2020.5") <= 0 ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
 
 			const envExists = fs.pathExistsSync(envPath);
 			assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);

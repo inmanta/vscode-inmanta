@@ -5,42 +5,109 @@ import * as net from 'net';
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
+import * as getPort from 'get-port';
 
 import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
-import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
+import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 
-export function activate(context: ExtensionContext) {
 
-	//let serverOptions: ServerOptions = {command:'python3', args:['-m', 'inmanta-lsp']};
+export async function activate(context: ExtensionContext) {
+	let lsOutputChannel = null;
 
-	function startTCP() {
-		// have to start server by hand, debugging only
-		const serverOptions: ServerOptions = function () {
-			return new Promise((resolve, reject) => {
-				const client = new net.Socket();
-				client.connect(5432, "127.0.0.1", function () {
-					resolve({
-						reader: client,
-						writer: client
-					});
-				});
-			});
-		};
+	async function startServerAndClient() {
+		const clientOptions = getClientOptions();
+		if (os.platform() === "win32") {
+			return await startTcp(clientOptions);
+		} else {
+			return startPipe(clientOptions);
+		}
+	}
+
+	function getClientOptions(): LanguageClientOptions {
+		const errorhandler = new LsErrorHandler();
 
 		// Options to control the language client
+		const compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv || Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
+		workspace.getConfiguration('inmanta').update('compilerVenv', compilerVenv, true);
+		
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
-			documentSelector: [{ scheme: 'file', language: 'inmanta' }]
+			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
+			errorHandler: errorhandler,
+			revealOutputChannelOn: RevealOutputChannelOn.Info,
+			initializationOptions: {
+				compilerVenv: compilerVenv
+			}
 		};
+		return clientOptions;
+	}
+	
+	async function startTcp(clientOptions: LanguageClientOptions) {
+		const host = "127.0.0.1";
+		const pp: string = createVenvIfNotExists();
+		// Get a random free port on 127.0.0.1
+		const serverPort = await getPort({ host: host });
+		
+		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()]);
+		let started = false;
+		serverProcess.stdout.on('data', (data) => {
+			lsOutputChannel.appendLine(`stdout: ${data}`);
+			if (data.includes("starting")) {
+				started = true;
+			}
+		});
+
+		if (lsOutputChannel === null) {
+			lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
+		}
+		serverProcess.stderr.on('data', (data) => {
+			lsOutputChannel.appendLine(`stderr: ${data}`);
+		});
+
+		const timeout: number = 10000;
+		const start = Date.now();
+		// Wait for server to start
+		await new Promise((resolve, reject) =>  {
+			const interval = setInterval(() => {
+				if (Date.now() - start > timeout) {
+					window.showErrorMessage("Couldn't start language server");
+					clearInterval(interval);
+					reject();
+				}
+				if (started) {
+					clearInterval(interval);
+					resolve();
+				}
+			}, 500);
+		});
+		
+		const serverDisposable = new Disposable(function disposeOfServerProcess(){
+			serverProcess.kill()
+		})
+		let serverOptions: ServerOptions = function () {
+			let client = net.connect({ port: serverPort, host: host});
+			const streamInfo = {
+				reader: client,
+				writer: client
+			};
+			return Promise.resolve(streamInfo);
+		}
 
 		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		// Create the language client and start the client.
-		const disposable = lc.start();
+		const clientDisposable = lc.start();
+		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
 
 		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
-		context.subscriptions.push(disposable);
-		return disposable;
+		const commonDisposable = new Disposable(function() {
+			clientDisposable.dispose();
+			serverDisposable.dispose();
+		})
+		context.subscriptions.push(commonDisposable);
+		
+		return commonDisposable;
 	}
 
 	function installLanguageServer(pythonPath: string, startServer?: boolean): void {
@@ -48,18 +115,13 @@ export function activate(context: ExtensionContext) {
 		if (child.status !== 0) {
 			window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
 		} else if (startServer) {
-			startPipe();
+			startServerAndClient();
 		}
 	}
 
 	class LsErrorHandler implements ErrorHandler {
 
-		_serverOptions: Executable;
 		_child: cp.ChildProcess;
-
-		constructor(serverOptions: Executable) {
-			this._serverOptions = serverOptions;
-		}
 
 		notInstalled() {
 			const pp: string = workspace.getConfiguration('inmanta').pythonPath;
@@ -94,7 +156,7 @@ export function activate(context: ExtensionContext) {
 				"except:\n" + 
 				"  sys.exit(3)";
 
-			this._child = cp.spawn(this._serverOptions.command, ["-c", script]);
+			this._child = cp.spawn(pp, ["-c", script]);
 
 			this._child.on('close', (code) => {
 				if (code === 4) {
@@ -126,7 +188,7 @@ export function activate(context: ExtensionContext) {
 
 	}
 
-	function startPipe() {
+	function startPipe(clientOptions: LanguageClientOptions) {
 		const pp: string = createVenvIfNotExists();
 
 		const serverOptions: Executable = {
@@ -134,21 +196,8 @@ export function activate(context: ExtensionContext) {
 			args: ["-m", "inmantals.pipeserver"],
 		};
 
-		const errorhandler = new LsErrorHandler(serverOptions);
-
-		const compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv || Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
-		workspace.getConfiguration('inmanta').update('compilerVenv', compilerVenv, true);
-
-		const clientOptions: LanguageClientOptions = {
-			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
-			errorHandler: errorhandler,
-			revealOutputChannelOn: RevealOutputChannelOn.Info,
-			initializationOptions: {
-				compilerVenv: compilerVenv
-			}
-		};
 		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
-		lc.onReady().catch(errorhandler.rejected);
+		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
 
 		// Create the language client and start the client.
 		const disposable = lc.start();
@@ -157,12 +206,17 @@ export function activate(context: ExtensionContext) {
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
 
-		process.env.INMANTA_EXTENSION_RUNNING = "true";
-
 		return disposable;
 	}
 
 	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
+
+	function getDefaultVenvPath() {
+		if (os.platform() === "win32") {
+			return Uri.joinPath(context.globalStorageUri, ".env", "Scripts", "python.exe").fsPath;
+		}
+		return Uri.joinPath(context.globalStorageUri, ".env", "bin", "python").fsPath;
+	}
 
 	function createVenvIfNotExists() {
 		const pp: string = workspace.getConfiguration('inmanta').pythonPath;
@@ -172,7 +226,7 @@ export function activate(context: ExtensionContext) {
 			window.showInformationMessage(`No Python3 interpreter found at "${pp}". Falling back to default virtual environment`);
 		}
 		const venvBaseDir = Uri.joinPath(context.globalStorageUri, ".env").fsPath;
-		const venvPath = Uri.joinPath(context.globalStorageUri, ".env", "bin", "python3").fsPath;
+		const venvPath = getDefaultVenvPath();
 
 		if (!fs.existsSync(venvBaseDir)) {
 			const venvProcess = cp.spawnSync("python3", ["-m", "venv", venvBaseDir]);
@@ -190,11 +244,11 @@ export function activate(context: ExtensionContext) {
 
 		const commandHandler = (openedFileObj: object) => {
 			const pathOpenedFile: string = String(openedFileObj);
-			const cwdCommand: string = path.dirname(pathOpenedFile).replace(/^file:\/\//, "");
+			const cwdCommand: string = path.dirname(Uri.parse(pathOpenedFile).fsPath);
 			const pythonPath: string = workspace.getConfiguration('inmanta').pythonPath;
 			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
 
-			if(exportToServerChannel === null) {
+			if (exportToServerChannel === null) {
 				exportToServerChannel = window.createOutputChannel("export to inmanta server");
 			}
 
@@ -225,7 +279,8 @@ export function activate(context: ExtensionContext) {
 	let running: Disposable = undefined;
 
 	if (enable) {
-		running = startPipe();
+		running = await startServerAndClient();
+		process.env.INMANTA_EXTENSION_RUNNING = "true";
 	}
 
 	function stopIfRunning() {
@@ -237,14 +292,15 @@ export function activate(context: ExtensionContext) {
 		process.env.INMANTA_EXTENSION_RUNNING = "false";
 	}
 
-	context.subscriptions.push(workspace.onDidChangeConfiguration(e => {
+	context.subscriptions.push(workspace.onDidChangeConfiguration(async e => {
 		if (e.affectsConfiguration('inmanta')) {
 			const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
 
 			stopIfRunning();
 
 			if (enable) {
-				startPipe();
+				running = await startServerAndClient();
+				process.env.INMANTA_EXTENSION_RUNNING = "true";
 			}
 		}
 	}));

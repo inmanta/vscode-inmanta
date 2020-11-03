@@ -87,6 +87,7 @@
     }
   },
   "dependencies": {
+    "get-port": "^5.1.1",
     "vsce": "^1.81.1",
     "vscode-languageclient": "^6.1.3"
   },
@@ -96,9 +97,9 @@
   ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "rm -rf out && tsc -p ./",
+    "compile": "rimraf out && tsc -p ./",
     "lint": "eslint src --ext ts",
-    "watch": "rm -rf out && tsc -watch -p ./",
+    "watch": "rimraf out && tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "test": "node ./out/test/runTest.js"
   },
@@ -115,6 +116,7 @@
     "fs-extra": "^9.0.1",
     "glob": "^7.1.6",
     "mocha": "^8.1.3",
+    "rimraf": "^3.0.2",
     "typescript": "^4.0.2",
     "vscode-test": "^1.4.0"
   },
