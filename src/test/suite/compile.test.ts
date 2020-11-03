@@ -11,7 +11,6 @@ import { waitForCompile } from './helpers';
 const logPath: string = '/tmp/vscode-inmanta.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
-const envPath: string = process.env.INMANTA_COMPILER_VENV;
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
 
@@ -29,7 +28,6 @@ describe('Compile checks', () => {
 		Promise.all([
 			fs.writeFile(logPath, ""),
 			fs.remove(libsPath),
-			fs.remove(envPath),
 			fs.remove(modelUri.fsPath),
 		]).then(async values => {
 			await commands.executeCommand('workbench.action.closeActiveEditor');
@@ -64,9 +62,6 @@ describe('Compile checks', () => {
 				const libsExists = fs.pathExistsSync(libsPath);
 				assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
 
-				const envExists = fs.pathExistsSync(envPath);
-				assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);
-
 				resolve();
 			});
 		}).timeout(0);
@@ -76,7 +71,6 @@ describe('Compile checks', () => {
 		Promise.all([
 			fs.writeFile(logPath, ""),
 			fs.remove(libsPath),
-			fs.remove(envPath),
 			fs.remove(modelUri.fsPath),
 		]).then(values => {
 			done();
