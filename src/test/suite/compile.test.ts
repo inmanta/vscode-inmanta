@@ -25,23 +25,20 @@ describe('Compile checks', () => {
 	before(async function() {
 		this.timeout(10000);
 		await commands.executeCommand('vscode.openFolder', workspaceUri);
+		await extensions.getExtension('Inmanta.inmanta').activate();
 		
-		let pythonPath: string = "";
-		let compilerVenv: string = "";
 		await new Promise(resolve => {
 			const refresh = setInterval(() => {
-				pythonPath = workspace.getConfiguration('inmanta').get('pythonPath');
-				compilerVenv = workspace.getConfiguration('inmanta').get('compilerVenv');
-				if (pythonPath !== "" && compilerVenv !== "") {
+				if (process.env.INMANTA_EXTENSION_RUNNING === "true") {
 					clearInterval(refresh);
 					resolve();
-				} else {
-					console.log(`PythonPath="${pythonPath}"\nCompilerVenv="${compilerVenv}"\nWaiting for extension to be ready...\n`);
 				}
 			}, 100);
 		});
-		
-		const inmantaVersion = await getInmantaVersion(pythonPath);
+
+		const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
+		const compilerVenv: string = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
+		const inmantaVersion: string = await getInmantaVersion(pythonPath);
 		envPath = compareVersions(inmantaVersion, "2020.5") <= 0 ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
 	});
 

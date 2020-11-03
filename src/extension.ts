@@ -156,6 +156,9 @@ export function activate(context: ExtensionContext) {
 		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
+
+		process.env.INMANTA_EXTENSION_RUNNING = "true";
+
 		return disposable;
 	}
 
@@ -231,6 +234,7 @@ export function activate(context: ExtensionContext) {
 			running = undefined;
 		}
 
+		process.env.INMANTA_EXTENSION_RUNNING = "false";
 	}
 
 	context.subscriptions.push(workspace.onDidChangeConfiguration(e => {
