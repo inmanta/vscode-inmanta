@@ -38,7 +38,7 @@ describe('Compile checks', () => {
 	});
 
 	tests.forEach(test => {
-		it(`Check that ${test.source} ${test.succeed ? "does" : "doesn't"} compile`, async () => {
+		it(`Check that ${test.source} does ${test.succeed ? "" : "not"} compile`, async () => {
 			// Copy model into main.cf
 			const source: string = path.resolve(workspaceUri.fsPath, test.source);
 			await fs.copyFile(source, modelUri.fsPath);
@@ -58,7 +58,7 @@ describe('Compile checks', () => {
 			await doc.save();
 
 			const succeeded = await waitForCompile(logPath, 10000);
-			assert.strictEqual(succeeded, test.succeed);
+			assert.strictEqual(succeeded, test.succeed, `The model should ${test.succeed ? "" : "not"} compile, but did ${succeeded ? "" : "not"}.`);
 
 			const libsExists = fs.pathExistsSync(libsPath);
 			assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
