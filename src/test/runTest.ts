@@ -3,19 +3,21 @@ import * as path from 'path';
 import { runTests } from 'vscode-test';
 import * as fs from 'fs-extra';
 
+
 async function main() {
 
 	try {
-		// Loading config of testing workspace
-		const pythonPath = process.env.INMANTA_PYTHON_PATH;
-		if (pythonPath === undefined) {
-			throw new Error("INMANTA_PYTHON_PATH has to be set");
-		}
-
 		const settings = {
 			"inmanta.ls.enabled": true,
-			"inmanta.pythonPath": pythonPath
 		};
+
+		if (process.env.INMANTA_PYTHON_PATH) {
+			settings["inmanta.pythonPath"] = process.env.INMANTA_PYTHON_PATH;
+		}
+
+		if (process.env.INMANTA_COMPILER_VENV) {
+			settings["inmanta.compilerVenv"] = process.env.INMANTA_COMPILER_VENV;
+		}
 
 		// Saving settings of testing workspace to file
 		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/workspace/.vscode/settings.json');
@@ -34,6 +36,9 @@ async function main() {
 		await runTests({ 
 			extensionDevelopmentPath: extensionDevelopmentPath, 
 			extensionTestsPath: extensionTestsPath,
+			extensionTestsEnv: {
+				"INMANTA_LANGUAGE_SERVER_PATH": process.env.INMANTA_LANGUAGE_SERVER_PATH,
+			},
 		});
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
