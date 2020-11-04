@@ -64,8 +64,10 @@ pipeline {
                 expression { "${run_job}" == "true" }
             }
             steps {
-                withCredentials([string(credentialsId: 'vscode_marketplace_access_token', variable: 'VSCODE_PERSONAL_ACCESS_TOKEN')]) {
-                    sh 'echo "${VSCODE_PERSONAL_ACCESS_TOKEN}" | $(npm bin)/vsce login'
+                dir('vscode-inmanta') {
+                    withCredentials([string(credentialsId: 'vscode_marketplace_access_token', variable: 'VSCODE_PERSONAL_ACCESS_TOKEN')]) {
+                        sh 'echo "${VSCODE_PERSONAL_ACCESS_TOKEN}" | $(npm bin)/vsce login'
+                    }
                 }
             }
         }
@@ -178,7 +180,9 @@ pipeline {
                 expression { "${run_job}" == "true" }
             }
             steps {
-                sh '$(npm bin)/vsce package'
+                dir('vscode-inmanta') {
+                    sh '$(npm bin)/vsce package'
+                }
             }
         }
 
@@ -190,8 +194,10 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([string(credentialsId: 'vscode_marketplace_access_token', variable: 'VSCODE_PERSONAL_ACCESS_TOKEN')]) {
-                    sh '$(npm bin)/vsce publish -p "${VSCODE_PERSONAL_ACCESS_TOKEN}"'
+                dir('vscode-inmanta') {
+                    withCredentials([string(credentialsId: 'vscode_marketplace_access_token', variable: 'VSCODE_PERSONAL_ACCESS_TOKEN')]) {
+                        sh '$(npm bin)/vsce publish -p "${VSCODE_PERSONAL_ACCESS_TOKEN}"'
+                    }
                 }
             }
         }
