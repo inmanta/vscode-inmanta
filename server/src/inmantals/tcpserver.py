@@ -19,14 +19,18 @@
 from inmantals.jsonrpc import JsonRpcServer
 from tornado.ioloop import IOLoop
 from inmantals.server import InmantaLSHandler
+import os
+import tempfile
 import logging
+import sys
 
 
 def main():
-    stream = logging.FileHandler("/tmp/vscode-inmanta.log")
+    logfile = os.path.join(str(tempfile.gettempdir()), "vscode-inmanta.log") if os.name == "nt" else "/tmp/vscode-inmanta.log"
+    stream = logging.FileHandler(logfile)
     stream.setLevel(logging.DEBUG)
-    stream2 = logging.StreamHandler()
-    stream2.setLevel(logging.DEBUG)
+    stream2 = logging.StreamHandler(sys.stderr)
+    stream2.setLevel(logging.INFO)
     logging.root.handlers = []
     logging.root.addHandler(stream)
     logging.root.addHandler(stream2)
@@ -35,7 +39,12 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
 
     server = JsonRpcServer(InmantaLSHandler)
-    server.listen(5432)
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 5432
+    sys.stdout.write(f"starting server on port {port} {os.linesep}")
+    sys.stdout.flush()
+    sys.stdout.write(f"Log file can be found at {logfile}")
+    sys.stdout.flush()
+    server.listen(port, address="127.0.0.1")
     IOLoop.current().start()
 
 

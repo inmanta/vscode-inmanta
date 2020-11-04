@@ -5,6 +5,7 @@ Changes in this release:
 - Use separate virtual env for the compiler (#9)
 - Added symbol search support (Ctrl+T) (#34)
 - Show clear error when a file is opened instead of a project (#32)
+- Extended language server support on Windows (#26)
 
 # v 0.0.1
 - Initial release
