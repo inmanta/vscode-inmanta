@@ -50,7 +50,7 @@ port=8888                                         # Replace this by the port on 
 
 ## Requirements
 
-None
+Operating System: Currently only Linux and Windows are supported.
 
 ## Extension Settings
 
