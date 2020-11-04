@@ -16,20 +16,20 @@ export async function activate(context: ExtensionContext) {
 	let lsOutputChannel = null;
 
 	async function startServerAndClient() {
-		const clientOptions = getClientOptions();
+		const clientOptions = await getClientOptions();
 		if (os.platform() === "win32") {
 			return await startTcp(clientOptions);
 		} else {
-			return startPipe(clientOptions);
+			return await startPipe(clientOptions);
 		}
 	}
 
-	function getClientOptions(): LanguageClientOptions {
+	async function getClientOptions(): Promise<LanguageClientOptions> {
 		const errorhandler = new LsErrorHandler();
 
 		// Options to control the language client
 		const compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv || Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
-		workspace.getConfiguration('inmanta').update('compilerVenv', compilerVenv, true);
+		await workspace.getConfiguration('inmanta').update('compilerVenv', compilerVenv, true);
 		
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
@@ -45,7 +45,7 @@ export async function activate(context: ExtensionContext) {
 	
 	async function startTcp(clientOptions: LanguageClientOptions) {
 		const host = "127.0.0.1";
-		const pp: string = createVenvIfNotExists();
+		const pp: string = await createVenvIfNotExists();
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
 		
@@ -142,12 +142,12 @@ export async function activate(context: ExtensionContext) {
 			);
 		}
 
-		diagnose() {
+		async diagnose() {
 			if (this._child !== undefined) {
 				return;
 			}
 
-			const pp: string = createVenvIfNotExists();
+			const pp: string = await createVenvIfNotExists();
 
 			if (!fs.existsSync(pp)) {
 				window.showErrorMessage("No python36 interpreter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.");
@@ -195,8 +195,8 @@ export async function activate(context: ExtensionContext) {
 
 	}
 
-	function startPipe(clientOptions: LanguageClientOptions) {
-		const pp: string = createVenvIfNotExists();
+	async function startPipe(clientOptions: LanguageClientOptions) {
+		const pp: string = await createVenvIfNotExists();
 
 		const serverOptions: Executable = {
 			command: pp,
@@ -215,8 +215,6 @@ export async function activate(context: ExtensionContext) {
 		return disposable;
 	}
 
-	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
-
 	function getDefaultVenvPath() {
 		if (os.platform() === "win32") {
 			return Uri.joinPath(context.globalStorageUri, ".env", "Scripts", "python.exe").fsPath;
@@ -224,7 +222,7 @@ export async function activate(context: ExtensionContext) {
 		return Uri.joinPath(context.globalStorageUri, ".env", "bin", "python").fsPath;
 	}
 
-	function createVenvIfNotExists() {
+	async function createVenvIfNotExists() {
 		const pp: string = workspace.getConfiguration('inmanta').pythonPath;
 		if (pp && fs.existsSync(pp)) {
 			return pp;
@@ -241,7 +239,7 @@ export async function activate(context: ExtensionContext) {
 			}
 			installLanguageServer(venvPath);
 		}
-		workspace.getConfiguration("inmanta").update("pythonPath", venvPath, true);
+		await workspace.getConfiguration("inmanta").update("pythonPath", venvPath, true);
 		return venvPath;
 	}
 
@@ -283,6 +281,7 @@ export async function activate(context: ExtensionContext) {
     }
 
 	let running: Disposable = undefined;
+	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
 
 	if (enable) {
 		running = await startServerAndClient();
