@@ -10,7 +10,7 @@ pipeline {
         booleanParam(
             name: 'run_job',
             defaultValue: false,
-            description: 'Triggering the build job with run_job == false doesn't run the actual job.',
+            description: 'Triggering the build job with run_job == false doesn\'t run the actual job.',
         )
         booleanParam(
             name: 'upload',
