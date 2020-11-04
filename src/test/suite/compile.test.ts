@@ -6,7 +6,7 @@ import { coerce, SemVer } from 'semver';
 
 import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString, extensions } from 'vscode';
 
-import { waitForCompile, getInmantaVersion, cleanVersion } from './helpers';
+import { waitForCompile, getInmantaVersion } from './helpers';
 
 
 const logPath: string = '/tmp/vscode-inmanta.log';
