@@ -187,12 +187,10 @@ class InmantaLSHandler(JsonRpcHandler):
                     ],
                 )
             await self.publish_diagnostics(params)
-            await self.send_show_message(lsp_types.MessageType.Error, "Compilation failed: " + e.get_message())
             logger.exception("Compilation failed")
 
         except Exception:
             await self.publish_diagnostics(None)
-            await self.send_show_message(lsp_types.MessageType.Error, "Compilation failed")
             logger.exception("Compilation failed")
 
     async def initialized(self):
