@@ -15,7 +15,7 @@ describe('Load extension', () => {
 
     it('Load .cf file wihtout opening a directory NO compilerVenv configured', async function() {
         await workspace.getConfiguration('inmanta').update('compilerVenv', "", true);
-        // Verify default configuration
+        // Verify initial state
         assert.ok(!extensions.getExtension('inmanta.inmanta').isActive);
 
         // Open a single file instead of a folder
