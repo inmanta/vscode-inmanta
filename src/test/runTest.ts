@@ -5,6 +5,7 @@ import * as fs from 'fs-extra';
 
 async function main() {
 
+	const tmpHomeDir: string = fs.mkdtempSync("/tmp/vscode-tests");
 	try {
 		// Loading config of testing workspace
 		const pythonPath = process.env.INMANTA_PYTHON_PATH;
@@ -26,18 +27,25 @@ async function main() {
 		// Passed to `--extensionDevelopmentPath`
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../');
 
-		// The path to test runner
-		// Passed to --extensionTestsPath
-		const extensionTestsPath = path.resolve(__dirname, './suite/index');
-
+		// Ensure the tests don't pick up any config present in the .config
+		// in the home dir.
+		const extensionTestsEnv = {HOME: tmpHomeDir};
 		// Download VS Code, unzip it and run the integration test
-		await runTests({ 
-			extensionDevelopmentPath: extensionDevelopmentPath, 
-			extensionTestsPath: extensionTestsPath,
+		await runTests({
+			extensionDevelopmentPath: extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './suite/indexCompileTest'),
+			extensionTestsEnv
+		});
+		await runTests({
+			extensionDevelopmentPath: extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './suite/indexLoadExtension'),
+			extensionTestsEnv
 		});
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
 		process.exit(1);
+	} finally {
+		fs.rmdirSync(tmpHomeDir, {recursive: true});
 	}
 }
 

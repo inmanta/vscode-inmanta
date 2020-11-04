@@ -76,6 +76,11 @@ class JsonRPC(object):
             assert False, "error in response %s: %s" % (id, result["error"])
         return result["result"]
 
+    async def assert_error(self, message: str) -> None:
+        result = json.loads(await client.read_one())
+        assert "error" in result
+        assert message in result["error"]["message"]
+
 
 @pytest.fixture
 async def server(event_loop) -> AsyncIterator[JsonRpcServer]:
@@ -303,3 +308,14 @@ async def test_symbol_provider(client: JsonRPC) -> None:
             container_name="testmodule::SymbolTest",
         ),
     ]
+
+@pytest.mark.timeout(5)
+@pytest.mark.asyncio
+async def test_root_path_is_none(client: JsonRPC) -> None:
+    """
+        The language server should return an error when it is started with `rootPath is None`.
+    """
+    await client.call("initialize", rootPath=None, rootUri=None, capabilities={})
+    client.assert_error(
+        message="A folder should be opened instead of a file in order to use the inmanta extension."
+    )

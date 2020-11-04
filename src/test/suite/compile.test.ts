@@ -63,7 +63,6 @@ describe('Compile checks', () => {
 				// Copy model into main.cf
 				const source: string = path.resolve(workspaceUri.fsPath, test.source);
 				await fs.copyFile(source, modelUri.fsPath);
-				
 				// Wait one second to let vscode notice we closed the previous editor
 				await new Promise(resolve => setTimeout(resolve, 1000));
 
