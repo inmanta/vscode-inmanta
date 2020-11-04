@@ -59,6 +59,17 @@ pipeline {
             }
         }
 
+        stage("Verify VS Code marketplace token hasn't expired") {
+            when {
+                expression { "${run_job}" == "true" }
+            }
+            steps {
+                withCredentials([string(credentialsId: 'vscode_marketplace_access_token', variable: 'VSCODE_PERSONAL_ACCESS_TOKEN')]) {
+                    sh 'echo "${VSCODE_PERSONAL_ACCESS_TOKEN}" | $(npm bin)/vsce login'
+                }
+            }
+        }
+
         stage("Setup next branch for major or minor release") {
             when{
                 allOf {
