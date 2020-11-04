@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import { after, before, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { coerce } from 'semver';
+import { coerce, SemVer } from 'semver';
 
 import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString, extensions } from 'vscode';
 
@@ -66,8 +66,8 @@ describe('Compile checks', () => {
 
 			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
 			const compilerVenv: string = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
-			const inmantaVersion: string = await getInmantaVersion(pythonPath);
-			envPath = coerce(cleanVersion(inmantaVersion)) <= coerce("2020.5") ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
+			const inmantaVersion: SemVer = await getInmantaVersion(pythonPath);
+			envPath = (inmantaVersion.major < 2020 || inmantaVersion.major == 2020 && inmantaVersion.minor <= 5) ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
 
 			const envExists = fs.pathExistsSync(envPath);
 			assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);

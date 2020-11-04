@@ -1,5 +1,6 @@
 import * as fs from 'fs-extra';
 import { exec } from 'child_process';
+import { coerce, SemVer } from 'semver';
 
 /**
  * Read a lloging file waiting for a message annoucing the end of the compilation
@@ -39,8 +40,8 @@ export function waitForCompile(logPath: string, timeout: number): Promise<boolea
  * 
  * @returns a Promise resolving a string, the verison of inmanta found.
  */
-export async function getInmantaVersion(pythonPath: string): Promise<string> {
-	return new Promise<string>((resolve, reject) => {
+export async function getInmantaVersion(pythonPath: string): Promise<SemVer> {
+	return new Promise<SemVer>((resolve, reject) => {
 		exec(`${pythonPath} -m pip list --format json`, (err, stdout, stderr) => {
 			if (err) {
 				reject(err);
@@ -48,24 +49,11 @@ export async function getInmantaVersion(pythonPath: string): Promise<string> {
 				const packageList = JSON.parse(stdout);
 				packageList.forEach(element => {
 					if (element.hasOwnProperty("name") && element["name"] === "inmanta" && element.hasOwnProperty("version")) {
-						resolve(element["version"]);
+						resolve(coerce(element["version"]));
 					}
 				});
 				reject(new Error("Could not find inmanta in provided python environment."));
 			}
 		});
 	});
-}
-
-/**
- * Clean a version given as input to only leave the major and minor part of it
- * @param version The version to clean
- * 
- * @returns The version cleaned up
- */
-export function cleanVersion(version: string): string {
-    const splited = version.split(".");
-    const major = splited.length > 0 ? splited[0] : "0";
-    const minor = splited.length > 1 ? splited[1] : "0";
-    return [major, minor].join(".");
 }
