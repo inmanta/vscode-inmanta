@@ -66,7 +66,7 @@ pipeline {
             steps {
                 dir('vscode-inmanta') {
                     withCredentials([string(credentialsId: 'vscode_marketplace_access_token', variable: 'VSCODE_PERSONAL_ACCESS_TOKEN')]) {
-                        sh 'echo "${VSCODE_PERSONAL_ACCESS_TOKEN}" | $(npm bin)/vsce login'
+                        sh 'echo "${VSCODE_PERSONAL_ACCESS_TOKEN}" | $(npm bin)/vsce login Inmanta'
                     }
                 }
             }
