@@ -16,7 +16,7 @@ export async function activate(context: ExtensionContext) {
 	let lsOutputChannel = null;
 
 	async function startServerAndClient() {
-		var clientOptions
+		var clientOptions;
 		try{
 			clientOptions = await getClientOptions();
 		} catch(err){
