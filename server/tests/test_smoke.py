@@ -330,6 +330,7 @@ async def test_symbol_provider(client: JsonRPC) -> None:
         ),
     ]
 
+
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
 async def test_root_path_is_none(client: JsonRPC) -> None:
