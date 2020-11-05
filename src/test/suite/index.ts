@@ -9,7 +9,7 @@ export function inner_run(regexToTestFiles: string): Promise<void> {
 		color: true
 	});
 
-	const testsRoot = __dirname;
+	const testsRoot = path.resolve(__dirname, '..');
 
 	return new Promise((c, e) => {
 		glob(regexToTestFiles, { cwd: testsRoot }, (err, files) => {

@@ -51,7 +51,7 @@ async function main() {
 		});
 		await runTests({ 
 			extensionDevelopmentPath: extensionDevelopmentPath, 
-			extensionTestsPath: path.resolve(__dirname, './nav-suite/index'),
+			extensionTestsPath: path.resolve(__dirname, './suite/indexNavTest'),
 			launchArgs: [path.resolve(__dirname, '../../src/test/navigation-workspace')],
 			extensionTestsEnv
 		});
