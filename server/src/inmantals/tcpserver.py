@@ -40,9 +40,9 @@ def main():
 
     server = JsonRpcServer(InmantaLSHandler)
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 5432
-    sys.stdout.write(f"starting server on port {port} {os.linesep}")
+    sys.stdout.write(f"starting server on port {port}{os.linesep}")
     sys.stdout.flush()
-    sys.stdout.write(f"Log file can be found at {logfile}")
+    sys.stdout.write(f"Log file can be found at {logfile}{os.linesep}")
     sys.stdout.flush()
     server.listen(port, address="127.0.0.1")
     IOLoop.current().start()
