@@ -16,7 +16,7 @@ export async function activate(context: ExtensionContext) {
 	let lsOutputChannel = null;
 
 	async function startServerAndClient() {
-		var clientOptions;
+		let clientOptions;
 		try{
 			clientOptions = await getClientOptions();
 		} catch(err){
@@ -30,11 +30,11 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function getClientOptions(): Promise<LanguageClientOptions> {
-		var compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
+		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
 		if (!compilerVenv) {
 			if(context.storageUri == undefined){
 				window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
-				throw "A folder should be opened instead of a file in order to use the inmanta extension.";
+				throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 			}
 			compilerVenv = Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
 		} 
