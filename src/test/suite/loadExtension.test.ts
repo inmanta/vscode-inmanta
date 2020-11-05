@@ -9,7 +9,6 @@ const cfFile: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspac
 describe('Load extension', () => {
 
     beforeEach(async function() {
-        // await commands.executeCommand('workbench.action.closeWorkspace');
         await commands.executeCommand('workbench.action.closeFolder');
     });
 
