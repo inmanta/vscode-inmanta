@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 
 import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString, extensions, Range, Location } from 'vscode';
+import { getInmantaVersion, waitForCompile } from '../suite/helpers';
 
 const logPath: string = '/tmp/vscode-inmanta.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/navigation-workspace'));
@@ -11,30 +12,6 @@ const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 
 
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
-
-function waitForCompile(timeout: number): Promise<boolean> {
-	const start = Date.now();
-	return new Promise<boolean>((resolve, reject) => {
-		const readLogInterval = setInterval(() => {
-			if (Date.now() - start > timeout) {
-				reject(new Error("Timeout reached"));
-			} else {
-				fs.ensureFileSync(logPath);
-				fs.readFile(logPath, 'utf-8', (err, data) => {
-					if (err) {
-						console.log(err);
-					} else if (data.includes('Compilation succeeded')) {
-						clearInterval(readLogInterval);
-						resolve(true);
-					} else if (data.includes('Compilation failed')) {
-						clearInterval(readLogInterval);
-						resolve(false);
-					}
-				});
-			}
-		}, 500);
-	});
-}
 
 describe('Language Server Code navigation', () => {
 
@@ -57,13 +34,20 @@ describe('Language Server Code navigation', () => {
 			// Open model file
 			const doc: TextDocument = await workspace.openTextDocument(modelUri);
 			await window.showTextDocument(doc);
-			const succeeded = await waitForCompile(10000);
+			const succeeded = await waitForCompile(logPath, 10000);
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(13, 16));
-			
+			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
+			const inmantaVersion = await getInmantaVersion(pythonPath);
+			let expectedAttributeLocation;
+			if (inmantaVersion.major < 2020 || inmantaVersion.major === 2020 && inmantaVersion.minor <= 5) {
+				expectedAttributeLocation = new Range(new Position(2, 0), new Position(3, 0));
+			} else {
+				expectedAttributeLocation = new Range(new Position(2, 11), new Position(2, 15));
+			}
 			assert.strictEqual((attributeInSameFile as Location[]).length, 1);
 			assert.strictEqual(attributeInSameFile[0].uri.fsPath, modelUri.fsPath);
-			assert.deepStrictEqual(attributeInSameFile[0].range, new Range(new Position(2, 11), new Position(2, 15)), "Attribute location in the same file doesn't match");
+			assert.deepStrictEqual(attributeInSameFile[0].range, expectedAttributeLocation, "Attribute location in the same file doesn't match");
 
 			const typeInDifferentFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(4, 18));
 			assert.strictEqual((typeInDifferentFile as Location[]).length, 1);

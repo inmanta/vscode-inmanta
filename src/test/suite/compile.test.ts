@@ -4,8 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { SemVer } from 'semver';
 
-import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString, extensions } from 'vscode';
-
+import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString } from 'vscode';
 import { waitForCompile, getInmantaVersion } from './helpers';
 
 
