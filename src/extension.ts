@@ -16,7 +16,12 @@ export async function activate(context: ExtensionContext) {
 	let lsOutputChannel = null;
 
 	async function startServerAndClient() {
-		const clientOptions = await getClientOptions();
+		let clientOptions;
+		try{
+			clientOptions = await getClientOptions();
+		} catch(err){
+			return undefined;
+		}
 		if (os.platform() === "win32") {
 			return await startTcp(clientOptions);
 		} else {
@@ -25,10 +30,18 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function getClientOptions(): Promise<LanguageClientOptions> {
+		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
+		if (!compilerVenv) {
+			if(context.storageUri == undefined){
+				window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
+				throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
+			}
+			compilerVenv = Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
+		} 
+
 		const errorhandler = new LsErrorHandler();
 
 		// Options to control the language client
-		const compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv || Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
 		await workspace.getConfiguration('inmanta').update('compilerVenv', compilerVenv, true);
 		
 		const clientOptions: LanguageClientOptions = {
@@ -156,11 +169,11 @@ export async function activate(context: ExtensionContext) {
 
 			const script = "import sys\n" +
 				"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
-				"  exit(4)\n" + 
-				"try:\n" + 
-				"  import inmantals.pipeserver\n" + 
+				"  exit(4)\n" +
+				"try:\n" +
+				"  import inmantals.pipeserver\n" +
 				"  sys.exit(0)\n" +
-				"except:\n" + 
+				"except:\n" +
 				"  sys.exit(3)";
 
 			this._child = cp.spawn(pp, ["-c", script]);
