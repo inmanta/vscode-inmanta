@@ -1,8 +1,8 @@
 import * as assert from 'assert';
-import { after, before, describe, it, beforeEach } from 'mocha';
+import { after, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { coerce, SemVer } from 'semver';
+import { SemVer } from 'semver';
 
 import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString, extensions } from 'vscode';
 
@@ -22,10 +22,6 @@ describe('Compile checks', () => {
 	];
 
 	let envPath: string = "";
-
-	before(async function() {
-		await commands.executeCommand('vscode.openFolder', workspaceUri);
-	});
 
 	beforeEach((done) => {
 		Promise.all([
@@ -74,14 +70,12 @@ describe('Compile checks', () => {
 		}).timeout(0);
 	});
 
-	after((done) => {
-		Promise.all([
+	after(async () => {
+		await Promise.all([
 			fs.writeFile(logPath, ""),
 			fs.remove(libsPath),
 			fs.remove(envPath),
 			fs.remove(modelUri.fsPath),
-		]).then(values => {
-			done();
-		});
+		]);
 	});
 });

@@ -23,6 +23,9 @@ async function main() {
 		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/workspace/.vscode/settings.json');
 		await fs.ensureFile(workspaceSettingsPath);
 		await fs.writeJSON(workspaceSettingsPath, settings);
+		const navworkspaceSettingsPath = path.resolve(__dirname, '../../src/test/navigation-workspace/.vscode/settings.json');
+		await fs.ensureFile(navworkspaceSettingsPath);
+		await fs.writeJSON(navworkspaceSettingsPath, settings);
 
 		// The folder containing the Extension Manifest package.json
 		// Passed to `--extensionDevelopmentPath`
@@ -32,14 +35,21 @@ async function main() {
 		// Passed to --extensionTestsPath
 		const extensionTestsPath = path.resolve(__dirname, './suite/index');
 
-		// Download VS Code, unzip it and run the integration test
+		// Download VS Code, unzip it and run the integration tests
 		await runTests({ 
 			extensionDevelopmentPath: extensionDevelopmentPath, 
 			extensionTestsPath: extensionTestsPath,
 			extensionTestsEnv: {
 				"INMANTA_LANGUAGE_SERVER_PATH": process.env.INMANTA_LANGUAGE_SERVER_PATH,
 			},
+			launchArgs: [path.resolve(__dirname, '../../src/test/workspace')]
 		});
+		await runTests({ 
+			extensionDevelopmentPath: extensionDevelopmentPath, 
+			extensionTestsPath: path.resolve(__dirname, './nav-suite/index'),
+			launchArgs: [path.resolve(__dirname, '../../src/test/navigation-workspace')]
+		});
+		
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
 		process.exit(1);
