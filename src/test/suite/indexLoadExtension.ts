@@ -1,5 +1,5 @@
-import { inner_run } from "./index";
+import { innerRun } from "./index";
 
 export function run(): Promise<void> {
-    return inner_run("./suite/loadExtension.test.js");
+    return innerRun("./suite/loadExtension.test.js");
 }

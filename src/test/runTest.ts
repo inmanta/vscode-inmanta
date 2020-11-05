@@ -42,6 +42,7 @@ async function main() {
 		await runTests({
 			extensionDevelopmentPath: extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './suite/indexCompileTest'),
+			launchArgs: [path.resolve(__dirname, '../../src/test/workspace')],
 			extensionTestsEnv
 		});
 		await runTests({

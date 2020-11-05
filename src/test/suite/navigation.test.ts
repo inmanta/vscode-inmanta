@@ -25,16 +25,11 @@ describe('Language Server Code navigation', () => {
 
 	
 	it(`Check that code navigation works`, () => {
-		return new Promise(async (resolve, reject) => {			
-			// Wait one second to let vscode notice we closed the previous editor
-			
-			await new Promise(res => setTimeout(res, 1000));
-			
-
+		return new Promise(async resolve => {			
 			// Open model file
 			const doc: TextDocument = await workspace.openTextDocument(modelUri);
 			await window.showTextDocument(doc);
-			const succeeded = await waitForCompile(logPath, 10000);
+			const succeeded = await waitForCompile(logPath, 25000);
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(13, 16));
 			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
@@ -69,7 +64,7 @@ describe('Language Server Code navigation', () => {
 
 	after(async () => {
 		await Promise.all([
-			// fs.writeFile(logPath, ""),
+			fs.writeFile(logPath, ""),
 		]);
 	});
 });

@@ -53,7 +53,7 @@ describe('Compile checks', () => {
 			assert.strictEqual(doc.isDirty, true, "The file should be dirty, but isn't");
 			await doc.save();
 
-			const succeeded = await waitForCompile(logPath, 20000);
+			const succeeded = await waitForCompile(logPath, 25000);
 			assert.strictEqual(succeeded, test.succeed, `The model should ${test.succeed ? "" : "not"} compile, but did ${succeeded ? "" : "not"}.`);
 
 			const libsExists = fs.pathExistsSync(libsPath);
