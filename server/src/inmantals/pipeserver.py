@@ -21,6 +21,7 @@ from inmantals.server import InmantaLSHandler
 import logging
 from tornado.iostream import PipeIOStream
 import sys
+import os
 
 
 def main():
@@ -38,13 +39,13 @@ def main():
     stdin = PipeIOStream(sys.stdin.fileno())
     stdout = PipeIOStream(sys.stdout.fileno())
     handler = InmantaLSHandler(stdin, stdout, "0.0.0.0")
-    sys.stdout.write("starting{os.linesep}")
-    sys.stdout.flush()
+    sys.stderr.write(f"starting{os.linesep}")
+    sys.stderr.flush()
 
     IOLoop.current().run_sync(handler.start)
 
-    sys.stdout.write("stopped{os.linesep}")
-    sys.stdout.flush()
+    sys.stderr.write(f"stopped{os.linesep}")
+    sys.stderr.flush()
 
 
 if __name__ == "__main__":
