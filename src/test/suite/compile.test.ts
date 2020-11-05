@@ -63,7 +63,7 @@ describe('Compile checks', () => {
 			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
 			const compilerVenv: string = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
 			const inmantaVersion: SemVer = await getInmantaVersion(pythonPath);
-			envPath = (inmantaVersion.major < 2020 || inmantaVersion.major == 2020 && inmantaVersion.minor <= 5) ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
+			envPath = (inmantaVersion.major < 2020 || inmantaVersion.major === 2020 && inmantaVersion.minor <= 5) ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
 
 			const envExists = fs.pathExistsSync(envPath);
 			assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);

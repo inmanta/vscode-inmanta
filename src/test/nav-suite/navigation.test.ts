@@ -48,23 +48,17 @@ describe('Language Server Code navigation', () => {
 
 	
 	it(`Check that code navigation works`, () => {
-		return new Promise(async (resolve, reject) => {
-			
-			// await commands.executeCommand('vscode.openFolder', workspaceUri);
-			// Copy model into main.cf
-			// assert.strictEqual(true, false);
-			
+		return new Promise(async (resolve, reject) => {			
 			// Wait one second to let vscode notice we closed the previous editor
 			
 			await new Promise(res => setTimeout(res, 1000));
 			
 
-			// Opening model file
+			// Open model file
 			const doc: TextDocument = await workspace.openTextDocument(modelUri);
-			// reject();
 			await window.showTextDocument(doc);
 			const succeeded = await waitForCompile(10000);
-			assert.strictEqual(succeeded, true);
+			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(13, 16));
 			
 			assert.strictEqual((attributeInSameFile as Location[]).length, 1);
