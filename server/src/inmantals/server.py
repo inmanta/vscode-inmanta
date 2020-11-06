@@ -70,6 +70,9 @@ class InmantaLSHandler(JsonRpcHandler):
     async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
 
+        if rootPath is None:
+            raise Exception("A folder should be opened instead of a file in order to use the inmanta extension.")
+
         self.rootPath = rootPath
         self.rootUrl = rootUri
         os.chdir(rootPath)
@@ -187,12 +190,10 @@ class InmantaLSHandler(JsonRpcHandler):
                     ],
                 )
             await self.publish_diagnostics(params)
-            await self.send_show_message(lsp_types.MessageType.Error, "Compilation failed: " + e.get_message())
             logger.exception("Compilation failed")
 
         except Exception:
             await self.publish_diagnostics(None)
-            await self.send_show_message(lsp_types.MessageType.Error, "Compilation failed")
             logger.exception("Compilation failed")
 
     async def initialized(self):

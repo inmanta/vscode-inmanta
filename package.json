@@ -51,7 +51,7 @@
       "properties": {
         "inmanta.pythonPath": {
           "type": "string",
-          "default": "python",
+          "default": "",
           "description": "Path to Python, you can use a custom version of Python by modifying this setting to include the full path.",
           "scope": "resource"
         },
@@ -108,6 +108,8 @@
     "@types/glob": "^7.1.3",
     "@types/mocha": "^8.0.0",
     "@types/node": "^12.11.7",
+    "@types/rimraf": "^3.0.0",
+    "@types/semver": "^7.3.4",
     "@types/vscode": "^1.50.0",
     "@typescript-eslint/eslint-plugin": "^4.6.0",
     "@typescript-eslint/parser": "^4.6.0",
@@ -117,6 +119,7 @@
     "glob": "^7.1.6",
     "mocha": "^8.1.3",
     "rimraf": "^3.0.2",
+    "semver": "^7.3.2",
     "typescript": "^4.0.2",
     "vscode-test": "^1.4.0"
   },
