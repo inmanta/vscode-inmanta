@@ -46,7 +46,7 @@ describe('Language Server Code navigation', () => {
 
 			const typeInDifferentFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(4, 18));
 			assert.strictEqual((typeInDifferentFile as Location[]).length, 1);
-			assert.strictEqual(typeInDifferentFile[0].uri.fsPath, Uri.file(path.resolve(libsPath, "testmodule", "model", "_init.cf")).fsPath);
+			assert.strictEqual(typeInDifferentFile[0].uri.fsPath, path.resolve(libsPath, "testmodule", "model", "_init.cf"));
 			assert.deepStrictEqual(typeInDifferentFile[0].range, new Range(new Position(0, 8), new Position(0, 11)), "Attribute location in different file doesn't match");
 
 			if (inmantaVersion.major < 2020 || inmantaVersion.major === 2020 && inmantaVersion.minor <= 5) {
@@ -54,7 +54,7 @@ describe('Language Server Code navigation', () => {
 			} else {
 				const pluginLocation = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(17, 15));
 				assert.strictEqual((pluginLocation as Location[]).length, 1);
-				assert.strictEqual(pluginLocation[0].uri.fsPath, Uri.file(path.resolve(libsPath, "testmodule", "plugins", "__init__.py")).fsPath);
+				assert.strictEqual(pluginLocation[0].uri.fsPath, path.resolve(libsPath, "testmodule", "plugins", "__init__.py"));
 				assert.deepStrictEqual(pluginLocation[0].range, new Range(new Position(4, 0), new Position(5, 0)), "Plugin location doesn't match");
 			}
 			resolve();
