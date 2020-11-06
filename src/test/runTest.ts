@@ -2,6 +2,7 @@ import * as path from 'path';
 
 import { runTests } from 'vscode-test';
 import * as fs from 'fs-extra';
+import * as rimraf from 'rimraf';
 
 
 async function main() {
@@ -21,9 +22,12 @@ async function main() {
 		}
 
 		// Saving settings of testing workspace to file
-		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/workspace/.vscode/settings.json');
+		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/compile/workspace/.vscode/settings.json');
 		await fs.ensureFile(workspaceSettingsPath);
 		await fs.writeJSON(workspaceSettingsPath, settings);
+		const navworkspaceSettingsPath = path.resolve(__dirname, '../../src/test/navigation/workspace/.vscode/settings.json');
+		await fs.ensureFile(navworkspaceSettingsPath);
+		await fs.writeJSON(navworkspaceSettingsPath, settings);
 
 		// The folder containing the Extension Manifest package.json
 		// Passed to `--extensionDevelopmentPath`
@@ -38,19 +42,27 @@ async function main() {
 		// Download VS Code, unzip it and run the integration test
 		await runTests({
 			extensionDevelopmentPath: extensionDevelopmentPath,
-			extensionTestsPath: path.resolve(__dirname, './suite/indexCompileTest'),
+			extensionTestsPath: path.resolve(__dirname, './compile/index'),
+			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace')],
 			extensionTestsEnv
 		});
 		await runTests({
 			extensionDevelopmentPath: extensionDevelopmentPath,
-			extensionTestsPath: path.resolve(__dirname, './suite/indexLoadExtension'),
+			extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
 			extensionTestsEnv
 		});
+		await runTests({ 
+			extensionDevelopmentPath: extensionDevelopmentPath, 
+			extensionTestsPath: path.resolve(__dirname, './navigation/index'),
+			launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace')],
+			extensionTestsEnv
+		});
+		
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
 		process.exit(1);
 	} finally {
-		fs.rmdirSync(tmpHomeDir, {recursive: true});
+		rimraf.sync(tmpHomeDir);
 	}
 }
 

@@ -1,16 +1,15 @@
 import * as assert from 'assert';
-import { after, before, describe, it, beforeEach } from 'mocha';
+import { after, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { coerce, SemVer } from 'semver';
+import { SemVer } from 'semver';
 
-import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString, extensions } from 'vscode';
-
-import { waitForCompile, getInmantaVersion } from './helpers';
+import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString } from 'vscode';
+import { waitForCompile, getInmantaVersion } from '../helpers';
 
 
 const logPath: string = '/tmp/vscode-inmanta.log';
-const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace'));
+const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/compile/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
@@ -22,10 +21,6 @@ describe('Compile checks', () => {
 	];
 
 	let envPath: string = "";
-
-	before(async function() {
-		await commands.executeCommand('vscode.openFolder', workspaceUri);
-	});
 
 	beforeEach((done) => {
 		Promise.all([
@@ -58,7 +53,7 @@ describe('Compile checks', () => {
 			assert.strictEqual(doc.isDirty, true, "The file should be dirty, but isn't");
 			await doc.save();
 
-			const succeeded = await waitForCompile(logPath, 20000);
+			const succeeded = await waitForCompile(logPath, 25000);
 			assert.strictEqual(succeeded, test.succeed, `The model should ${test.succeed ? "" : "not"} compile, but did ${succeeded ? "" : "not"}.`);
 
 			const libsExists = fs.pathExistsSync(libsPath);
@@ -67,21 +62,19 @@ describe('Compile checks', () => {
 			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
 			const compilerVenv: string = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
 			const inmantaVersion: SemVer = await getInmantaVersion(pythonPath);
-			envPath = (inmantaVersion.major < 2020 || inmantaVersion.major == 2020 && inmantaVersion.minor <= 5) ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
+			envPath = (inmantaVersion.major < 2020 || inmantaVersion.major === 2020 && inmantaVersion.minor <= 5) ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
 
 			const envExists = fs.pathExistsSync(envPath);
 			assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);
 		}).timeout(0);
 	});
 
-	after((done) => {
-		Promise.all([
+	after(async () => {
+		await Promise.all([
 			fs.writeFile(logPath, ""),
 			fs.remove(libsPath),
 			fs.remove(envPath),
 			fs.remove(modelUri.fsPath),
-		]).then(values => {
-			done();
-		});
+		]);
 	});
 });
