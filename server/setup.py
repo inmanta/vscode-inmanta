@@ -28,7 +28,7 @@ setup(
     license="Apache Software License",
     url="https://github.com/inmanta/vscode-inmanta",
     keywords=["ide","language-server","vscode", "inmanta"],
-    classifiers=["Development Status :: 5 - Stable",
+    classifiers=["Development Status :: 5 - Production/Stable",
                  "Intended Audience :: Developers",
                  "Intended Audience :: Telecommunications Industry",
                  "License :: OSI Approved :: Apache Software License",
