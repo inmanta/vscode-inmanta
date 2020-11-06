@@ -5,11 +5,11 @@ import * as fs from 'fs-extra';
 import { SemVer } from 'semver';
 
 import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString } from 'vscode';
-import { waitForCompile, getInmantaVersion } from './helpers';
+import { waitForCompile, getInmantaVersion } from '../helpers';
 
 
 const logPath: string = '/tmp/vscode-inmanta.log';
-const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace'));
+const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/compile/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 

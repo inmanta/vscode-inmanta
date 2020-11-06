@@ -4,7 +4,7 @@ import * as path from 'path';
 
 import { Uri, window, commands, workspace, TextDocument, TextEditor, extensions } from 'vscode';
 
-const cfFile: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/workspace/valid.cf'));
+const cfFile: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/compile/workspace/valid.cf'));
 
 describe('Load extension', () => {
 

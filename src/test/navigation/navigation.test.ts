@@ -4,10 +4,10 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 
 import { Uri, window, commands, workspace, TextDocument, Position, Range, Location } from 'vscode';
-import { getInmantaVersion, waitForCompile } from './helpers';
+import { getInmantaVersion, waitForCompile } from '../helpers';
 
 const logPath: string = '/tmp/vscode-inmanta.log';
-const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/navigation-workspace'));
+const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/navigation/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 
 
