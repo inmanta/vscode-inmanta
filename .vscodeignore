@@ -1,8 +1,10 @@
-server
+images/
+LICENSE
+server/
 src/
-.gitignore
-contributing.md
 tsconfig.json
+.ci/
+.gitignore
 
 .vscode/**
 **/*.ts

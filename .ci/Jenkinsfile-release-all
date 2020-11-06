@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(
+            name: 'release_server',
+            defaultValue: false,
+            description: 'Whether a new version should be released for the language server',
+        )
+        choice(
+            name: 'server_version_increment',
+            choices: ['none', 'patch', 'minor', 'major'],
+            description: 'Indicates what kind of version bump should be done for the language server. Ignored if release_server == false',
+        )
+        booleanParam(
+            name: 'release_extension',
+            defaultValue: false,
+            description: 'Whether a new version should be released for the extension',
+        )
+        choice(
+            name: 'extension_version_increment',
+            choices: ['none', 'patch', 'minor', 'major'],
+            description: 'Indicates what kind of version bump should be done for the extension. Ignored if release_extension == false',
+        )
+    }
+
+    options {
+        disableConcurrentBuilds()
+        skipDefaultCheckout()
+    }
+
+    stages {
+        stage ("Build and publish language server") {
+            when {
+                expression { "${release_server}" == "true" }
+            }
+            steps {
+                build(
+                    job: "/releases/python-packages/vscode-inmanta-ls-pypi-release/${env.BRANCH_NAME}",
+                    parameters: [
+                        string(name: 'release_type', value: 'stable'),
+                        string(name: 'version_increment', value: server_version_increment),
+                        booleanParam(name: 'run_job', value: true),
+                        booleanParam(name: 'upload', value: true),
+                    ]
+                )
+            }
+        }
+        stage ("Build and publish extension") {
+            when {
+                expression { "${release_extension}" == "true" }
+            }
+            steps {
+                build(
+                    job: "/releases/npm/vscode-inmanta-extension-release/${env.BRANCH_NAME}",
+                    parameters: [
+                        string(name: 'version_increment', value: extension_version_increment),
+                        booleanParam(name: 'run_job', value: true),
+                        booleanParam(name: 'upload', value: true),
+                    ]
+                )
+            }
+        }
+    }
+}
