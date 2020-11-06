@@ -1,4 +1,5 @@
-images/
+images/*
+!images/inmanta.ico
 LICENSE
 server/
 src/
