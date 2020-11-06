@@ -1,4 +1,4 @@
-# v 1.0.0 (?)
+# v 1.0.0 (2020-11-06)
 Changes in this release:
 - Added error highlighting (#18)
 - Added export to server button (#8)
