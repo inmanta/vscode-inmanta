@@ -16,35 +16,25 @@
     Contact: code@inmanta.com
 """
 
-from tornado.ioloop import IOLoop
-from inmantals.server import InmantaLSHandler
-import logging
-from tornado.iostream import PipeIOStream
-import sys
 import os
+import sys
+
+from inmantals.server import InmantaLSHandler
+from tornado.ioloop import IOLoop
+from tornado.iostream import PipeIOStream
 
 
 def main():
-    stream = logging.FileHandler("/tmp/vscode-inmanta.log")
-    stream.setLevel(logging.DEBUG)
-    stream2 = logging.StreamHandler(sys.stderr)
-    stream2.setLevel(logging.INFO)
-    logging.root.handlers = []
-    logging.root.addHandler(stream)
-    logging.root.addHandler(stream2)
-    logging.root.setLevel(0)
-
-    logging.basicConfig(level=logging.DEBUG)
-
     stdin = PipeIOStream(sys.stdin.fileno())
     stdout = PipeIOStream(sys.stdout.fileno())
     handler = InmantaLSHandler(stdin, stdout, "0.0.0.0")
-    sys.stderr.write(f"starting{os.linesep}")
+
+    sys.stderr.write(f"Starting language server{os.linesep}")
     sys.stderr.flush()
 
     IOLoop.current().run_sync(handler.start)
 
-    sys.stderr.write(f"stopped{os.linesep}")
+    sys.stderr.write(f"Language server stopped{os.linesep}")
     sys.stderr.flush()
 
 

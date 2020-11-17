@@ -21,33 +21,29 @@ import json
 import logging
 import os
 import types
-from intervaltree.intervaltree import IntervalTree
+from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Set, Tuple
 
-from inmantals import lsp_types
-from inmantals.jsonrpc import (
-    JsonRpcHandler,
-    MethodNotFoundException,
-    InvalidParamsException,
-)
 import inmanta.ast.type as inmanta_type
-from inmanta import compiler
-from inmanta.util import groupby
-from inmanta.ast import CompilerException, Range
-from concurrent.futures.thread import ThreadPoolExecutor
-from tornado.iostream import BaseIOStream
-from inmanta import resources
+from inmanta import compiler, resources
 from inmanta.agent import handler
+from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, EntityLike, Implementation
 from inmanta.execute import scheduler
 from inmanta.module import Project
 from inmanta.plugins import Plugin
+from inmanta.util import groupby
+from inmantals import lsp_types
+from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
+from intervaltree.intervaltree import IntervalTree
+from tornado.iostream import BaseIOStream
 
 # This module has only been added in inmanta v2020.3.
 ast_export: Optional[types.ModuleType]
 try:
     import inmanta.ast.export  # type: ignore
+
     ast_export = inmanta.ast.export
 except ModuleNotFoundError:
     ast_export = None
@@ -67,18 +63,24 @@ class InmantaLSHandler(JsonRpcHandler):
         self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = None
         self.compiler_venv_path: Optional[str] = None
 
-    async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
+    async def initialize(
+        self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs
+    ):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
 
         if rootPath is None:
-            raise Exception("A folder should be opened instead of a file in order to use the inmanta extension.")
+            raise Exception(
+                "A folder should be opened instead of a file in order to use the inmanta extension."
+            )
 
         self.rootPath = rootPath
         self.rootUrl = rootUri
         os.chdir(rootPath)
         init_options = kwargs.get("initializationOptions", None)
         if init_options:
-            self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
+            self.compiler_venv_path = init_options.get(
+                "compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler")
+            )
 
         value_set: List[int]
         try:
@@ -93,7 +95,9 @@ class InmantaLSHandler(JsonRpcHandler):
                 logging.warning("Client specified unsupported symbol kind %s" % value)
                 return None
 
-        self.supported_symbol_kinds = {symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None}
+        self.supported_symbol_kinds = {
+            symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None
+        }
 
         return {
             "capabilities": {
@@ -109,7 +113,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 "workspaceSymbolProvider": {
                     # the language server does not report work done progress for workspace symbol requests
                     "workDoneProgress": False,
-                }
+                },
             }
         }
 
@@ -126,7 +130,10 @@ class InmantaLSHandler(JsonRpcHandler):
 
             project_signature = inspect.signature(Project.__init__)
             # fresh project
-            if "venv_path" in project_signature.parameters.keys() and self.compiler_venv_path:
+            if (
+                "venv_path" in project_signature.parameters.keys()
+                and self.compiler_venv_path
+            ):
                 logger.debug("Using venv path " + str(self.compiler_venv_path))
                 Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
             else:
@@ -136,7 +143,9 @@ class InmantaLSHandler(JsonRpcHandler):
             compiler_instance: compiler.Compiler = compiler.Compiler()
             (statements, blocks) = compiler_instance.compile()
             scheduler_instance = scheduler.Scheduler()
-            anchormap = scheduler_instance.anchormap(compiler_instance, statements, blocks)
+            anchormap = scheduler_instance.anchormap(
+                compiler_instance, statements, blocks
+            )
             self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
@@ -169,7 +178,9 @@ class InmantaLSHandler(JsonRpcHandler):
 
         try:
             # run synchronous part in executor to allow context switching while awaiting
-            await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
+            await asyncio.get_event_loop().run_in_executor(
+                self.threadpool, sync_compile_and_anchor
+            )
             await self.publish_diagnostics(None)
             logger.info("Compilation succeeded")
 
@@ -256,7 +267,9 @@ class InmantaLSHandler(JsonRpcHandler):
         loc = list(range)[0].data
         return self.convert_location(loc)
 
-    async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803
+    async def textDocument_references(
+        self, textDocument, position, context
+    ):  # noqa: N802, N803
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
@@ -288,14 +301,23 @@ class InmantaLSHandler(JsonRpcHandler):
         ]
 
         def get_symbol_kind(tp: inmanta_type.NamedType) -> lsp_types.SymbolKind:
-            def if_supported(then: lsp_types.SymbolKind, otherwise: lsp_types.SymbolKind) -> lsp_types.SymbolKind:
+            def if_supported(
+                then: lsp_types.SymbolKind, otherwise: lsp_types.SymbolKind
+            ) -> lsp_types.SymbolKind:
                 """
                 Returns `then` iff the client can handle it, otherwise returns `otherwise`.
                 If the client explicitly specifies its supported symbol kinds, it is expected to gracefully handle symbol kinds
                 outside of this set. If it doesn't specify its supported symbol kinds, it must support all symbol kinds up to
                 Array.
                 """
-                return then if (self.supported_symbol_kinds is not None and then in self.supported_symbol_kinds) else otherwise
+                return (
+                    then
+                    if (
+                        self.supported_symbol_kinds is not None
+                        and then in self.supported_symbol_kinds
+                    )
+                    else otherwise
+                )
 
             if isinstance(tp, Plugin):
                 return lsp_types.SymbolKind.Function
@@ -307,14 +329,17 @@ class InmantaLSHandler(JsonRpcHandler):
                 return lsp_types.SymbolKind.Constructor
 
             logger.warning("Unknown type %s, using default symbol kind" % tp)
-            return if_supported(lsp_types.SymbolKind.Object, lsp_types.SymbolKind.Variable)
+            return if_supported(
+                lsp_types.SymbolKind.Object, lsp_types.SymbolKind.Variable
+            )
 
         type_symbols: Iterator[lsp_types.SymbolInformation] = (
             lsp_types.SymbolInformation(
-                name=name, kind=get_symbol_kind(tp), location=self.convert_location(tp.location)
+                name=name,
+                kind=get_symbol_kind(tp),
+                location=self.convert_location(tp.location),
             )
-            for name, tp
-            in matching_types
+            for name, tp in matching_types
         )
 
         attribute_symbols: Iterator[lsp_types.SymbolInformation] = (
@@ -324,7 +349,8 @@ class InmantaLSHandler(JsonRpcHandler):
                 location=self.convert_location(attribute.location),
                 container_name=entity_name,
             )
-            for entity_name, entity in matching_types if isinstance(entity, Entity)
+            for entity_name, entity in matching_types
+            if isinstance(entity, Entity)
             for attribute_name, attribute in entity.attributes.items()
         )
 
@@ -364,7 +390,9 @@ class InmantaLSHandler(JsonRpcHandler):
             "window/showMessage", {"type": type.value, "message": message}
         )
 
-    async def publish_diagnostics(self, params: Optional[lsp_types.PublishDiagnosticsParams]) -> None:
+    async def publish_diagnostics(
+        self, params: Optional[lsp_types.PublishDiagnosticsParams]
+    ) -> None:
         """
         Publishes supplied diagnostics and caches it. If params is None, clears previously published diagnostics.
         """
@@ -373,8 +401,12 @@ class InmantaLSHandler(JsonRpcHandler):
             if params is None:
                 if self.diagnostics_cache is None:
                     return
-                publish_params = lsp_types.PublishDiagnosticsParams(uri=self.diagnostics_cache.uri, diagnostics=[])
+                publish_params = lsp_types.PublishDiagnosticsParams(
+                    uri=self.diagnostics_cache.uri, diagnostics=[]
+                )
             else:
                 publish_params = params
-            await self.send_notification("textDocument/publishDiagnostics", publish_params.dict())
+            await self.send_notification(
+                "textDocument/publishDiagnostics", publish_params.dict()
+            )
             self.diagnostics_cache = params

@@ -62,7 +62,11 @@ export async function activate(context: ExtensionContext) {
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
 		
-		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()]);
+		const options: cp.SpawnOptionsWithoutStdio = {}
+		if (process.env.LOG_PATH)
+			options.env["LOG_PATH"] = process.env.LOG_PATH;
+
+		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
 		serverProcess.stdout.on('data', (data) => {
 			lsOutputChannel.appendLine(`stdout: ${data}`);
@@ -214,7 +218,11 @@ export async function activate(context: ExtensionContext) {
 		const serverOptions: Executable = {
 			command: pp,
 			args: ["-m", "inmantals.pipeserver"],
+			options: {}
 		};
+
+		if (process.env.LOG_PATH)
+			serverOptions.options.env["LOG_PATH"] = process.env.LOG_PATH;
 
 		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
