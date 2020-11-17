@@ -32,7 +32,7 @@ export async function activate(context: ExtensionContext) {
 	async function getClientOptions(): Promise<LanguageClientOptions> {
 		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
 		if (!compilerVenv) {
-			if(context.storageUri == undefined){
+			if(context.storageUri === undefined){
 				window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 				throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 			}
@@ -62,9 +62,10 @@ export async function activate(context: ExtensionContext) {
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
 		
-		const options: cp.SpawnOptionsWithoutStdio = {}
-		if (process.env.LOG_PATH)
+		const options: cp.SpawnOptionsWithoutStdio = {};
+		if (process.env.LOG_PATH) {
 			options.env["LOG_PATH"] = process.env.LOG_PATH;
+		}
 
 		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
@@ -218,11 +219,13 @@ export async function activate(context: ExtensionContext) {
 		const serverOptions: Executable = {
 			command: pp,
 			args: ["-m", "inmantals.pipeserver"],
-			options: {}
+			options: {
+				env: {}
+			}
 		};
 
 		if (process.env.LOG_PATH)
-			serverOptions.options.env["LOG_PATH"] = process.env.LOG_PATH;
+			{serverOptions.options.env["LOG_PATH"] = process.env.LOG_PATH;}
 
 		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
