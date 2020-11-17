@@ -15,12 +15,12 @@ export function waitForCompile(logPath: string, timeout: number): Promise<boolea
 	return new Promise<boolean>((resolve, reject) => {
 		const readLogInterval = setInterval(() => {
 			if (Date.now() - start > timeout) {
-				reject(new Error("Timeout reached"));
+				reject(new Error(`Timeout of ${timeout}ms reached`));
 			} else {
 				fs.ensureFileSync(logPath);
 				fs.readFile(logPath, 'utf-8', (err, data) => {
 					if (err) {
-						console.log(err);
+						console.log(`Got an error while waiting for compile: ${err}`);
 					} else if (data.includes('Compilation succeeded')) {
 						clearInterval(readLogInterval);
 						resolve(true);

@@ -10,11 +10,9 @@ export function innerRun(regexToTestFiles: string): Promise<void> {
 	});
 
 	const testsRoot = __dirname;
-	console.log(testsRoot);
 
 	return new Promise((c, e) => {
 		glob(regexToTestFiles, { cwd: testsRoot }, (err, files) => {
-			console.log(files);
 			if (err) {
 				return e(err);
 			}
