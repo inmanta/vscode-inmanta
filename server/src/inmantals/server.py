@@ -64,18 +64,18 @@ class InmantaLSHandler(JsonRpcHandler):
         self.compiler_venv_path: Optional[str] = None
 
     async def initialize(
-        self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs
+        self, root_path, root_uri, capabilities: Dict[str, object], **kwargs
     ):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
 
-        if rootPath is None:
+        if root_path is None:
             raise Exception(
                 "A folder should be opened instead of a file in order to use the inmanta extension."
             )
 
-        self.rootPath = rootPath
-        self.rootUrl = rootUri
-        os.chdir(rootPath)
+        self.rootPath = root_path
+        self.rootUrl = root_uri
+        os.chdir(root_path)
         init_options = kwargs.get("initializationOptions", None)
         if init_options:
             self.compiler_venv_path = init_options.get(
@@ -267,10 +267,10 @@ class InmantaLSHandler(JsonRpcHandler):
         loc = list(range)[0].data
         return self.convert_location(loc)
 
-    async def textDocument_references(
-        self, textDocument, position, context
+    async def text_document_references(
+        self, text_document, position, context
     ):  # noqa: N802, N803
-        uri = textDocument["uri"]
+        uri = text_document["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
 
