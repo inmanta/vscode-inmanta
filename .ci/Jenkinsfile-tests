@@ -14,7 +14,7 @@ pipeline {
     environment {
       INMANTA_LS_TEST_ENV="${env.WORKSPACE}/ls-venv"
       INMANTA_LS_PATH="${env.WORKSPACE}/server"
-      INMANTA_LS_LOG_PATH=${env.WORKSPACE}/server.log"
+      INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       INMANTA_EXTENSION_TEST_ENV="${env.WORKSPACE}/extension-venv"
     } 
 
