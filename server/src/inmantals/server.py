@@ -64,8 +64,8 @@ class InmantaLSHandler(JsonRpcHandler):
         self.compiler_venv_path: Optional[str] = None
 
     async def initialize(
-        self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs
-    ):  # noqa: N803
+        self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs  # noqa: N803
+    ):
         logger.debug("Init: " + json.dumps(kwargs))
 
         if rootPath is None:
@@ -267,9 +267,9 @@ class InmantaLSHandler(JsonRpcHandler):
         loc = list(range)[0].data
         return self.convert_location(loc)
 
-    async def textDocument_references(
-        self, textDocument, position, context
-    ):  # noqa: N802, N803
+    async def textDocument_references(  # noqa: N802, N803
+        self, textDocument, position, context  # noqa: N802, N803
+    ):
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
