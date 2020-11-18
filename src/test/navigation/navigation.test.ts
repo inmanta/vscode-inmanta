@@ -6,7 +6,7 @@ import * as fs from 'fs-extra';
 import { Uri, window, commands, workspace, TextDocument, Position, Range, Location } from 'vscode';
 import { getInmantaVersion, waitForCompile } from '../helpers';
 
-const logPath: string = process.env.LOG_PATH || '/tmp/vscode-inmanta.log';
+const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/navigation/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 
