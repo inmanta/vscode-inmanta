@@ -71,7 +71,7 @@ export async function activate(context: ExtensionContext) {
 		const options: cp.SpawnOptionsWithoutStdio = {};
 		if (process.env.LOG_PATH) {
 			options.env = {
-				"LOG_PATH": process.env.LOG_PATH
+				"LOG_PATH": process.env.LOG_PATH  // eslint-disable-line @typescript-eslint/naming-convention
 			};
 		}
 
@@ -218,7 +218,7 @@ export async function activate(context: ExtensionContext) {
 		}
 
 		rejected(reason) {
-			log(`Could not start Language Server: ${reason}`)
+			log(`Could not start Language Server: ${reason}`);
 			window.showErrorMessage('Inmanta Language Server: rejected to start' + reason);
 		}
 

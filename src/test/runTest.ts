@@ -36,8 +36,8 @@ async function main() {
 		// Ensure the tests don't pick up any config present in the .config
 		// in the home dir.
 		const extensionTestsEnv = {
-			HOME: tmpHomeDir,
-			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH
+			HOME: tmpHomeDir,  // eslint-disable-line @typescript-eslint/naming-convention
+			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH  // eslint-disable-line @typescript-eslint/naming-convention
 		};
 		// Download VS Code, unzip it and run the integration test
 		await runTests({
