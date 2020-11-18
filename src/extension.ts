@@ -9,14 +9,12 @@ import * as os from 'os';
 import * as getPort from 'get-port';
 
 import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
-import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
+import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, Executable, ErrorHandler, Message, ErrorAction, CloseAction, TransportKind } from 'vscode-languageclient';
 
 
 function log(message: string) {
 	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
 }
-
-log(`Running extensions on node: ${process.version}`)
 
 export async function activate(context: ExtensionContext) {
 	let lsOutputChannel = null;
@@ -74,7 +72,7 @@ export async function activate(context: ExtensionContext) {
 		if (process.env.LOG_PATH) {
 			options.env = {
 				"LOG_PATH": process.env.LOG_PATH
-			}
+			};
 		}
 
 		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
@@ -220,17 +218,17 @@ export async function activate(context: ExtensionContext) {
 		}
 
 		rejected(reason) {
+			log(`Could not start Language Server: ${reason}`)
 			window.showErrorMessage('Inmanta Language Server: rejected to start' + reason);
 		}
 
 	}
 
 	async function startPipe(clientOptions: LanguageClientOptions) {
-		log("Pipe server has been selected");
 		const pp: string = await createVenvIfNotExists();
 		log(`Virtual environment is ${pp}`);
 
-		const serverOptions: Executable = {
+		const serverOptions: ServerOptions = {
 			command: pp,
 			args: ["-m", "inmantals.pipeserver"],
 			options: {
@@ -246,7 +244,10 @@ export async function activate(context: ExtensionContext) {
 		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
 
 		// Create the language client and start the client.
-		console.log(`[${new Date()}] Starting Language Client`);
+		log(`Starting Language Client with options: ${JSON.stringify({
+			serverOptions: serverOptions,
+			clientOptions: clientOptions
+		}, null, 2)}`);
 		const disposable = lc.start();
 
 		// Push the disposable to the context's subscriptions so that the

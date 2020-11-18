@@ -16,12 +16,14 @@
     Contact: code@inmanta.com
 """
 
-import os
+import logging
 import sys
 
 from inmantals.server import InmantaLSHandler
 from tornado.ioloop import IOLoop
 from tornado.iostream import PipeIOStream
+
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -29,13 +31,14 @@ def main():
     stdout = PipeIOStream(sys.stdout.fileno())
     handler = InmantaLSHandler(stdin, stdout, "0.0.0.0")
 
-    sys.stderr.write(f"Starting language server{os.linesep}")
-    sys.stderr.flush()
+    logger.info("Starting language server")
 
-    IOLoop.current().run_sync(handler.start)
+    try:
+        IOLoop.current().run_sync(handler.start)
+    except Exception as e:
+        logging.error(e)
 
-    sys.stderr.write(f"Language server stopped{os.linesep}")
-    sys.stderr.flush()
+    logger.info("Language server stopped")
 
 
 if __name__ == "__main__":
