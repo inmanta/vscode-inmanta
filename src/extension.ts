@@ -70,6 +70,7 @@ export async function activate(context: ExtensionContext) {
 		
 		const options: cp.SpawnOptionsWithoutStdio = {};
 		if (process.env.INMANTA_LS_LOG_PATH) {
+			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`)
 			options.env = {
 				"LOG_PATH": process.env.INMANTA_LS_LOG_PATH  // eslint-disable-line @typescript-eslint/naming-convention
 			};
@@ -140,7 +141,7 @@ export async function activate(context: ExtensionContext) {
 		const args = ["-m", "pip", "install"];
 		if (process.env.INMANTA_LS_PATH) {
 			args.push("-e", process.env.INMANTA_LS_PATH);
-			log(`Installing Language Server from local source: ${process.env.INMANTA_LS_PATH}`);
+			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
 		} else {
 			args.push("inmantals");
 		}
@@ -236,8 +237,9 @@ export async function activate(context: ExtensionContext) {
 			}
 		};
 
-		if (process.env.LOG_PATH) {
-			serverOptions.options.env["LOG_PATH"] = process.env.LOG_PATH;
+		if (process.env.INMANTA_LS_LOG_PATH) {
+			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`)
+			serverOptions.options.env["LOG_PATH"] = process.env.INMANTA_LS_LOG_PATH;
 		}
 
 		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
