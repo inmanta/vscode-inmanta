@@ -13,9 +13,10 @@ import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOpt
 
 
 function log(message: string) {
-	console.log(`[${new Date()}] ${message}`);
+	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
 }
 
+log(`Running extensions on node: ${process.version}`)
 
 export async function activate(context: ExtensionContext) {
 	let lsOutputChannel = null;
