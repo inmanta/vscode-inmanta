@@ -36,7 +36,7 @@ pipeline {
                 sh '''
                     rm -rf node_modules
                     npm i --also=dev
-                    LOG_PATH="$INMANTA_LS_LOG_PATH" INMANTA_LANGUAGE_SERVER_PATH="$INMANTA_LS_PATH" xvfb-run npm run test
+                    xvfb-run npm run test
                 '''
             }
         }

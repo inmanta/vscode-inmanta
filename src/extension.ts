@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as getPort from 'get-port';
 
 import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
-import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, Executable, ErrorHandler, Message, ErrorAction, CloseAction, TransportKind } from 'vscode-languageclient';
+import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 
 
 function log(message: string) {
@@ -69,9 +69,9 @@ export async function activate(context: ExtensionContext) {
 		const serverPort = await getPort({ host: host });
 		
 		const options: cp.SpawnOptionsWithoutStdio = {};
-		if (process.env.LOG_PATH) {
+		if (process.env.INMANTA_LS_LOG_PATH) {
 			options.env = {
-				"LOG_PATH": process.env.LOG_PATH  // eslint-disable-line @typescript-eslint/naming-convention
+				"LOG_PATH": process.env.INMANTA_LS_LOG_PATH  // eslint-disable-line @typescript-eslint/naming-convention
 			};
 		}
 
@@ -138,9 +138,9 @@ export async function activate(context: ExtensionContext) {
 
 	function installLanguageServer(pythonPath: string, startServer?: boolean): void {
 		const args = ["-m", "pip", "install"];
-		if (process.env.INMANTA_LANGUAGE_SERVER_PATH) {
-			args.push("-e", process.env.INMANTA_LANGUAGE_SERVER_PATH);
-			log(`Installing Language Server from local source: ${process.env.INMANTA_LANGUAGE_SERVER_PATH}`);
+		if (process.env.INMANTA_LS_PATH) {
+			args.push("-e", process.env.INMANTA_LS_PATH);
+			log(`Installing Language Server from local source: ${process.env.INMANTA_LS_PATH}`);
 		} else {
 			args.push("inmantals");
 		}
