@@ -37,12 +37,12 @@ def generate_safe_log_file():
     if file_name is not None:
         return file_name
 
-    import random
+    import time
     import tempfile
-
-    file_name = "vscode-inmanta-%08x.log" % random.getrandbits(64)
+    
+    file_name = "vscode-inmanta-%08x.log" % round(time.time() * 1000000)
     while os.path.exists(os.path.join(tempfile.gettempdir(), file_name)):
-        file_name = "vscode-inmanta-%08x.log" % random.getrandbits(64)
+        file_name = "vscode-inmanta-%08x.log" % round(time.time() * 1000000)
     return os.path.join(tempfile.gettempdir(), file_name)
 
 
