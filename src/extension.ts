@@ -9,17 +9,23 @@ import * as os from 'os';
 import * as getPort from 'get-port';
 
 import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
-import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, Executable, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
+import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 
+
+function log(message: string) {
+	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
+}
 
 export async function activate(context: ExtensionContext) {
 	let lsOutputChannel = null;
 
 	async function startServerAndClient() {
+		log("Start server and client");
 		let clientOptions;
-		try{
+		try {
 			clientOptions = await getClientOptions();
-		} catch(err){
+			log("Retrieved client options");
+		} catch (err) {
 			return undefined;
 		}
 		if (os.platform() === "win32") {
@@ -32,7 +38,7 @@ export async function activate(context: ExtensionContext) {
 	async function getClientOptions(): Promise<LanguageClientOptions> {
 		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
 		if (!compilerVenv) {
-			if(context.storageUri == undefined){
+			if (context.storageUri === undefined) {
 				window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 				throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 			}
@@ -62,7 +68,15 @@ export async function activate(context: ExtensionContext) {
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
 		
-		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()]);
+		const options: cp.SpawnOptionsWithoutStdio = {};
+		if (process.env.INMANTA_LS_LOG_PATH) {
+			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`)
+			options.env = {
+				"LOG_PATH": process.env.INMANTA_LS_LOG_PATH  // eslint-disable-line @typescript-eslint/naming-convention
+			};
+		}
+
+		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
 		serverProcess.stdout.on('data', (data) => {
 			lsOutputChannel.appendLine(`stdout: ${data}`);
@@ -125,16 +139,18 @@ export async function activate(context: ExtensionContext) {
 
 	function installLanguageServer(pythonPath: string, startServer?: boolean): void {
 		const args = ["-m", "pip", "install"];
-		if (process.env.INMANTA_LANGUAGE_SERVER_PATH) {
-			args.push("-e", process.env.INMANTA_LANGUAGE_SERVER_PATH);
-			console.log("Installing Language Server from local source: " + process.env.INMANTA_LANGUAGE_SERVER_PATH);
+		if (process.env.INMANTA_LS_PATH) {
+			args.push("-e", process.env.INMANTA_LS_PATH);
+			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
 		} else {
 			args.push("inmantals");
 		}
 		const child = cp.spawnSync(pythonPath, args);
 		if (child.status !== 0) {
+			log(`Can not start server and client`);
 			window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
 		} else if (startServer) {
+			log(`Starting server and client`);
 			startServerAndClient();
 		}
 	}
@@ -203,6 +219,7 @@ export async function activate(context: ExtensionContext) {
 		}
 
 		rejected(reason) {
+			log(`Could not start Language Server: ${reason}`);
 			window.showErrorMessage('Inmanta Language Server: rejected to start' + reason);
 		}
 
@@ -210,16 +227,29 @@ export async function activate(context: ExtensionContext) {
 
 	async function startPipe(clientOptions: LanguageClientOptions) {
 		const pp: string = await createVenvIfNotExists();
+		log(`Virtual environment is ${pp}`);
 
-		const serverOptions: Executable = {
+		const serverOptions: ServerOptions = {
 			command: pp,
 			args: ["-m", "inmantals.pipeserver"],
+			options: {
+				env: {}
+			}
 		};
+
+		if (process.env.INMANTA_LS_LOG_PATH) {
+			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`)
+			serverOptions.options.env["LOG_PATH"] = process.env.INMANTA_LS_LOG_PATH;
+		}
 
 		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
 
 		// Create the language client and start the client.
+		log(`Starting Language Client with options: ${JSON.stringify({
+			serverOptions: serverOptions,
+			clientOptions: clientOptions
+		}, null, 2)}`);
 		const disposable = lc.start();
 
 		// Push the disposable to the context's subscriptions so that the
@@ -246,6 +276,7 @@ export async function activate(context: ExtensionContext) {
 		const venvPath = getDefaultVenvPath();
 
 		if (!fs.existsSync(venvBaseDir)) {
+			log("Creating new virtual environment");
 			const venvProcess = cp.spawnSync("python3", ["-m", "venv", venvBaseDir]);
 			if (venvProcess.status !== 0) {
 				window.showErrorMessage(`Virtual env creation at ${venvBaseDir} failed with code ${venvProcess.status}, ${venvProcess.stderr}`);
