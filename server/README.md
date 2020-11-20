@@ -23,6 +23,15 @@ provides the bridge between the Inmanta compiler and Visual Studio Code ide, by 
 1. re-load code (not upon edit or upon save, need to close vscode)
 2. work with incorrect models (needs to compile, all or nothing)
 
+## Troubleshooting
+
+### No module named x
+
+If compilation fails with the message "no module named x" where x is a Python module, you might need to clean up the virtual
+environments used by the compiler. This issue can be caused by running the compiler from multiple different environments.
+To clean up the virtual environment, remove the .env directory in the Inmanta project directory as well as the compiler venv
+specified by the client, if it exists.
+
 ## References
 
 [https://microsoft.github.io/language-server-protocol/specification](https://microsoft.github.io/language-server-protocol/specification)

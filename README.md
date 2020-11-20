@@ -19,7 +19,7 @@ The extension makes your life easier by highlighting syntax keywords or the Inma
 ### Code navigation
 When you hover an element while pressing `Ctrl`, an overview of its Entity type is shown. If you click it (while still having `Ctrl` pressed) you can navigate to the definition of the entity.
 
-> :bulb: To work properly, this feature requires the Inmanta Language Server to be running:  
+> :bulb: To work properly, this feature requires the Inmanta Language Server to be running:
 > In the inmanta extension configuration (`ctrl+, > extensions > inmanta`), ensure that `LS` is enabled.
 
 ![Navigation screenshot](images/screenshot-ctrl-click.png)
@@ -27,7 +27,7 @@ When you hover an element while pressing `Ctrl`, an overview of its Entity type 
 ### Compilation error reporting
 The extension will run a pre-compilation every time you save your file.  Making it easier for you to spot syntax and basic model errors.  When hovering the problematic bit, an explaination message is shown, and more details can be found in the **Output** panel (when selecting *Inmanta Server Language* in the expandable list on the right).
 
-> :bulb: To work properly, this feature requires the Inmanta Language Server to be running:  
+> :bulb: To work properly, this feature requires the Inmanta Language Server to be running:
 > In the inmanta extension configuration (`ctrl+, > extensions > inmanta`), ensure that `LS` is enabled.
 
 ![Error reporting screenshot](images/screenshot-error-reporting.png)
@@ -66,6 +66,16 @@ The extension currently has three settings:
 ## Known Issues
 
 None ATM
+
+## Troubleshooting
+
+### No module named x
+
+If compilation fails with the message "no module named x" where x is a Python module, you might need to clean up the virtual
+environments used by the compiler. This issue can be caused when you open a project in vscode that you previously compiled
+manually, or when you change the path for the language server venv. To clean up the virtual environments, remove the .env
+directory in the Inmanta project directory as well as the directory specified in the Compiler Venv option in the extension's
+settings. Then restart vscode.
 
 ## Authors
 
