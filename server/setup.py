@@ -18,7 +18,7 @@ setup(
     packages=find_packages("src"),
     install_requires=requires,
 
-    version="1.0.0",
+    version="1.0.1",
 
     description="Inmanta Language Server",
     long_description=long_description,
