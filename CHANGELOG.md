@@ -1,3 +1,11 @@
+# v 1.1.0 (?)
+Changes in this release:
+
+# v 1.0.1 (?)
+Changes in this release:
+- use unique log file for each workspace (#64)
+- added troubleshooting sections related to venv reuse by multiple compiler venvs (#65)
+
 # v 1.0.0 (2020-11-06)
 Changes in this release:
 - Added error highlighting (#18)

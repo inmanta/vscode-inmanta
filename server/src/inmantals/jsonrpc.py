@@ -16,17 +16,34 @@
     Contact: code@inmanta.com
 """
 import asyncio
-from tornado.tcpserver import TCPServer
-from tornado.iostream import StreamClosedError, BaseIOStream
-import logging
 import json
+import logging
+import os
+import sys
 from enum import Enum
 from json.decoder import JSONDecodeError
-from tornado.locks import Semaphore
-from tornado.ioloop import IOLoop
 
+from tornado.ioloop import IOLoop
+from tornado.iostream import BaseIOStream, StreamClosedError
+from tornado.locks import Semaphore
+from tornado.tcpserver import TCPServer
 
 logger = logging.getLogger(__name__)
+
+
+def generate_safe_log_file():
+    # This env variable will only be set for testing purpose
+    file_name = os.getenv("LOG_PATH", None)
+    if file_name is not None:
+        return file_name
+
+    import time
+    import tempfile
+
+    file_name = "vscode-inmanta-%08x.log" % round(time.time() * 1000000)
+    while os.path.exists(os.path.join(tempfile.gettempdir(), file_name)):
+        file_name = "vscode-inmanta-%08x.log" % round(time.time() * 1000000)
+    return os.path.join(tempfile.gettempdir(), file_name)
 
 
 class ErrorCodes(Enum):
@@ -92,7 +109,7 @@ class InvalidParamsException(JsonRpcException):
 class JsonRpcServer(TCPServer):
     def __init__(self, delegate):
         """
-            :param delegate: a class of which an instance is created for each connection, subclass of JsonRpcHandler
+        :param delegate: a class of which an instance is created for each connection, subclass of JsonRpcHandler
         """
         super(JsonRpcServer, self).__init__()
         if not issubclass(delegate, JsonRpcHandler):
@@ -112,6 +129,20 @@ class JsonRpcHandler(object):
         self.running = True
         self.io_loop = IOLoop.current()
         self.writelock = Semaphore(1)
+
+        # Setting up logging for the LServer
+        self.log_file = generate_safe_log_file()
+        formatter = logging.Formatter(fmt="%(asctime)s %(name)-25s%(levelname)-8s%(message)s")
+        log_file_stream = logging.FileHandler(self.log_file)
+        log_file_stream.setLevel(logging.DEBUG)
+        log_file_stream.setFormatter(formatter)
+        log_stderr = logging.StreamHandler(sys.stderr)
+        log_stderr.setLevel(logging.INFO)
+        log_stderr.setFormatter(formatter)
+
+        logging.basicConfig(level=logging.DEBUG)
+
+        logging.root.handlers = [log_file_stream, log_stderr]
 
     def assert_field(self, message, field, value=None, id=None):
         if field not in message:

@@ -194,7 +194,6 @@ pipeline {
             when {
                 allOf {
                     expression { "${run_job}" == "true" }
-                    expression { "${release_type}" == "stable" }
                 }
             }
             steps {

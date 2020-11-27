@@ -19,10 +19,10 @@
     This module contains types as specified in the
     `LSP spec 3.15 <https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/>`__
 """
+import re
 from enum import Enum
 from functools import partial
 from typing import Any, Dict, List, Optional, Union
-import re
 
 from inmanta.data.model import BaseModel
 
@@ -33,15 +33,22 @@ class LspModel(BaseModel):
     """
 
     class Config:
-        alias_generator = partial(re.sub, r"_([a-z])", lambda match: match.group(1).upper())
+        alias_generator = partial(
+            re.sub, r"_([a-z])", lambda match: match.group(1).upper()
+        )
         allow_population_by_field_name = True
 
     def dict(self, *args: object, **kwargs: Any) -> Dict[str, object]:
-        extended_kwargs: Dict[str, Any] = {"by_alias": True, "exclude_none": True, **kwargs}
+        extended_kwargs: Dict[str, Any] = {
+            "by_alias": True,
+            "exclude_none": True,
+            **kwargs,
+        }
         return super().dict(*args, **extended_kwargs)
 
 
 # Data types
+
 
 class Position(LspModel):
     """
@@ -144,6 +151,7 @@ class SymbolInformation(LspModel):
 
 
 # Message parameters
+
 
 class PublishDiagnosticsParams(LspModel):
     """
