@@ -84,7 +84,7 @@ class JsonRPC(object):
         return result["result"]
 
     async def assert_error(self, message: str) -> None:
-        result = json.loads(await client.read_one())
+        result = json.loads(await self.read_one())
         assert "error" in result
         assert message in result["error"]["message"]
 
