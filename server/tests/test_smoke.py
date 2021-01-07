@@ -338,6 +338,6 @@ async def test_root_path_is_none(client: JsonRPC) -> None:
         The language server should return an error when it is started with `rootPath is None`.
     """
     await client.call("initialize", rootPath=None, rootUri=None, capabilities={})
-    assert client.assert_error(
+    await client.assert_error(
         message="A folder should be opened instead of a file in order to use the inmanta extension."
     )
