@@ -16,6 +16,7 @@ pipeline {
       INMANTA_LS_PATH="${env.WORKSPACE}/server"
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       INMANTA_EXTENSION_TEST_ENV="${env.WORKSPACE}/extension-venv"
+      PIP_INDEX_URL=https://artifacts.internal.inmanta.com/inmanta/dev
     } 
 
     stages {
