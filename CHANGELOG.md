@@ -1,3 +1,7 @@
+# v 1.0.2 (2021-02-10)
+Changes in this release:
+- Ensure latest pip and wheel are installed in the venv (#76)
+
 # v 1.0.1 (2020-11-27)
 Changes in this release:
 - use unique log file for each workspace (#64)
