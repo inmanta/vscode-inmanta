@@ -43,13 +43,13 @@ export async function activate(context: ExtensionContext) {
 				throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 			}
 			compilerVenv = Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
-		} 
+		}
 
 		const errorhandler = new LsErrorHandler();
 
 		// Options to control the language client
 		await workspace.getConfiguration('inmanta').update('compilerVenv', compilerVenv, true);
-		
+
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
@@ -61,13 +61,13 @@ export async function activate(context: ExtensionContext) {
 		};
 		return clientOptions;
 	}
-	
+
 	async function startTcp(clientOptions: LanguageClientOptions) {
 		const host = "127.0.0.1";
 		const pp: string = await createVenvIfNotExists();
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
-		
+
 		const options: cp.SpawnOptionsWithoutStdio = {};
 		if (process.env.INMANTA_LS_LOG_PATH) {
 			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`)
@@ -108,7 +108,7 @@ export async function activate(context: ExtensionContext) {
 				}
 			}, 500);
 		});
-		
+
 		const serverDisposable = new Disposable(function disposeOfServerProcess() {
 			serverProcess.kill();
 		});
@@ -133,7 +133,7 @@ export async function activate(context: ExtensionContext) {
 			serverDisposable.dispose();
 		});
 		context.subscriptions.push(commonDisposable);
-		
+
 		return commonDisposable;
 	}
 
@@ -280,6 +280,11 @@ export async function activate(context: ExtensionContext) {
 			const venvProcess = cp.spawnSync("python3", ["-m", "venv", venvBaseDir]);
 			if (venvProcess.status !== 0) {
 				window.showErrorMessage(`Virtual env creation at ${venvBaseDir} failed with code ${venvProcess.status}, ${venvProcess.stderr}`);
+			}
+			log("Ensuring latest pip and wheel");
+			const updateProcess = cp.spawnSync(venvPath, ["-m", "pip", "install", "-U", "pip", "wheel"]);
+			if (updateProcess.status !== 0) {
+				window.showErrorMessage(`Updating pip and wheel in venv ${venvBaseDir} failed with code ${updateProcess.status}, ${updateProcess.stderr}`);
 			}
 			installLanguageServer(venvPath);
 		}
