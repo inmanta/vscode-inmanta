@@ -44,6 +44,9 @@ pipeline {
                             echo 'echo \${GITHUB_TOKEN}' > ${GIT_ASKPASS}
                             chmod u+x ${GIT_ASKPASS}
 
+                            # install the extension for its vsce dependency, required for building and publishing the extension
+                            npm ci
+
                             # checkout appropriate branch
                             if [ "${version_increment}" == "none" ] || [ "${version_increment}" == "patch" ]; then
                                 git checkout next
@@ -159,17 +162,6 @@ pipeline {
             }
         }
 
-        stage("Install vsce") {
-            when {
-                expression { "${run_job}" == "true" }
-            }
-            steps {
-                dir('vscode-inmanta') {
-                    sh 'npm install vsce'
-                }
-            }
-        }
-
         stage("Build") {
             when {
                 expression { "${run_job}" == "true" }
@@ -194,17 +186,6 @@ pipeline {
                     withCredentials([string(credentialsId: 'vscode_marketplace_access_token', variable: 'VSCODE_PERSONAL_ACCESS_TOKEN')]) {
                         sh '$(npm bin)/vsce publish -p "${VSCODE_PERSONAL_ACCESS_TOKEN}"'
                     }
-                }
-            }
-        }
-
-        stage("Clean up npm artifacts") {
-            when {
-                expression { "${run_job}" == "true" }
-            }
-            steps {
-                dir('vscode-inmanta') {
-                    sh 'git checkout package{,-lock}.json'
                 }
             }
         }
