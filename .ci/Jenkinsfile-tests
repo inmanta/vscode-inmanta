@@ -46,7 +46,7 @@ pipeline {
     post {
         always {
             junit 'server/junit*.xml'
-            cleanWs()
+            deleteDir()
         }
     }
 }
