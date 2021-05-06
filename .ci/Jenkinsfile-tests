@@ -5,7 +5,7 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-    triggers { 
+    triggers {
         upstream "inmanta-core/master"
         cron("H H(2-5) * * *")
         pollSCM '* * * * *'
@@ -17,7 +17,7 @@ pipeline {
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       INMANTA_EXTENSION_TEST_ENV="${env.WORKSPACE}/extension-venv"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
-    } 
+    }
 
     stages {
         stage('Language server tests') {
@@ -46,6 +46,7 @@ pipeline {
     post {
         always {
             junit 'server/junit*.xml'
+            deleteDir()
         }
     }
 }
