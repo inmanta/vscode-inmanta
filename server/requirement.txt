@@ -1,4 +1,4 @@
-inmanta
+inmanta-core
 intervaltree
 pytest
 pytest-asyncio
