@@ -5,7 +5,7 @@ import * as fs from 'fs-extra';
 import { SemVer } from 'semver';
 
 import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString } from 'vscode';
-import { waitForCompile, getInmantaVersion } from '../helpers';
+import { waitForCompile } from '../helpers';
 
 
 const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
@@ -60,10 +60,7 @@ describe('Compile checks', () => {
 			assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
 
 			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
-			const compilerVenv: string = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
-			const inmantaVersion: SemVer = await getInmantaVersion(pythonPath);
-			envPath = (inmantaVersion.major < 2020 || inmantaVersion.major === 2020 && inmantaVersion.minor <= 5) ? path.resolve(workspaceUri.fsPath, '.env') : compilerVenv;
-
+			envPath = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
 			const envExists = fs.pathExistsSync(envPath);
 			assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);
 		}).timeout(0);

@@ -34,26 +34,3 @@ export function waitForCompile(logPath: string, timeout: number): Promise<boolea
 	});
 }
 
-/**
- * Query the version of inmanta installed in the provided python environment.
- * @param pythonPath the path to the python binary in the environment in which inmanta is installed
- * 
- * @returns a Promise resolving a string, the verison of inmanta found.
- */
-export async function getInmantaVersion(pythonPath: string): Promise<SemVer> {
-	return new Promise<SemVer>((resolve, reject) => {
-		exec(`${pythonPath} -m pip list --format json`, (err, stdout, stderr) => {
-			if (err) {
-				reject(err);
-			} else {
-				const packageList = JSON.parse(stdout);
-				packageList.forEach(element => {
-					if (element.hasOwnProperty("name") && element["name"] === "inmanta" && element.hasOwnProperty("version")) {
-						resolve(coerce(element["version"]));
-					}
-				});
-				reject(new Error("Could not find inmanta in provided python environment."));
-			}
-		});
-	});
-}
