@@ -1,3 +1,7 @@
+# v 1.0.3 (2021-05-28)
+Changes in this release:
+- Update dependencies
+
 # v 1.0.2 (2021-02-10)
 Changes in this release:
 - Ensure latest pip and wheel are installed in the venv (#76)
