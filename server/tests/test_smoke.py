@@ -1,23 +1,16 @@
 import json
 import logging
 import socket
-from typing import AsyncIterator, Dict, List, Optional, Union
+from typing import AsyncIterator, Dict, List, Optional
 
 import pytest
 import os
-import pkg_resources
-import packaging.version
 
 from tornado.iostream import IOStream
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import InmantaLSHandler
 from tornado.tcpclient import TCPClient
-
-
-INMANTA_VERSION: Union[packaging.version.Version, packaging.version.LegacyVersion] = packaging.version.parse(
-    pkg_resources.get_distribution("inmanta").version
-)
 
 
 class JsonRPC(object):
@@ -84,7 +77,7 @@ class JsonRPC(object):
         return result["result"]
 
     async def assert_error(self, message: str) -> None:
-        result = json.loads(await client.read_one())
+        result = json.loads(await self.read_one())
         assert "error" in result
         assert message in result["error"]["message"]
 
@@ -262,8 +255,6 @@ async def test_symbol_provider(client: JsonRPC) -> None:
     uri_testmodule_model: str = "file://%s" % os.path.join(testmodule_dir, "model", "_init.cf")
     uri_testmodule_plugins: str = "file://%s" % os.path.join(testmodule_dir, "plugins", "__init__.py")
 
-    improved_locations: bool = INMANTA_VERSION >= packaging.version.parse("2020.6.dev")
-
     assert symbol_info == [
         lsp_types.SymbolInformation(
             name="__config__::my_symbol_test_type",
@@ -304,10 +295,6 @@ async def test_symbol_provider(client: JsonRPC) -> None:
                     lsp_types.Range(
                         start=lsp_types.Position(line=4, character=0), end=lsp_types.Position(line=5, character=0)
                     )
-                    if improved_locations
-                    else lsp_types.Range(
-                        start=lsp_types.Position(line=4, character=0), end=lsp_types.Position(line=4, character=1)
-                    )
                 ),
             ),
         ),
@@ -319,10 +306,6 @@ async def test_symbol_provider(client: JsonRPC) -> None:
                 range=(
                     lsp_types.Range(
                         start=lsp_types.Position(line=1, character=11), end=lsp_types.Position(line=1, character=17)
-                    )
-                    if improved_locations
-                    else lsp_types.Range(
-                        start=lsp_types.Position(line=1, character=0), end=lsp_types.Position(line=2, character=0)
                     )
                 ),
             ),
@@ -338,6 +321,6 @@ async def test_root_path_is_none(client: JsonRPC) -> None:
         The language server should return an error when it is started with `rootPath is None`.
     """
     await client.call("initialize", rootPath=None, rootUri=None, capabilities={})
-    client.assert_error(
+    await client.assert_error(
         message="A folder should be opened instead of a file in order to use the inmanta extension."
     )

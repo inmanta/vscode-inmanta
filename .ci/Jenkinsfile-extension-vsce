@@ -44,8 +44,8 @@ pipeline {
                             echo 'echo \${GITHUB_TOKEN}' > ${GIT_ASKPASS}
                             chmod u+x ${GIT_ASKPASS}
 
-                            # install vsce for building and publishing the extension
-                            npm install vsce
+                            # install the extension for its vsce dependency, required for building and publishing the extension
+                            npm ci
 
                             # checkout appropriate branch
                             if [ "${version_increment}" == "none" ] || [ "${version_increment}" == "patch" ]; then

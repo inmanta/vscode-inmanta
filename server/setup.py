@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 from os import path
 
 requires = [
-    'inmanta>=2019.2',
+    'inmanta-core',
     'intervaltree'
 ]
 
