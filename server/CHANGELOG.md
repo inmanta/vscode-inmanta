@@ -1,4 +1,4 @@
-# v 1.1.0 (?)
+# v 1.1.0 (2021-05-28)
 Changes in this release:
 - Replace the dependency on inmanta with a dependency on inmanta-core
 
