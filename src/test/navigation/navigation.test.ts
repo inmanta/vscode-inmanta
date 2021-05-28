@@ -33,8 +33,7 @@ describe('Language Server Code navigation', () => {
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(13, 16));
 			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
-			let expectedAttributeLocation;
-			expectedAttributeLocation = new Range(new Position(2, 11), new Position(2, 15));
+			let expectedAttributeLocation = new Range(new Position(2, 11), new Position(2, 15));
 			assert.strictEqual((attributeInSameFile as Location[]).length, 1);
 			assert.strictEqual(attributeInSameFile[0].uri.fsPath, modelUri.fsPath);
 			assert.deepStrictEqual(attributeInSameFile[0].range, expectedAttributeLocation, "Attribute location in the same file doesn't match");
