@@ -1,23 +1,16 @@
 import json
 import logging
 import socket
-from typing import AsyncIterator, Dict, List, Optional, Union
+from typing import AsyncIterator, Dict, List, Optional
 
 import pytest
 import os
-import pkg_resources
-import packaging.version
 
 from tornado.iostream import IOStream
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import InmantaLSHandler
 from tornado.tcpclient import TCPClient
-
-
-INMANTA_VERSION: Union[packaging.version.Version, packaging.version.LegacyVersion] = packaging.version.parse(
-    pkg_resources.get_distribution("inmanta").version
-)
 
 
 class JsonRPC(object):
@@ -262,8 +255,6 @@ async def test_symbol_provider(client: JsonRPC) -> None:
     uri_testmodule_model: str = "file://%s" % os.path.join(testmodule_dir, "model", "_init.cf")
     uri_testmodule_plugins: str = "file://%s" % os.path.join(testmodule_dir, "plugins", "__init__.py")
 
-    improved_locations: bool = INMANTA_VERSION >= packaging.version.parse("2020.6.dev")
-
     assert symbol_info == [
         lsp_types.SymbolInformation(
             name="__config__::my_symbol_test_type",
@@ -304,10 +295,6 @@ async def test_symbol_provider(client: JsonRPC) -> None:
                     lsp_types.Range(
                         start=lsp_types.Position(line=4, character=0), end=lsp_types.Position(line=5, character=0)
                     )
-                    if improved_locations
-                    else lsp_types.Range(
-                        start=lsp_types.Position(line=4, character=0), end=lsp_types.Position(line=4, character=1)
-                    )
                 ),
             ),
         ),
@@ -319,10 +306,6 @@ async def test_symbol_provider(client: JsonRPC) -> None:
                 range=(
                     lsp_types.Range(
                         start=lsp_types.Position(line=1, character=11), end=lsp_types.Position(line=1, character=17)
-                    )
-                    if improved_locations
-                    else lsp_types.Range(
-                        start=lsp_types.Position(line=1, character=0), end=lsp_types.Position(line=2, character=0)
                     )
                 ),
             ),

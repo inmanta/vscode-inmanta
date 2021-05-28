@@ -1,5 +1,6 @@
 # v 1.1.0 (?)
 Changes in this release:
+- Replace the dependency on inmanta with a dependency on inmanta-core
 
 # v 1.0.1 (?)
 Changes in this release:
