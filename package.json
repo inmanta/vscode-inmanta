@@ -119,7 +119,7 @@
     "glob": "^7.1.6",
     "mocha": "^8.1.3",
     "rimraf": "^3.0.2",
-    "semver": "^7.3.2",
+    "semver": "^7.3.5",
     "typescript": "^4.0.2",
     "vscode-test": "^1.4.0"
   },
