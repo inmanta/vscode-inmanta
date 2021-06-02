@@ -110,7 +110,7 @@
     "@types/node": "^15.6.1",
     "@types/rimraf": "^3.0.0",
     "@types/semver": "^7.3.4",
-    "@types/vscode": "^1.50.0",
+    "@types/vscode": "^1.56.0",
     "@typescript-eslint/eslint-plugin": "^4.6.0",
     "@typescript-eslint/parser": "^4.26.0",
     "eslint": "^7.27.0",
