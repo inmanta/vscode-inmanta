@@ -95,7 +95,7 @@ export async function activate(context: ExtensionContext) {
 		const timeout: number = 10000;
 		const start = Date.now();
 		// Wait for server to start
-		await new Promise((resolve, reject) =>  {
+		await new Promise<void>((resolve, reject) =>  {
 			const interval = setInterval(() => {
 				if (Date.now() - start > timeout) {
 					window.showErrorMessage("Couldn't start language server");
