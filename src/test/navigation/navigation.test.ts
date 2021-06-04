@@ -23,9 +23,9 @@ describe('Language Server Code navigation', () => {
 		});
 	});
 
-	
+
 	it(`Check that code navigation works`, () => {
-		return new Promise(async resolve => {			
+		return new Promise<void>(async resolve => {
 			// Open model file
 			const doc: TextDocument = await workspace.openTextDocument(modelUri);
 			await window.showTextDocument(doc);
@@ -50,7 +50,7 @@ describe('Language Server Code navigation', () => {
 			resolve();
 		});
 	}).timeout(0);
-	
+
 
 	after(async () => {
 		await Promise.all([
