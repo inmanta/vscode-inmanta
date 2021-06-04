@@ -9,7 +9,8 @@ import * as os from 'os';
 import * as getPort from 'get-port';
 
 import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
-import { RevealOutputChannelOn, LanguageClient, LanguageClientOptions, ServerOptions, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
+import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
+import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 
 
 function log(message: string) {
