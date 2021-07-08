@@ -1,16 +1,33 @@
+"""
+    Copyright 2021 Inmanta
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+    Contact: code@inmanta.com
+"""
 import json
 import logging
+import os
 import socket
 from typing import AsyncIterator, Dict, List, Optional
 
 import pytest
-import os
-
 from tornado.iostream import IOStream
+from tornado.tcpclient import TCPClient
+
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import InmantaLSHandler
-from tornado.tcpclient import TCPClient
 
 
 class JsonRPC(object):
@@ -98,14 +115,23 @@ async def client(server) -> AsyncIterator[JsonRPC]:
     client.ios.close()
 
 
-async def initialize(client: JsonRPC, project: str, client_capabilities: Optional[Dict[str, object]] = None) -> None:
+async def initialize(
+    client: JsonRPC,
+    project: str,
+    client_capabilities: Optional[Dict[str, object]] = None,
+) -> None:
     """
     Initializes the server with the basic_test project.
     """
     if client_capabilities is None:
         client_capabilities = {}
     path = os.path.join(os.path.dirname(__file__), project)
-    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", capabilities=client_capabilities)
+    ret = await client.call(
+        "initialize",
+        rootPath=path,
+        rootUri=f"file://{path}",
+        capabilities=client_capabilities,
+    )
     await client.assert_one(ret)
 
 
@@ -135,13 +161,15 @@ async def assert_lnr_reverse(client):
         context={},
     )
     result = await client.assert_one(ret)
-    assert result == [{
-        "uri": f"file://{path}/main.cf",
-        "range": {
-            "start": {"line": 5, "character": 0},
-            "end": {"line": 5, "character": 4},
-        },
-    }]
+    assert result == [
+        {
+            "uri": f"file://{path}/main.cf",
+            "range": {
+                "start": {"line": 5, "character": 0},
+                "end": {"line": 5, "character": 4},
+            },
+        }
+    ]
 
 
 @pytest.mark.timeout(5)
@@ -224,7 +252,8 @@ async def test_diagnostics(client: JsonRPC) -> None:
         diagnostics=[
             lsp_types.Diagnostic(
                 range=lsp_types.Range(
-                    start=lsp_types.Position(line=5, character=21), end=lsp_types.Position(line=5, character=46)
+                    start=lsp_types.Position(line=5, character=21),
+                    end=lsp_types.Position(line=5, character=46),
                 ),
                 severity=lsp_types.DiagnosticSeverity.Error,
                 message="could not find type nonExistantImplementation in namespace __config__",
@@ -262,7 +291,8 @@ async def test_symbol_provider(client: JsonRPC) -> None:
             location=lsp_types.Location(
                 uri=uri_main,
                 range=lsp_types.Range(
-                    start=lsp_types.Position(line=8, character=8), end=lsp_types.Position(line=8, character=27)
+                    start=lsp_types.Position(line=8, character=8),
+                    end=lsp_types.Position(line=8, character=27),
                 ),
             ),
         ),
@@ -272,7 +302,8 @@ async def test_symbol_provider(client: JsonRPC) -> None:
             location=lsp_types.Location(
                 uri=uri_testmodule_model,
                 range=lsp_types.Range(
-                    start=lsp_types.Position(line=0, character=7), end=lsp_types.Position(line=0, character=17)
+                    start=lsp_types.Position(line=0, character=7),
+                    end=lsp_types.Position(line=0, character=17),
                 ),
             ),
         ),
@@ -282,7 +313,8 @@ async def test_symbol_provider(client: JsonRPC) -> None:
             location=lsp_types.Location(
                 uri=uri_testmodule_model,
                 range=lsp_types.Range(
-                    start=lsp_types.Position(line=4, character=15), end=lsp_types.Position(line=4, character=25)
+                    start=lsp_types.Position(line=4, character=15),
+                    end=lsp_types.Position(line=4, character=25),
                 ),
             ),
         ),
@@ -293,7 +325,8 @@ async def test_symbol_provider(client: JsonRPC) -> None:
                 uri=uri_testmodule_plugins,
                 range=(
                     lsp_types.Range(
-                        start=lsp_types.Position(line=4, character=0), end=lsp_types.Position(line=5, character=0)
+                        start=lsp_types.Position(line=4, character=0),
+                        end=lsp_types.Position(line=5, character=0),
                     )
                 ),
             ),
@@ -305,7 +338,8 @@ async def test_symbol_provider(client: JsonRPC) -> None:
                 uri=uri_testmodule_model,
                 range=(
                     lsp_types.Range(
-                        start=lsp_types.Position(line=1, character=11), end=lsp_types.Position(line=1, character=17)
+                        start=lsp_types.Position(line=1, character=11),
+                        end=lsp_types.Position(line=1, character=17),
                     )
                 ),
             ),
@@ -318,9 +352,7 @@ async def test_symbol_provider(client: JsonRPC) -> None:
 @pytest.mark.asyncio
 async def test_root_path_is_none(client: JsonRPC) -> None:
     """
-        The language server should return an error when it is started with `rootPath is None`.
+    The language server should return an error when it is started with `rootPath is None`.
     """
     await client.call("initialize", rootPath=None, rootUri=None, capabilities={})
-    await client.assert_error(
-        message="A folder should be opened instead of a file in order to use the inmanta extension."
-    )
+    await client.assert_error(message="A folder should be opened instead of a file in order to use the inmanta extension.")
