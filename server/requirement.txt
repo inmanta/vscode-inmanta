@@ -1,5 +1,0 @@
-inmanta-core
-intervaltree
-pytest
-pytest-asyncio
-pylspclient

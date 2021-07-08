@@ -37,8 +37,8 @@ def generate_safe_log_file():
     if file_name is not None:
         return file_name
 
-    import time
     import tempfile
+    import time
 
     file_name = "vscode-inmanta-%08x.log" % round(time.time() * 1000000)
     while os.path.exists(os.path.join(tempfile.gettempdir(), file_name)):
@@ -149,8 +149,7 @@ class JsonRpcHandler(object):
             raise InvalidRequestException("header %s not found" % field, id)
         if value is not None and message[field] != value:
             raise InvalidRequestException(
-                "expected header %s to be %s but was %s"
-                % (field, value, message[field]),
+                "expected header %s to be %s but was %s" % (field, value, message[field]),
                 id,
             )
         return message[field]
@@ -259,9 +258,7 @@ class JsonRpcHandler(object):
                     e.id = id
                     raise
             except Exception as e:
-                logger.debug(
-                    "exception occurred during method handling ", exc_info=True
-                )
+                logger.debug("exception occurred during method handling ", exc_info=True)
                 if id is not None:
                     # no exceptions on notifications
                     raise InternalErrorException(str(e), id)
