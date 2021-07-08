@@ -108,7 +108,7 @@
     "@types/glob": "^7.1.4",
     "@types/mocha": "^8.2.3",
     "@types/node": "^15.14.0",
-    "@types/rimraf": "^3.0.0",
+    "@types/rimraf": "^3.0.1",
     "@types/semver": "^7.3.7",
     "@types/vscode": "^1.57.1",
     "@typescript-eslint/eslint-plugin": "^4.28.2",
