@@ -40,7 +40,7 @@ describe('Compile checks', () => {
 			await fs.copyFile(source, modelUri.fsPath);
 			
 			// Wait one second to let vscode notice we closed the previous editor
-			await new Promise(resolve => setTimeout(resolve, 1000));
+			await new Promise(resolve => setTimeout(() => resolve(true), 1000));
 
 			// Opening model file
 			const doc: TextDocument = await workspace.openTextDocument(modelUri);
