@@ -121,7 +121,7 @@
     "rimraf": "^3.0.2",
     "semver": "^7.3.5",
     "typescript": "^4.3.5",
-    "vscode-test": "^1.5.2"
+    "vscode-test": "^1.6.1"
   },
   "main": "./out/extension"
 }
