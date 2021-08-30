@@ -88,7 +88,7 @@
   },
   "dependencies": {
     "get-port": "^5.1.1",
-    "vsce": "^1.96.1",
+    "vsce": "^1.96.2",
     "vscode-languageclient": "^7.0.0"
   },
   "activationEvents": [
