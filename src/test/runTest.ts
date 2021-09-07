@@ -10,11 +10,7 @@ async function main() {
 	const tmpHomeDir: string = fs.mkdtempSync("/tmp/vscode-tests");
 	try {
 		const settings = {
-			"inmanta": {
-				"ls": {
-					"enabled": true,
-				}
-			}
+			"inmanta.ls.enabled": true,
 		};
 
 		// Saving settings of testing workspace to file
