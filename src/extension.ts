@@ -71,7 +71,7 @@ export async function activate(context: ExtensionContext) {
 
 		const options: cp.SpawnOptionsWithoutStdio = {};
 		if (process.env.INMANTA_LS_LOG_PATH) {
-			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`)
+			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`);
 			options.env = {
 				"LOG_PATH": process.env.INMANTA_LS_LOG_PATH  // eslint-disable-line @typescript-eslint/naming-convention
 			};
@@ -239,7 +239,7 @@ export async function activate(context: ExtensionContext) {
 		};
 
 		if (process.env.INMANTA_LS_LOG_PATH) {
-			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`)
+			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`);
 			serverOptions.options.env["LOG_PATH"] = process.env.INMANTA_LS_LOG_PATH;
 		}
 
