@@ -9,6 +9,22 @@ async function main() {
 
 	const tmpHomeDir: string = fs.mkdtempSync("/tmp/vscode-tests");
 	try {
+		const settings = {
+			"inmanta": {
+				"ls": {
+					"enabled": true,
+				}
+			}
+		};
+
+		// Saving settings of testing workspace to file
+		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/compile/workspace/.vscode/settings.json');
+		await fs.ensureFile(workspaceSettingsPath);
+		await fs.writeJSON(workspaceSettingsPath, settings);
+		const navworkspaceSettingsPath = path.resolve(__dirname, '../../src/test/navigation/workspace/.vscode/settings.json');
+		await fs.ensureFile(navworkspaceSettingsPath);
+		await fs.writeJSON(navworkspaceSettingsPath, settings);
+
 		// The folder containing the Extension Manifest package.json
 		// Passed to `--extensionDevelopmentPath`
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../');
