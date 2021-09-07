@@ -9,16 +9,16 @@ const cfFile: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/compile/
 describe('Load extension', () => {
 
     beforeEach(async function() {
-        await commands.executeCommand('workbench.action.closeFolder');
+        await commands.executeCommand('workbench.action.closeActiveEditor');
     });
 
-    it('Load .cf file wihtout opening a directory NO compilerVenv configured', async function() {
+    it('Load .cf file without opening a directory NO compilerVenv configured', async function() {
         await workspace.getConfiguration('inmanta').update('compilerVenv', "", true);
         // Verify initial state
         assert.ok(!extensions.getExtension('inmanta.inmanta').isActive);
 
         // Open a single file instead of a folder
-        await commands.executeCommand('vscode.open', cfFile);
+        await commands.executeCommand('vscode.open', cfFile)
         const doc: TextDocument = await workspace.openTextDocument(cfFile);
         const edit: TextEditor = await window.showTextDocument(doc);
 
