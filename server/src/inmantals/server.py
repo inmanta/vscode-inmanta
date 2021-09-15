@@ -129,6 +129,13 @@ class InmantaLSHandler(JsonRpcHandler):
             else:
                 Project.set(Project(self.rootPath))
 
+            try:
+                # This is required for Modules V2, which don't install on each compile
+                Project.get().load(install=True)
+            except TypeError:
+                # install argument doesn't exist on older versions
+                pass
+
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
             (statements, blocks) = compiler_instance.compile()
