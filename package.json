@@ -107,7 +107,7 @@
     "@types/fs-extra": "^9.0.12",
     "@types/glob": "^7.1.4",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^16.9.2",
+    "@types/node": "^16.9.4",
     "@types/rimraf": "^3.0.2",
     "@types/semver": "^7.3.8",
     "@types/vscode": "^1.60.0",
