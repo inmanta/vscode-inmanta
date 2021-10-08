@@ -1,3 +1,7 @@
+boolean onDependabotBranch(String ecosystem) {
+    return env.BRANCH_NAME ==~ /dependabot\/${ecosystem}\/.*/
+}
+
 pipeline {
     agent any
 
@@ -21,6 +25,9 @@ pipeline {
 
     stages {
         stage('Language server tests') {
+            when {
+                expression { ! onDependabotBranch("npm_and_yarn") }
+            }
             steps {
                 sh '''
                     rm -rf $INMANTA_LS_TEST_ENV
@@ -45,7 +52,7 @@ pipeline {
 
     post {
         always {
-            junit 'server/junit*.xml'
+            junit allowEmptyResults: true, testResults: 'server/junit*.xml'
             deleteDir()
         }
     }
