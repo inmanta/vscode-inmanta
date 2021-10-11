@@ -1,1 +1,1 @@
-inmanta-dev-dependencies[async]==1.59.0
+inmanta-dev-dependencies[async]==1.60.0
