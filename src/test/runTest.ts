@@ -44,7 +44,7 @@ async function main() {
 			vscodeExecutablePath,
 			extensionDevelopmentPath: extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './compile/index'),
-			launchArgs: ["--install-extension", "ms-python.python"],
+			launchArgs: [],
 			extensionTestsEnv
 		});
 		// await runTests({
