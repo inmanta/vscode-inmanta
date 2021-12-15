@@ -1,6 +1,6 @@
 import * as path from 'path';
-
-import { runTests } from 'vscode-test';
+import * as cp from 'child_process';
+import { downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
 import * as fs from 'fs-extra';
 import * as rimraf from 'rimraf';
 
@@ -31,26 +31,35 @@ async function main() {
 			HOME: tmpHomeDir,  // eslint-disable-line @typescript-eslint/naming-convention
 			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH  // eslint-disable-line @typescript-eslint/naming-convention
 		};
-		// Download VS Code, unzip it and run the integration test
+
+		const vscodeExecutablePath = await downloadAndUnzipVSCode('1.50.0');
+    	const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
+		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python'], {
+			encoding: 'utf-8',
+			stdio: 'inherit'
+		  });
+
+		//run the integration test
 		await runTests({
+			vscodeExecutablePath,
 			extensionDevelopmentPath: extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './compile/index'),
-			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
+			launchArgs: ["--install-extension", "ms-python.python"],
 			extensionTestsEnv
 		});
-		await runTests({
-			extensionDevelopmentPath: extensionDevelopmentPath,
-			extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
-			launchArgs: ["--disable-gpu"],
-			extensionTestsEnv
-		});
-		await runTests({ 
-			extensionDevelopmentPath: extensionDevelopmentPath, 
-			extensionTestsPath: path.resolve(__dirname, './navigation/index'),
-			launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
-			extensionTestsEnv
-		});
-		
+		// await runTests({
+		// 	extensionDevelopmentPath: extensionDevelopmentPath,
+		// 	extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
+		// 	launchArgs: ["--disable-gpu"],
+		// 	extensionTestsEnv
+		// });
+		// await runTests({
+		// 	extensionDevelopmentPath: extensionDevelopmentPath,
+		// 	extensionTestsPath: path.resolve(__dirname, './navigation/index'),
+		// 	launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
+		// 	extensionTestsEnv
+		// });
+
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
 		process.exit(1);
