@@ -13,8 +13,8 @@ import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, Er
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 
 
-function log(message: string) {
-	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
+function log(msg: string) {
+	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${msg}`);
 }
 
 export async function activate(context: ExtensionContext) {
