@@ -34,7 +34,7 @@ async function main() {
 
 		const vscodeExecutablePath = await downloadAndUnzipVSCode('1.50.0');
     	const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
-		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python'], {
+		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python', "--list-extensions","--show-versions"], {
 			encoding: 'utf-8',
 			stdio: 'inherit'
 		  });
@@ -42,7 +42,7 @@ async function main() {
 		//run the integration test
 		await runTests({
 			vscodeExecutablePath,
-			extensionDevelopmentPath: extensionDevelopmentPath,
+			extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './compile/index'),
 			launchArgs: [],
 			extensionTestsEnv
