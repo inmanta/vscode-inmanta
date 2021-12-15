@@ -207,7 +207,6 @@ export async function activate(context: ExtensionContext) {
 			this._child = cp.spawn(pp, ["-c", script]);
 
 			this._child.on('close', (code) => {
-				console.log(code)
 				if (code === 4) {
 					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pp} is an older version`);
 				} else if (code === 3) {
