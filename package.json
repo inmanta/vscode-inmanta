@@ -1,127 +1,124 @@
 {
-  "name": "inmanta",
-  "displayName": "inmanta",
-  "description": "Inmanta",
-  "version": "1.1.0",
-  "publisher": "Inmanta",
-  "icon": "images/inmanta.ico",
-  "license": "Apache-2.0",
-  "homepage": "https://github.com/inmanta/vscode-inmanta",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/inmanta/vscode-inmanta"
-  },
-  "bugs": {
-    "url": "https://github.com/inmanta/vscode-inmanta/issues"
-  },
-  "keywords": [
-    "inmanta",
-    "syntax"
-  ],
-  "engines": {
-    "vscode": "^1.50.0"
-  },
-  "categories": [
-    "Programming Languages"
-  ],
-  "contributes": {
-    "languages": [
-      {
-        "id": "inmanta",
-        "aliases": [
-          "Inmanta",
-          "inmanta"
-        ],
-        "extensions": [
-          ".cf"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "inmanta",
-        "scopeName": "source.inmanta",
-        "path": "./syntaxes/inmanta.json"
-      }
-    ],
-    "configuration": {
-      "type": "object",
-      "title": "Inmanta",
-      "properties": {
-        "inmanta.pythonPath": {
-          "type": "string",
-          "default": "",
-          "description": "Path to Python, you can use a custom version of Python by modifying this setting to include the full path.",
-          "scope": "resource"
-        },
-        "inmanta.ls.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable the language server",
-          "scope": "resource"
-        },
-        "inmanta.compilerVenv": {
-          "type": "string",
-          "default": "",
-          "description": "Path to the Python virtual environment used by the compiler. Leave empty to use the default. Only available when using Inmanta versions higher than 2020.5 in the language server environment.",
-          "scope": "window"
-        }
-      }
+    "name": "inmanta",
+    "displayName": "inmanta",
+    "description": "Inmanta",
+    "version": "1.1.0",
+    "publisher": "Inmanta",
+    "icon": "images/inmanta.ico",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/inmanta/vscode-inmanta",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/inmanta/vscode-inmanta"
     },
-    "commands": [
-      {
-        "command": "inmanta.exportToServer",
-        "title": "Export to server",
-        "category": "inmanta"
-      }
+    "bugs": {
+        "url": "https://github.com/inmanta/vscode-inmanta/issues"
+    },
+    "keywords": [
+        "inmanta",
+        "syntax"
     ],
-    "menus": {
-      "editor/title": [
-        {
-          "when": "editorLangId == inmanta",
-          "command": "inmanta.exportToServer",
-          "group": "navigation"
+    "engines": {
+        "vscode": "^1.50.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "inmanta",
+                "aliases": [
+                    "Inmanta",
+                    "inmanta"
+                ],
+                "extensions": [
+                    ".cf"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "inmanta",
+                "scopeName": "source.inmanta",
+                "path": "./syntaxes/inmanta.json"
+            }
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "Inmanta",
+            "properties": {
+                "inmanta.ls.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable the language server",
+                    "scope": "resource"
+                },
+                "inmanta.compilerVenv": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to the Python virtual environment used by the compiler. Leave empty to use the default. Only available when using Inmanta versions higher than 2020.5 in the language server environment.",
+                    "scope": "window"
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "inmanta.exportToServer",
+                "title": "Export to server",
+                "category": "inmanta"
+            }
+        ],
+        "menus": {
+            "editor/title": [
+                {
+                    "when": "editorLangId == inmanta",
+                    "command": "inmanta.exportToServer",
+                    "group": "navigation"
+                }
+            ]
         }
-      ]
-    }
-  },
-  "dependencies": {
-    "get-port": "^5.1.1",
-    "vsce": "^2.5.1",
-    "vscode-languageclient": "^7.0.0"
-  },
-  "activationEvents": [
-    "onLanguage:inmanta",
-    "onCommand:inmanta.exportToServer"
-  ],
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "rimraf out && tsc -p ./",
-    "lint": "eslint src --ext ts",
-    "watch": "rimraf out && tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "test": "node ./out/test/runTest.js"
-  },
-  "devDependencies": {
-    "@types/fs-extra": "^9.0.13",
-    "@types/glob": "^7.2.0",
-    "@types/mocha": "^9.0.0",
-    "@types/node": "^17.0.0",
-    "@types/rimraf": "^3.0.2",
-    "@types/semver": "^7.3.9",
-    "@types/vscode": "^1.63.0",
-    "@typescript-eslint/eslint-plugin": "^4.33.0",
-    "@typescript-eslint/parser": "^4.33.0",
-    "eslint": "^7.32.0",
-    "eslint-config-google": "^0.14.0",
-    "fs-extra": "^10.0.0",
-    "glob": "^7.2.0",
-    "mocha": "^9.1.3",
-    "rimraf": "^3.0.2",
-    "semver": "^7.3.5",
-    "typescript": "^4.5.4",
-    "vscode-test": "^1.6.1"
-  },
-  "main": "./out/extension"
+    },
+    "dependencies": {
+        "get-port": "^5.1.1",
+        "vsce": "^2.5.1",
+        "vscode-languageclient": "^7.0.0"
+    },
+    "activationEvents": [
+        "onLanguage:inmanta",
+        "onCommand:inmanta.exportToServer"
+    ],
+    "extensionDependencies": [
+        "ms-python.python"
+    ],
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "rimraf out && tsc -p ./",
+        "lint": "eslint src --ext ts",
+        "watch": "rimraf out && tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "test": "node ./out/test/runTest.js"
+    },
+    "devDependencies": {
+        "@types/fs-extra": "^9.0.13",
+        "@types/glob": "^7.2.0",
+        "@types/mocha": "^9.0.0",
+        "@types/node": "^16.11.12",
+        "@types/rimraf": "^3.0.2",
+        "@types/semver": "^7.3.9",
+        "@types/vscode": "^1.63.0",
+        "@typescript-eslint/eslint-plugin": "^4.33.0",
+        "@typescript-eslint/parser": "^4.33.0",
+        "eslint": "^7.32.0",
+        "eslint-config-google": "^0.14.0",
+        "fs-extra": "^10.0.0",
+        "glob": "^7.2.0",
+        "mocha": "^9.1.3",
+        "rimraf": "^3.0.2",
+        "semver": "^7.3.5",
+        "typescript": "^4.5.2",
+        "vscode-test": "^1.6.1"
+    },
+    "main": "./out/extension"
 }

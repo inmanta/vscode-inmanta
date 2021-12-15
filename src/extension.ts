@@ -8,16 +8,27 @@ import * as path from 'path';
 import * as os from 'os';
 import * as getPort from 'get-port';
 
-import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
+import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel, extensions } from 'vscode';
 import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
+import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 
 
-function log(message: string) {
+export function log(message: string) {
 	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
 }
 
 export async function activate(context: ExtensionContext) {
+	//use Python extension
+	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
+	if (pythonExtension === undefined) {
+		log("Python extension not found");
+		return;
+	}
+	log("Activate Python extension");
+	await pythonExtension.activate();
+	const pythonExtentionApi = new PythonExtension(pythonExtension.exports, startServerAndClient);
+
 	let lsOutputChannel = null;
 
 	async function startServerAndClient() {
@@ -57,7 +68,7 @@ export async function activate(context: ExtensionContext) {
 			errorHandler: errorhandler,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
-				compilerVenv: compilerVenv
+				compilerVenv: compilerVenv,
 			}
 		};
 		return clientOptions;
@@ -161,7 +172,7 @@ export async function activate(context: ExtensionContext) {
 		_child: cp.ChildProcess;
 
 		notInstalled() {
-			const pp: string = workspace.getConfiguration('inmanta').pythonPath;
+			const pp: string = pythonExtentionApi.pythonPath;
 
 			window.showErrorMessage(`Inmanta Language Server not installed, run "${pp} -m pip install inmantals" ?`, 'Yes', 'No').then(
 				(answer) => {
@@ -180,7 +191,7 @@ export async function activate(context: ExtensionContext) {
 			const pp: string = await createVenvIfNotExists();
 
 			if (!fs.existsSync(pp)) {
-				window.showErrorMessage("No python36 interpreter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.");
+				window.showErrorMessage("No python36 interpreter found at `" + pp + "`.");
 				return;
 			}
 
@@ -196,6 +207,7 @@ export async function activate(context: ExtensionContext) {
 			this._child = cp.spawn(pp, ["-c", script]);
 
 			this._child.on('close', (code) => {
+				console.log(code)
 				if (code === 4) {
 					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pp} is an older version`);
 				} else if (code === 3) {
@@ -228,7 +240,7 @@ export async function activate(context: ExtensionContext) {
 
 	async function startPipe(clientOptions: LanguageClientOptions) {
 		const pp: string = await createVenvIfNotExists();
-		log(`Virtual environment is ${pp}`);
+		log(`Python path is ${pp}`);
 
 		const serverOptions: ServerOptions = {
 			command: pp,
@@ -267,7 +279,7 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function createVenvIfNotExists() {
-		const pp: string = workspace.getConfiguration('inmanta').pythonPath;
+		const pp: string = pythonExtentionApi.pythonPath;
 		if (pp && fs.existsSync(pp)) {
 			return pp;
 		} else {
@@ -293,13 +305,14 @@ export async function activate(context: ExtensionContext) {
 		return venvPath;
 	}
 
+
 	function registerExportCommand() {
 		const commandId = 'inmanta.exportToServer';
 
 		const commandHandler = (openedFileObj: object) => {
 			const pathOpenedFile: string = String(openedFileObj);
 			const cwdCommand: string = path.dirname(Uri.parse(pathOpenedFile).fsPath);
-			const pythonPath: string = workspace.getConfiguration('inmanta').pythonPath;
+			const pythonPath : string = pythonExtentionApi.pythonPath;
 			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
 
 			if (exportToServerChannel === null) {

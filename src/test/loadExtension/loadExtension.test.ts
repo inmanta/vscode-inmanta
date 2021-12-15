@@ -18,7 +18,7 @@ describe('Load extension', () => {
         assert.ok(!extensions.getExtension('inmanta.inmanta').isActive);
 
         // Open a single file instead of a folder
-        await commands.executeCommand('vscode.open', cfFile)
+        await commands.executeCommand('vscode.open', cfFile);
         const doc: TextDocument = await workspace.openTextDocument(cfFile);
         const edit: TextEditor = await window.showTextDocument(doc);
 
