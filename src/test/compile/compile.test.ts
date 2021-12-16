@@ -57,7 +57,6 @@ describe('Compile checks', () => {
 			const libsExists = fs.pathExistsSync(libsPath);
 			assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
 
-			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
 			envPath = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
 			const envExists = fs.pathExistsSync(envPath);
 			assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);

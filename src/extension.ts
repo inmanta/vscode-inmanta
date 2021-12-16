@@ -300,7 +300,6 @@ export async function activate(context: ExtensionContext) {
 			}
 			installLanguageServer(venvPath);
 		}
-		await workspace.getConfiguration("inmanta").update("pythonPath", venvPath, true);
 		return venvPath;
 	}
 
