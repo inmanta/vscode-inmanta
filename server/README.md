@@ -1,6 +1,10 @@
 # Inmanta Language server
 
-provides the bridge between the Inmanta compiler and Visual Studio Code ide, by implementing a Language Server
+Provides the bridge between the Inmanta compiler and Visual Studio Code ide, by implementing a Language Server.
+
+For recent versions of `inmanta-core` (`>=6`), the server takes ownership of the Python environment it runs in and installs any
+modules and module dependencies in that environment. For older versions of `inmanta-core`, a separate compiler venv is used,
+which can be configured with the `compilerVenv` option.
 
 **This is alpha software, it may or may not work**
 
