@@ -16,11 +16,9 @@
     Contact: code@inmanta.com
 """
 import asyncio
-import inspect
 import json
 import logging
 import os
-import types
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Set, Tuple
