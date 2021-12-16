@@ -28,6 +28,7 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple
 from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
+import pkg_resources
 from inmanta import compiler, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
@@ -39,15 +40,18 @@ from inmanta.util import groupby
 from inmantals import lsp_types
 from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
 from intervaltree.intervaltree import IntervalTree
+from packaging import version
 
-# This module has only been added in inmanta v2020.3.
-ast_export: Optional[types.ModuleType]
-try:
-    import inmanta.ast.export  # type: ignore
+CORE_VERSION: version.Version = version.Version(pkg_resources.get_distribution("inmanta-core").version)
+"""
+Version of the inmanta-core package.
+"""
 
-    ast_export = inmanta.ast.export
-except ModuleNotFoundError:
-    ast_export = None
+LEGACY_MODE_COMPILER_VENV: bool = CORE_VERSION < version.Version("6.dev")
+"""
+Older versions of inmanta-core work with a separate compiler venv and install modules and their dependencies on the fly.
+Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
+"""
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +66,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
         self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = None
+        # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
         self.compiler_venv_path: Optional[str] = None
 
     async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
@@ -121,20 +126,16 @@ class InmantaLSHandler(JsonRpcHandler):
             resources.resource.reset()
             handler.Commander.reset()
 
-            project_signature = inspect.signature(Project.__init__)
             # fresh project
-            if "venv_path" in project_signature.parameters.keys() and self.compiler_venv_path:
-                logger.debug("Using venv path " + str(self.compiler_venv_path))
-                Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
+            if LEGACY_MODE_COMPILER_VENV:
+                if self.compiler_venv_path:
+                    logger.debug("Using venv path " + str(self.compiler_venv_path))
+                    Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
+                else:
+                    Project.set(Project(self.rootPath))
             else:
                 Project.set(Project(self.rootPath))
-
-            try:
-                # This is required for Modules V2, which don't install on each compile
-                Project.get().load(install=True)
-            except TypeError:
-                # install argument doesn't exist on older versions
-                pass
+                Project.get().install_modules()
 
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
