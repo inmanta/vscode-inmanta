@@ -22,12 +22,11 @@ export async function activate(context: ExtensionContext) {
 	//use Python extension
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
 	if (pythonExtension === undefined) {
-		log("Python extension not found");
-		return;
+		throw Error("Python extension not found");
 	}
 	log("Activate Python extension");
 	await pythonExtension.activate();
-	const pythonExtentionApi = new PythonExtension(pythonExtension.exports, startServerAndClient);
+	const pythonExtentionApi = new PythonExtension(pythonExtension.exports, restartLS);
 
 	let lsOutputChannel = null;
 
@@ -43,6 +42,7 @@ export async function activate(context: ExtensionContext) {
 		if (os.platform() === "win32") {
 			return await startTcp(clientOptions);
 		} else {
+			log("startpipe");
 			return await startPipe(clientOptions);
 		}
 	}
@@ -76,7 +76,7 @@ export async function activate(context: ExtensionContext) {
 
 	async function startTcp(clientOptions: LanguageClientOptions) {
 		const host = "127.0.0.1";
-		const pp: string = await createVenvIfNotExists();
+		const pp: string = pythonExtentionApi.pythonPath;
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
 
@@ -173,7 +173,7 @@ export async function activate(context: ExtensionContext) {
 
 		notInstalled() {
 			const pp: string = pythonExtentionApi.pythonPath;
-
+			log("error not installed");
 			window.showErrorMessage(`Inmanta Language Server not installed, run "${pp} -m pip install inmantals" ?`, 'Yes', 'No').then(
 				(answer) => {
 					if (answer === 'Yes') {
@@ -188,12 +188,7 @@ export async function activate(context: ExtensionContext) {
 				return;
 			}
 
-			const pp: string = await createVenvIfNotExists();
-
-			if (!fs.existsSync(pp)) {
-				window.showErrorMessage("No python36 interpreter found at `" + pp + "`.");
-				return;
-			}
+			const pp: string = pythonExtentionApi.pythonPath;
 
 			const script = "import sys\n" +
 				"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
@@ -238,7 +233,7 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function startPipe(clientOptions: LanguageClientOptions) {
-		const pp: string = await createVenvIfNotExists();
+		const pp: string = pythonExtentionApi.pythonPath;
 		log(`Python path is ${pp}`);
 
 		const serverOptions: ServerOptions = {
@@ -262,47 +257,15 @@ export async function activate(context: ExtensionContext) {
 			serverOptions: serverOptions,
 			clientOptions: clientOptions
 		}, null, 2)}`);
+		log("disposable");
 		const disposable = lc.start();
 
 		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
+		log("context");
 		return disposable;
 	}
-
-	function getDefaultVenvPath() {
-		if (os.platform() === "win32") {
-			return Uri.joinPath(context.globalStorageUri, ".env", "Scripts", "python.exe").fsPath;
-		}
-		return Uri.joinPath(context.globalStorageUri, ".env", "bin", "python").fsPath;
-	}
-
-	async function createVenvIfNotExists() {
-		const pp: string = pythonExtentionApi.pythonPath;
-		if (pp && fs.existsSync(pp)) {
-			return pp;
-		} else {
-			window.showInformationMessage(`No Python3 interpreter found at "${pp}". Falling back to default virtual environment`);
-		}
-		const venvBaseDir = Uri.joinPath(context.globalStorageUri, ".env").fsPath;
-		const venvPath = getDefaultVenvPath();
-
-		if (!fs.existsSync(venvBaseDir)) {
-			log("Creating new virtual environment");
-			const venvProcess = cp.spawnSync("python3", ["-m", "venv", venvBaseDir]);
-			if (venvProcess.status !== 0) {
-				window.showErrorMessage(`Virtual env creation at ${venvBaseDir} failed with code ${venvProcess.status}, ${venvProcess.stderr}`);
-			}
-			log("Ensuring latest pip and wheel");
-			const updateProcess = cp.spawnSync(venvPath, ["-m", "pip", "install", "-U", "pip", "wheel"]);
-			if (updateProcess.status !== 0) {
-				window.showErrorMessage(`Updating pip and wheel in venv ${venvBaseDir} failed with code ${updateProcess.status}, ${updateProcess.stderr}`);
-			}
-			installLanguageServer(venvPath);
-		}
-		return venvPath;
-	}
-
 
 	function registerExportCommand() {
 		const commandId = 'inmanta.exportToServer';
@@ -353,6 +316,12 @@ export async function activate(context: ExtensionContext) {
 			running.dispose();
 			running = undefined;
 		}
+	}
+
+	function restartLS() {
+		log("restart LS");
+		stopIfRunning();
+		startServerAndClient();
 	}
 
 	context.subscriptions.push(workspace.onDidChangeConfiguration(async e => {

@@ -3,6 +3,7 @@ import * as cp from 'child_process';
 import { downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
 import * as fs from 'fs-extra';
 import * as rimraf from 'rimraf';
+import { workspace } from 'vscode';
 
 
 async function main() {
@@ -11,6 +12,7 @@ async function main() {
 	try {
 		const settings = {
 			"inmanta.ls.enabled": true,
+			"python.defaultInterpreterPath": path.resolve(__dirname,'../../', "extension-venv")
 		};
 
 		// Saving settings of testing workspace to file
@@ -31,18 +33,13 @@ async function main() {
 			HOME: tmpHomeDir,  // eslint-disable-line @typescript-eslint/naming-convention
 			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH  // eslint-disable-line @typescript-eslint/naming-convention
 		};
+
 		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
 		const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
 		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python'], {
 		encoding: 'utf-8',
 		stdio: 'inherit'
 		});
-
-		await runTests({
-			vscodeExecutablePath,
-			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
-			extensionDevelopmentPath,
-			extensionTestsPath: path.resolve(__dirname, './compile/index') });
 
 		await runTests({
 			vscodeExecutablePath,
@@ -54,10 +51,16 @@ async function main() {
 
 		await runTests({
 			vscodeExecutablePath,
+			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
+			extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './compile/index'),
+		});
+
+		await runTests({
+			vscodeExecutablePath,
 			extensionDevelopmentPath: extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './navigation/index'),
 			launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
-			extensionTestsEnv
 		});
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
