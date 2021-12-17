@@ -42,7 +42,6 @@ export async function activate(context: ExtensionContext) {
 		if (os.platform() === "win32") {
 			return await startTcp(clientOptions);
 		} else {
-			log("startpipe");
 			return await startPipe(clientOptions);
 		}
 	}
@@ -173,7 +172,6 @@ export async function activate(context: ExtensionContext) {
 
 		notInstalled() {
 			const pp: string = pythonExtentionApi.pythonPath;
-			log("error not installed");
 			window.showErrorMessage(`Inmanta Language Server not installed, run "${pp} -m pip install inmantals" ?`, 'Yes', 'No').then(
 				(answer) => {
 					if (answer === 'Yes') {
@@ -257,13 +255,11 @@ export async function activate(context: ExtensionContext) {
 			serverOptions: serverOptions,
 			clientOptions: clientOptions
 		}, null, 2)}`);
-		log("disposable");
 		const disposable = lc.start();
 
 		// Push the disposable to the context's subscriptions so that the
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
-		log("context");
 		return disposable;
 	}
 
@@ -319,7 +315,7 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	function restartLS() {
-		log("restart LS");
+		log("restarting Language Server");
 		stopIfRunning();
 		startServerAndClient();
 	}

@@ -10,6 +10,7 @@ Inmanta Documentation on [Read the Docs](https://inmanta.com/resources/docs/)
 
 ## Features
 
+
 ### Syntax highlighting
 The extension makes your life easier by highlighting syntax keywords or the Inmanta language.
 
