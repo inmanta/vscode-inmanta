@@ -20,14 +20,13 @@ describe('Compile checks', () => {
 	];
 
 	let envPath: string = "";
-	beforeEach((done) => {
+	beforeEach(() => {
 		Promise.all([
 			fs.writeFile(logPath, ""),
 			fs.remove(libsPath),
 			fs.remove(modelUri.fsPath),
 		]).then(async () => {
-			await commands.executeCommand('workbench.action.closeActiveEditor');
-			done();
+			return await commands.executeCommand('workbench.action.closeActiveEditor');
 		});
 	});
 

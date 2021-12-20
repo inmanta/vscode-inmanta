@@ -3,7 +3,6 @@
 import * as net from 'net';
 
 import * as cp from 'child_process';
-import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as getPort from 'get-port';
@@ -68,7 +67,6 @@ export async function activate(context: ExtensionContext) {
 
 	async function startTcp(clientOptions: LanguageClientOptions) {
 		const host = "127.0.0.1";
-		const pp: string = pythonExtentionApi.pythonPath;
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
 
@@ -80,7 +78,7 @@ export async function activate(context: ExtensionContext) {
 			};
 		}
 
-		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
+		const serverProcess = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
 		serverProcess.stdout.on('data', (data) => {
 			lsOutputChannel.appendLine(`stdout: ${data}`);
@@ -164,11 +162,10 @@ export async function activate(context: ExtensionContext) {
 		_child: cp.ChildProcess;
 
 		notInstalled() {
-			const pp: string = pythonExtentionApi.pythonPath;
-			window.showErrorMessage(`Inmanta Language Server not installed, run "${pp} -m pip install inmantals" ?`, 'Yes', 'No').then(
+			window.showErrorMessage(`Inmanta Language Server not installed, run "${pythonExtentionApi.pythonPath} -m pip install inmantals" ?`, 'Yes', 'No').then(
 				(answer) => {
 					if (answer === 'Yes') {
-						installLanguageServer(pp, true);
+						installLanguageServer(pythonExtentionApi.pythonPath, true);
 					}
 				}
 			);
@@ -179,8 +176,6 @@ export async function activate(context: ExtensionContext) {
 				return;
 			}
 
-			const pp: string = pythonExtentionApi.pythonPath;
-
 			const script = "import sys\n" +
 				"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
 				"  exit(4)\n" +
@@ -190,11 +185,11 @@ export async function activate(context: ExtensionContext) {
 				"except:\n" +
 				"  sys.exit(3)";
 
-			this._child = cp.spawn(pp, ["-c", script]);
+			this._child = cp.spawn(pythonExtentionApi.pythonPath, ["-c", script]);
 
 			this._child.on('close', (code) => {
 				if (code === 4) {
-					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pp} is an older version`);
+					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pythonExtentionApi.pythonPath} is an older version`);
 				} else if (code === 3) {
 					this.notInstalled();
 				} else {
@@ -224,11 +219,10 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function startPipe(clientOptions: LanguageClientOptions) {
-		const pp: string = pythonExtentionApi.pythonPath;
-		log(`Python path is ${pp}`);
+		log(`Python path is ${pythonExtentionApi.pythonPath}`);
 
 		const serverOptions: ServerOptions = {
-			command: pp,
+			command: pythonExtentionApi.pythonPath,
 			args: ["-m", "inmantals.pipeserver"],
 			options: {
 				env: {}
@@ -262,8 +256,7 @@ export async function activate(context: ExtensionContext) {
 		const commandHandler = (openedFileObj: object) => {
 			const pathOpenedFile: string = String(openedFileObj);
 			const cwdCommand: string = path.dirname(Uri.parse(pathOpenedFile).fsPath);
-			const pythonPath : string = pythonExtentionApi.pythonPath;
-			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
+			const child = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
 
 			if (exportToServerChannel === null) {
 				exportToServerChannel = window.createOutputChannel("export to inmanta server");

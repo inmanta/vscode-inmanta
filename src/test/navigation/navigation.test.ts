@@ -14,12 +14,8 @@ const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
 describe('Language Server Code navigation', () => {
 
-	beforeEach((done) => {
-		Promise.all([
-			commands.executeCommand('workbench.action.closeActiveEditor'),
-		]).then(async () => {
-			done();
-		});
+	beforeEach(async () => {
+		await commands.executeCommand('workbench.action.closeActiveEditor')
 	});
 
 	it(`Check that code navigation works`, () => {
