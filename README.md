@@ -67,13 +67,14 @@ The extension currently has two settings:
 The plugin uses the Python extension to change environments. This can be done by clicking on the active environment in the bottombar
 and then selecting the environment to activate.
 
-![Settings screenshot](images/python-extension.png)
+<img src="images/python-extension.png" width="40%">
 
 The selected Python environment will be used to install the Inmanta Language server.
  - If the used version of inmanta-core>=6 then it will also be used for the module dependencies and the v2 modules.
  - If the version of inmanta-core<6 then the inmanta.compilerVenv setting will be used as environement for the module dependencies and the v2 modules.
 
- ![Settings screenshot](images/python-env.png)
+<img src="images/python-env.png" width="80%">
+
 ## Known Issues
 
 None ATM
