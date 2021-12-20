@@ -59,7 +59,7 @@ export async function activate(context: ExtensionContext) {
 			errorHandler: errorhandler,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
-				compilerVenv: compilerVenv,
+				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
 			}
 		};
 		return clientOptions;

@@ -16,16 +16,13 @@ describe('Load extension', () => {
         await workspace.getConfiguration('inmanta').update('compilerVenv', "", true);
         // Verify initial state
 		let inmanta = extensions.getExtension('inmanta.inmanta');
-        assert.ok(!inmanta.isActive, 'first assert');
+        assert.ok(!inmanta.isActive, 'Inmanta extension is not started');
 
         // Open a single file instead of a folder
         await commands.executeCommand('vscode.open', cfFile);
         const doc: TextDocument = await workspace.openTextDocument(cfFile);
         await window.showTextDocument(doc);
 		inmanta = extensions.getExtension('inmanta.inmanta');
-        // The extension will not start because it doesn't have a storageUri to store the compilerVenv.
-        // A different storageUri is created for each workspace. If no workspace is opened, no
-        // storageUri is available.
-        assert.ok(inmanta.isActive, 'second assert');
+        assert.ok(inmanta.isActive, 'Inmanta extension is started');
     });
 });
