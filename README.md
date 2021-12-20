@@ -71,7 +71,7 @@ and then selecting the environment to activate.
 
 The selected Python environment will be used to install the Inmanta Language server.
  - If the used version of inmanta-core>=6 then it will also be used for the module dependencies and the v2 modules.
- - If the version of inmanta-core<6 then the inmanta.compilerVenv setting will be used as environement for the module dependencies and the v2 modules.
+ - If the version of inmanta-core<6 then the inmanta.compilerVenv setting will be used as environment for the module dependencies.
 
 <img src="images/python-env.png" width="80%">
 
