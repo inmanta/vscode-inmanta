@@ -50,7 +50,8 @@ port=8888                                         # Replace this by the port on 
 
 ## Requirements
 
-Operating System: Currently only Linux and Windows are supported.
+ - Operating System: Currently only Linux and Windows are supported.
+ - Python extension (ms-python.python) installed
 
 ## Extension Settings
 
@@ -58,11 +59,21 @@ You can find the settings of the extension, in the Settings panel, under `Extens
 
 ![Settings screenshot](images/screenshot-settings.png)
 
-The extension currently has three settings:
- - inmanta.compilerVenv: Absolute path to the virtual environment the compiler should use.
+The extension currently has two settings:
+ - inmanta.compilerVenv: Absolute path to the virtual environment the compiler and language server should use.
  - inmanta.ls.enabled: Whether or not activate the Inmanta Language server (you probably want to).
- - inmanta.pythonPath: Python path the extension should use to run the language server.
 
+### Python environments
+The plugin uses the Python extension to change environments. This can be done by clicking on the active environment in the bottombar
+and then selecting the environment to activate.
+
+![Settings screenshot](images/python-extension.png)
+
+The selected Python environment will be used to install the Inmanta Language server.
+ - If the used version of inmanta-core>=6 then it will also be used for the module dependencies and the v2 modules.
+ - If the version of inmanta-core<6 then the inmanta.compilerVenv setting will be used as environement for the module dependencies and the v2 modules.
+
+ ![Settings screenshot](images/python-env.png)
 ## Known Issues
 
 None ATM

@@ -48,18 +48,11 @@ export async function activate(context: ExtensionContext) {
 
 	async function getClientOptions(): Promise<LanguageClientOptions> {
 		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
-		if (!compilerVenv) {
-			if (context.storageUri === undefined) {
-				window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
-				throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
-			}
-			compilerVenv = Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
+		if (context.storageUri === undefined) {
+			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
+			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 		}
-
 		const errorhandler = new LsErrorHandler();
-
-		// Options to control the language client
-		await workspace.getConfiguration('inmanta').update('compilerVenv', compilerVenv, true);
 
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
