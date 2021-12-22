@@ -52,6 +52,7 @@ port=8888                                         # Replace this by the port on 
 
  - Operating System: Currently only Linux and Windows are supported.
  - Python extension (ms-python.python) installed
+ - Python >=3.6 <=3.8
 
 ## Extension Settings
 
