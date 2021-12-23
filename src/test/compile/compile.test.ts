@@ -2,7 +2,6 @@ import * as assert from 'assert';
 import { after, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { SemVer } from 'semver';
 
 import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString } from 'vscode';
 import { waitForCompile } from '../helpers';
@@ -21,16 +20,13 @@ describe('Compile checks', () => {
 	];
 
 	let envPath: string = "";
-
-	beforeEach((done) => {
-		Promise.all([
+	beforeEach(async () => {
+		await Promise.all([
 			fs.writeFile(logPath, ""),
 			fs.remove(libsPath),
 			fs.remove(modelUri.fsPath),
-		]).then(async values => {
-			await commands.executeCommand('workbench.action.closeActiveEditor');
-			done();
-		});
+			]);
+		commands.executeCommand('workbench.action.closeActiveEditor');
 	});
 
 	tests.forEach(test => {
@@ -38,7 +34,7 @@ describe('Compile checks', () => {
 			// Copy model into main.cf
 			const source: string = path.resolve(workspaceUri.fsPath, test.source);
 			await fs.copyFile(source, modelUri.fsPath);
-			
+
 			// Wait one second to let vscode notice we closed the previous editor
 			await new Promise(resolve => setTimeout(() => resolve(true), 1000));
 
@@ -59,7 +55,6 @@ describe('Compile checks', () => {
 			const libsExists = fs.pathExistsSync(libsPath);
 			assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
 
-			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
 			envPath = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
 			const envExists = fs.pathExistsSync(envPath);
 			assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);

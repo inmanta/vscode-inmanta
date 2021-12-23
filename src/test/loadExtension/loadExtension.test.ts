@@ -12,19 +12,17 @@ describe('Load extension', () => {
         await commands.executeCommand('workbench.action.closeActiveEditor');
     });
 
-    it('Load .cf file without opening a directory NO compilerVenv configured', async function() {
+    it('Load .cf file will start the Extension', async function() {
         await workspace.getConfiguration('inmanta').update('compilerVenv', "", true);
         // Verify initial state
-        assert.ok(!extensions.getExtension('inmanta.inmanta').isActive);
+		let inmanta = extensions.getExtension('inmanta.inmanta');
+        assert.ok(!inmanta.isActive, 'Inmanta extension is not started');
 
         // Open a single file instead of a folder
-        await commands.executeCommand('vscode.open', cfFile)
+        await commands.executeCommand('vscode.open', cfFile);
         const doc: TextDocument = await workspace.openTextDocument(cfFile);
-        const edit: TextEditor = await window.showTextDocument(doc);
-
-        // The extension will not start because it doesn't have a storageUri to store the compilerVenv.
-        // A different storageUri is created for each workspace. If no workspace is opened, no
-        // storageUri is available.
-        assert.ok(!extensions.getExtension('inmanta.inmanta').isActive);
+        await window.showTextDocument(doc);
+		inmanta = extensions.getExtension('inmanta.inmanta');
+        assert.ok(inmanta.isActive, 'Inmanta extension is started');
     });
 });

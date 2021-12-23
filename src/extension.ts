@@ -3,21 +3,30 @@
 import * as net from 'net';
 
 import * as cp from 'child_process';
-import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as getPort from 'get-port';
 
-import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel } from 'vscode';
+import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel, extensions } from 'vscode';
 import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
+import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 
 
-function log(message: string) {
+export function log(message: string) {
 	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
 }
 
 export async function activate(context: ExtensionContext) {
+	//use Python extension
+	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
+	if (pythonExtension === undefined) {
+		throw Error("Python extension not found");
+	}
+	log("Activate Python extension");
+	await pythonExtension.activate();
+	const pythonExtentionApi = new PythonExtension(pythonExtension.exports, restartLS);
+
 	let lsOutputChannel = null;
 
 	async function startServerAndClient() {
@@ -38,18 +47,11 @@ export async function activate(context: ExtensionContext) {
 
 	async function getClientOptions(): Promise<LanguageClientOptions> {
 		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
-		if (!compilerVenv) {
-			if (context.storageUri === undefined) {
-				window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
-				throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
-			}
-			compilerVenv = Uri.joinPath(context.storageUri, ".env-ls-compiler").fsPath;
+		if (context.storageUri === undefined) {
+			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
+			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 		}
-
 		const errorhandler = new LsErrorHandler();
-
-		// Options to control the language client
-		await workspace.getConfiguration('inmanta').update('compilerVenv', compilerVenv, true);
 
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
@@ -57,7 +59,7 @@ export async function activate(context: ExtensionContext) {
 			errorHandler: errorhandler,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
-				compilerVenv: compilerVenv
+				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
 			}
 		};
 		return clientOptions;
@@ -65,7 +67,6 @@ export async function activate(context: ExtensionContext) {
 
 	async function startTcp(clientOptions: LanguageClientOptions) {
 		const host = "127.0.0.1";
-		const pp: string = await createVenvIfNotExists();
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
 
@@ -77,7 +78,7 @@ export async function activate(context: ExtensionContext) {
 			};
 		}
 
-		const serverProcess = cp.spawn(pp, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
+		const serverProcess = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
 		serverProcess.stdout.on('data', (data) => {
 			lsOutputChannel.appendLine(`stdout: ${data}`);
@@ -161,12 +162,10 @@ export async function activate(context: ExtensionContext) {
 		_child: cp.ChildProcess;
 
 		notInstalled() {
-			const pp: string = workspace.getConfiguration('inmanta').pythonPath;
-
-			window.showErrorMessage(`Inmanta Language Server not installed, run "${pp} -m pip install inmantals" ?`, 'Yes', 'No').then(
+			window.showErrorMessage(`Inmanta Language Server not installed, run "${pythonExtentionApi.pythonPath} -m pip install inmantals" ?`, 'Yes', 'No').then(
 				(answer) => {
 					if (answer === 'Yes') {
-						installLanguageServer(pp, true);
+						installLanguageServer(pythonExtentionApi.pythonPath, true);
 					}
 				}
 			);
@@ -174,13 +173,6 @@ export async function activate(context: ExtensionContext) {
 
 		async diagnose() {
 			if (this._child !== undefined) {
-				return;
-			}
-
-			const pp: string = await createVenvIfNotExists();
-
-			if (!fs.existsSync(pp)) {
-				window.showErrorMessage("No python36 interpreter found at `" + pp + "`. Please update the config setting `inmanta.pythonPath` to point to a valid python interperter.");
 				return;
 			}
 
@@ -193,11 +185,11 @@ export async function activate(context: ExtensionContext) {
 				"except:\n" +
 				"  sys.exit(3)";
 
-			this._child = cp.spawn(pp, ["-c", script]);
+			this._child = cp.spawn(pythonExtentionApi.pythonPath, ["-c", script]);
 
 			this._child.on('close', (code) => {
 				if (code === 4) {
-					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pp} is an older version`);
+					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pythonExtentionApi.pythonPath} is an older version`);
 				} else if (code === 3) {
 					this.notInstalled();
 				} else {
@@ -227,11 +219,10 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function startPipe(clientOptions: LanguageClientOptions) {
-		const pp: string = await createVenvIfNotExists();
-		log(`Virtual environment is ${pp}`);
+		log(`Python path is ${pythonExtentionApi.pythonPath}`);
 
 		const serverOptions: ServerOptions = {
-			command: pp,
+			command: pythonExtentionApi.pythonPath,
 			args: ["-m", "inmantals.pipeserver"],
 			options: {
 				env: {}
@@ -259,48 +250,13 @@ export async function activate(context: ExtensionContext) {
 		return disposable;
 	}
 
-	function getDefaultVenvPath() {
-		if (os.platform() === "win32") {
-			return Uri.joinPath(context.globalStorageUri, ".env", "Scripts", "python.exe").fsPath;
-		}
-		return Uri.joinPath(context.globalStorageUri, ".env", "bin", "python").fsPath;
-	}
-
-	async function createVenvIfNotExists() {
-		const pp: string = workspace.getConfiguration('inmanta').pythonPath;
-		if (pp && fs.existsSync(pp)) {
-			return pp;
-		} else {
-			window.showInformationMessage(`No Python3 interpreter found at "${pp}". Falling back to default virtual environment`);
-		}
-		const venvBaseDir = Uri.joinPath(context.globalStorageUri, ".env").fsPath;
-		const venvPath = getDefaultVenvPath();
-
-		if (!fs.existsSync(venvBaseDir)) {
-			log("Creating new virtual environment");
-			const venvProcess = cp.spawnSync("python3", ["-m", "venv", venvBaseDir]);
-			if (venvProcess.status !== 0) {
-				window.showErrorMessage(`Virtual env creation at ${venvBaseDir} failed with code ${venvProcess.status}, ${venvProcess.stderr}`);
-			}
-			log("Ensuring latest pip and wheel");
-			const updateProcess = cp.spawnSync(venvPath, ["-m", "pip", "install", "-U", "pip", "wheel"]);
-			if (updateProcess.status !== 0) {
-				window.showErrorMessage(`Updating pip and wheel in venv ${venvBaseDir} failed with code ${updateProcess.status}, ${updateProcess.stderr}`);
-			}
-			installLanguageServer(venvPath);
-		}
-		await workspace.getConfiguration("inmanta").update("pythonPath", venvPath, true);
-		return venvPath;
-	}
-
 	function registerExportCommand() {
 		const commandId = 'inmanta.exportToServer';
 
 		const commandHandler = (openedFileObj: object) => {
 			const pathOpenedFile: string = String(openedFileObj);
 			const cwdCommand: string = path.dirname(Uri.parse(pathOpenedFile).fsPath);
-			const pythonPath: string = workspace.getConfiguration('inmanta').pythonPath;
-			const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
+			const child = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
 
 			if (exportToServerChannel === null) {
 				exportToServerChannel = window.createOutputChannel("export to inmanta server");
@@ -342,6 +298,12 @@ export async function activate(context: ExtensionContext) {
 			running.dispose();
 			running = undefined;
 		}
+	}
+
+	function restartLS() {
+		log("restarting Language Server");
+		stopIfRunning();
+		startServerAndClient();
 	}
 
 	context.subscriptions.push(workspace.onDidChangeConfiguration(async e => {

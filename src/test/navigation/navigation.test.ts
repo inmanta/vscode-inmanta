@@ -3,26 +3,20 @@ import { after, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-import { Uri, window, commands, workspace, TextDocument, Position, Range, Location } from 'vscode';
+import { Uri, window, commands, workspace, TextDocument, Position, Range, Location, TextEditor, SnippetString } from 'vscode';
 import { waitForCompile } from '../helpers';
 
 const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/navigation/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 
-
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
 describe('Language Server Code navigation', () => {
 
-	beforeEach(async () => {
-		await Promise.all([
-			fs.writeFile(logPath, ""),
-		]).then(async values => {
-			await commands.executeCommand('workbench.action.closeActiveEditor');
-		});
+	beforeEach(() => {
+		commands.executeCommand('workbench.action.closeActiveEditor');
 	});
-
 
 	it(`Check that code navigation works`, () => {
 		return new Promise<void>(async resolve => {
@@ -32,7 +26,6 @@ describe('Language Server Code navigation', () => {
 			const succeeded = await waitForCompile(logPath, 25000);
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(13, 16));
-			const pythonPath: string = workspace.getConfiguration('inmanta').get<string>('pythonPath');
 			let expectedAttributeLocation = new Range(new Position(2, 11), new Position(2, 15));
 			assert.strictEqual((attributeInSameFile as Location[]).length, 1);
 			assert.strictEqual(attributeInSameFile[0].uri.fsPath, modelUri.fsPath);
