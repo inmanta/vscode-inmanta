@@ -26,7 +26,7 @@ describe('Compile checks', () => {
 			fs.remove(libsPath),
 			fs.remove(modelUri.fsPath),
 			]);
-		commands.executeCommand('workbench.action.closeActiveEditor');
+		await commands.executeCommand('workbench.action.closeActiveEditor');
 	});
 
 	tests.forEach(test => {
@@ -35,8 +35,8 @@ describe('Compile checks', () => {
 			const source: string = path.resolve(workspaceUri.fsPath, test.source);
 			await fs.copyFile(source, modelUri.fsPath);
 
-			// Wait one second to let vscode notice we closed the previous editor
-			await new Promise(resolve => setTimeout(() => resolve(true), 1000));
+			// Wait three second to let vscode notice we closed the previous editor
+			await new Promise(resolve => setTimeout(() => resolve(true), 3000));
 
 			// Opening model file
 			const doc: TextDocument = await workspace.openTextDocument(modelUri);
@@ -55,9 +55,6 @@ describe('Compile checks', () => {
 			const libsExists = fs.pathExistsSync(libsPath);
 			assert.strictEqual(libsExists, true, "The libs folder hasn't been created");
 
-			envPath = workspace.getConfiguration('inmanta').get<string>('compilerVenv');
-			const envExists = fs.pathExistsSync(envPath);
-			assert.strictEqual(envExists, true, `The venv folder (${envPath}) hasn't been created`);
 		}).timeout(0);
 	});
 
