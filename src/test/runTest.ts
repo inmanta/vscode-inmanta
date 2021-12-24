@@ -12,7 +12,7 @@ async function main() {
 	try {
 		const settings = {
 			"inmanta.ls.enabled": true,
-			"python.defaultInterpreterPath": path.resolve(__dirname,'../../', "extension-venv")
+			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV
 		};
 
 		// Saving settings of testing workspace to file
@@ -46,7 +46,8 @@ async function main() {
 			extensionDevelopmentPath: extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
 			launchArgs: ["--disable-gpu"],
-			extensionTestsEnv
+			extensionTestsEnv,
+			reuseMachineInstall: true,
 		});
 
 		await runTests({
@@ -54,6 +55,7 @@ async function main() {
 			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
 			extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './compile/index'),
+			reuseMachineInstall: true,
 		});
 
 		await runTests({
@@ -61,6 +63,7 @@ async function main() {
 			extensionDevelopmentPath: extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './navigation/index'),
 			launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
+			reuseMachineInstall: true,
 		});
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
