@@ -82,7 +82,6 @@
     },
     "dependencies": {
         "get-port": "^5.1.1",
-        "vsce": "^2.5.1",
         "vscode-languageclient": "^7.0.0"
     },
     "activationEvents": [
@@ -118,7 +117,8 @@
         "mocha": "^9.1.3",
         "rimraf": "^3.0.2",
         "semver": "^7.3.5",
-        "typescript": "^4.5.2"
+        "typescript": "^4.5.2",
+        "vsce": "^2.5.3"
     },
     "main": "./out/extension"
 }
