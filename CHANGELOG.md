@@ -1,4 +1,4 @@
-# v 1.0.3 (2021-05-28)
+# v 1.1.0 (2022-01-13)
 Changes in this release:
 - Update dependencies
 
