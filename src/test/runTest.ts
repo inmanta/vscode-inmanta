@@ -1,8 +1,9 @@
 import * as path from 'path';
-
-import { runTests } from 'vscode-test';
+import * as cp from 'child_process';
+import { downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
 import * as fs from 'fs-extra';
 import * as rimraf from 'rimraf';
+import { workspace } from 'vscode';
 
 
 async function main() {
@@ -11,15 +12,8 @@ async function main() {
 	try {
 		const settings = {
 			"inmanta.ls.enabled": true,
+			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV
 		};
-
-		if (process.env.INMANTA_PYTHON_PATH) {
-			settings["inmanta.pythonPath"] = process.env.INMANTA_PYTHON_PATH;
-		}
-
-		if (process.env.INMANTA_COMPILER_VENV) {
-			settings["inmanta.compilerVenv"] = process.env.INMANTA_COMPILER_VENV;
-		}
 
 		// Saving settings of testing workspace to file
 		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/compile/workspace/.vscode/settings.json');
@@ -39,25 +33,38 @@ async function main() {
 			HOME: tmpHomeDir,  // eslint-disable-line @typescript-eslint/naming-convention
 			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH  // eslint-disable-line @typescript-eslint/naming-convention
 		};
-		// Download VS Code, unzip it and run the integration test
-		await runTests({
-			extensionDevelopmentPath: extensionDevelopmentPath,
-			extensionTestsPath: path.resolve(__dirname, './compile/index'),
-			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace')],
-			extensionTestsEnv
+
+		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
+		const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
+		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python'], {
+		encoding: 'utf-8',
+		stdio: 'inherit'
 		});
+
 		await runTests({
+			vscodeExecutablePath,
 			extensionDevelopmentPath: extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
-			extensionTestsEnv
+			launchArgs: ["--disable-gpu"],
+			extensionTestsEnv,
+			reuseMachineInstall: true,
 		});
-		await runTests({ 
-			extensionDevelopmentPath: extensionDevelopmentPath, 
+
+		await runTests({
+			vscodeExecutablePath,
+			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
+			extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './compile/index'),
+			reuseMachineInstall: true,
+		});
+
+		await runTests({
+			vscodeExecutablePath,
+			extensionDevelopmentPath: extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './navigation/index'),
-			launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace')],
-			extensionTestsEnv
+			launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
+			reuseMachineInstall: true,
 		});
-		
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
 		process.exit(1);

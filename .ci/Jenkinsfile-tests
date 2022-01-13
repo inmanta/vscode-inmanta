@@ -1,8 +1,13 @@
+boolean onDependabotBranch(String ecosystem) {
+    return env.BRANCH_NAME ==~ /dependabot\/${ecosystem}\/.*/
+}
+
 pipeline {
     agent any
 
     options{
         disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
     }
 
     triggers {
@@ -13,14 +18,17 @@ pipeline {
 
     environment {
       INMANTA_LS_TEST_ENV="${env.WORKSPACE}/ls-venv"
+      INMANTA_EXTENSION_TEST_ENV="${env.WORKSPACE}/extension-venv"
       INMANTA_LS_PATH="${env.WORKSPACE}/server"
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
-      INMANTA_EXTENSION_TEST_ENV="${env.WORKSPACE}/extension-venv"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
     }
 
     stages {
         stage('Language server tests') {
+            when {
+                expression { ! onDependabotBranch("npm_and_yarn") }
+            }
             steps {
                 sh '''
                     rm -rf $INMANTA_LS_TEST_ENV
@@ -35,6 +43,12 @@ pipeline {
         stage('Extension tests') {
             steps {
                 sh '''
+                    rm -rf $INMANTA_EXTENSION_TEST_ENV
+                    python3 -m venv $INMANTA_EXTENSION_TEST_ENV
+                    source $INMANTA_EXTENSION_TEST_ENV/bin/activate
+                    pip install --upgrade pip
+                    pip install inmantals
+                    deactivate
                     rm -rf node_modules
                     npm i --also=dev
                     xvfb-run npm run test
@@ -45,7 +59,7 @@ pipeline {
 
     post {
         always {
-            junit 'server/junit*.xml'
+            junit allowEmptyResults: true, testResults: 'server/junit*.xml'
             deleteDir()
         }
     }

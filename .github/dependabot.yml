@@ -1,0 +1,21 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/server"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  allow:
+    # Allow both direct and indirect updates for all packages
+    - dependency-type: "all"
+- package-ecosystem: npm
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  allow:
+    # Allow both direct and indirect updates for all packages
+    - dependency-type: "all"
+  ignore:
+    - dependency-name: "get-port"
+      update-types: ["version-update:semver-major"]
