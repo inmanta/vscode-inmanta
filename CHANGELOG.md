@@ -1,4 +1,4 @@
-# v 1.1.0 (?)
+# v 1.1.0 (2022-01-14)
 Changes in this release:
 
 # v 1.0.1 (?)
