@@ -107,7 +107,7 @@
         "@types/rimraf": "^3.0.2",
         "@types/semver": "^7.3.9",
         "@types/vscode": "^1.50.0",
-        "@typescript-eslint/eslint-plugin": "^5.10.1",
+        "@typescript-eslint/eslint-plugin": "^5.10.2",
         "@typescript-eslint/parser": "^5.10.1",
         "@vscode/test-electron": "^2.1.1",
         "eslint": "^8.7.0",
