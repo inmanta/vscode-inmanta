@@ -169,7 +169,7 @@ pipeline {
                         # install the extension for its vsce dependency, required for building and publishing the extension
                         # and populate vscodeignore with exceptions to node_modules of the needed modules.
                         npm ci --omit dev
-                        find node_modules/ -mindepth 1 -maxdepth 1 -exec echo '!{}/**' \; >> .vscodeignore
+                        find node_modules/ -mindepth 1 -maxdepth 1 -exec echo '!{}/**' \\; >> .vscodeignore
                         npm i
                         $(npm bin)/vsce package
                         git checkout .
