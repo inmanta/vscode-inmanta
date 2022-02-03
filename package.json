@@ -19,7 +19,7 @@
         "syntax"
     ],
     "engines": {
-        "vscode": "^1.50.0"
+        "vscode": "^1.63.0"
     },
     "categories": [
         "Programming Languages"
@@ -82,6 +82,9 @@
     },
     "dependencies": {
         "get-port": "^5.1.1",
+        "log-symbols": "^4.1.0",
+        "lru-cache": "^6.0.0",
+        "minimatch": "^3.0.4",
         "vscode-languageclient": "^7.0.0"
     },
     "activationEvents": [
