@@ -44,9 +44,6 @@ pipeline {
                             echo 'echo \${GITHUB_TOKEN}' > ${GIT_ASKPASS}
                             chmod u+x ${GIT_ASKPASS}
 
-                            # install the extension for its vsce dependency, required for building and publishing the extension
-                            npm ci
-
                             # checkout appropriate branch
                             if [ "${version_increment}" == "none" ] || [ "${version_increment}" == "patch" ]; then
                                 git checkout next
@@ -168,7 +165,13 @@ pipeline {
             }
             steps {
                 dir('vscode-inmanta') {
-                    sh '$(npm bin)/vsce package'
+                    sh '''
+                        # install the extension for its vsce dependency, required for building and publishing the extension
+                        # and populate vscodeignore with exceptions to node_modules of the needed modules.
+                        npm ci --omit dev && find node_modules/ -mindepth 1 -maxdepth 1 -exec echo '!{}/**' \; >> .vscodeignore && npm i
+                        $(npm bin)/vsce package
+                        git checkout .
+                    '''
                 }
             }
         }
