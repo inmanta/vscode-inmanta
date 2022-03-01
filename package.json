@@ -111,7 +111,7 @@
         "@types/semver": "^7.3.9",
         "@types/vscode": "^1.63.2",
         "@typescript-eslint/eslint-plugin": "^5.13.0",
-        "@typescript-eslint/parser": "^5.12.1",
+        "@typescript-eslint/parser": "^5.13.0",
         "@vscode/test-electron": "^2.1.2",
         "eslint": "^8.10.0",
         "eslint-config-google": "^0.14.0",
