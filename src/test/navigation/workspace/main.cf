@@ -24,10 +24,3 @@ mike.friends += john
 
 jane.friends += john
 jane.friends += mike
-
-a = 2
-if a == 3:
-    std::print("test")
-elif a == 2:
-    std::print("héhé")
-end
