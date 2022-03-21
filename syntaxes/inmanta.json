@@ -161,7 +161,7 @@
       "patterns": [
         {
           "name": "keyword.control.inmanta",
-          "match": "\\b(using|extends|matching|for|with|when|as|if|else|elif)\\b"
+          "match": "\\b(using|extends|matching|for|with|when|as|if|else)\\b"
         },
         {
           "name": "keyword.operator.inmanta",
