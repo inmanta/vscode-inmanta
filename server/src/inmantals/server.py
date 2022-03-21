@@ -114,7 +114,7 @@ class InmantaLSHandler(JsonRpcHandler):
         }
 
     def flatten(self, line, char):
-        """ convert linenr char combination into a single number"""
+        """convert linenr char combination into a single number"""
         assert char < 100000
         return line * 100000 + char
 

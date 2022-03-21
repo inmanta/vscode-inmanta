@@ -189,7 +189,7 @@ pipeline {
                 dir('vscode-inmanta') {
                     // This token has a limited lifetime. See the credential's description for more information on how to create a new one.
                     withCredentials([string(credentialsId: 'vscode_marketplace_access_token', variable: 'VSCODE_PERSONAL_ACCESS_TOKEN')]) {
-                        sh '$(npm bin)/vsce publish -p "${VSCODE_PERSONAL_ACCESS_TOKEN}"'
+                        sh '$(npm bin)/vsce publish --packagePath *.vsix -p "${VSCODE_PERSONAL_ACCESS_TOKEN}"'
                     }
                 }
             }
