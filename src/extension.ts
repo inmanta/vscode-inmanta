@@ -274,7 +274,6 @@ export async function activate(context: ExtensionContext) {
 		await startServerAndClient();
 	}
 
-	// TODO: THIS CAUSES A RACE CONDITION?
 	async function restartLS() {
 		log("restarting Language Server");
 		await stopServerAndClient();
