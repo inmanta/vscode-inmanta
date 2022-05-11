@@ -7,8 +7,8 @@ import * as path from 'path';
 import * as os from 'os';
 import * as getPort from 'get-port';
 
-import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel, extensions } from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
+import { workspace, ExtensionContext, window, Uri, commands, OutputChannel, extensions } from 'vscode';
+import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction, ErrorHandlerResult, CloseHandlerResult } from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 
@@ -16,6 +16,9 @@ import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 export function log(message: string) {
 	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
 }
+
+let client: LanguageClient;
+let serverProcess: cp.ChildProcess;
 
 export async function activate(context: ExtensionContext) {
 	//use Python extension
@@ -36,12 +39,17 @@ export async function activate(context: ExtensionContext) {
 			clientOptions = await getClientOptions();
 			log("Retrieved client options");
 		} catch (err) {
-			return undefined;
+			return;
 		}
-		if (os.platform() === "win32") {
-			return await startTcp(clientOptions);
-		} else {
-			return await startPipe(clientOptions);
+		try{
+			if (os.platform() === "win32") {
+				await startTcp(clientOptions);
+			} else {
+				await startPipe(clientOptions);
+			}
+		} catch (err) {
+			log(`Could not start Language Server: ${err.message}`);
+			window.showErrorMessage('Inmanta Language Server: rejected to start' + err.message);
 		}
 	}
 
@@ -78,7 +86,7 @@ export async function activate(context: ExtensionContext) {
 			};
 		}
 
-		const serverProcess = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
+		serverProcess = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
 		serverProcess.stdout.on('data', (data) => {
 			lsOutputChannel.appendLine(`stdout: ${data}`);
@@ -111,32 +119,18 @@ export async function activate(context: ExtensionContext) {
 			}, 500);
 		});
 
-		const serverDisposable = new Disposable(function disposeOfServerProcess() {
-			serverProcess.kill();
-		});
 		let serverOptions: ServerOptions = function () {
-			let client = net.connect({ port: serverPort, host: host});
+			let socket = net.connect({ port: serverPort, host: host});
 			const streamInfo = {
-				reader: client,
-				writer: client
+				reader: socket,
+				writer: socket
 			};
 			return Promise.resolve(streamInfo);
 		};
 
-		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
+		client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		// Create the language client and start the client.
-		const clientDisposable = lc.start();
-		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
-
-		// Push the disposable to the context's subscriptions so that the
-		// client can be deactivated on extension deactivation
-		const commonDisposable = new Disposable(function() {
-			clientDisposable.dispose();
-			serverDisposable.dispose();
-		});
-		context.subscriptions.push(commonDisposable);
-
-		return commonDisposable;
+		await client.start();
 	}
 
 	function installLanguageServer(pythonPath: string, startServer?: boolean): void {
@@ -201,19 +195,14 @@ export async function activate(context: ExtensionContext) {
 
 		}
 
-		error(error: Error, message: Message, count: number): ErrorAction {
+		error(error: Error, message: Message | undefined, count: number | undefined): ErrorHandlerResult {
 			this.diagnose();
-			return ErrorAction.Shutdown;
+			return {action: ErrorAction.Shutdown};
 		}
 
-		closed(): CloseAction {
+		closed(): CloseHandlerResult{
 			this.diagnose();
-			return CloseAction.DoNotRestart;
-		}
-
-		rejected(reason) {
-			log(`Could not start Language Server: ${reason}`);
-			window.showErrorMessage('Inmanta Language Server: rejected to start' + reason);
+			return {action: CloseAction.DoNotRestart};
 		}
 
 	}
@@ -234,20 +223,13 @@ export async function activate(context: ExtensionContext) {
 			serverOptions.options.env["LOG_PATH"] = process.env.INMANTA_LS_LOG_PATH;
 		}
 
-		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
-		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
-
 		// Create the language client and start the client.
+		client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		log(`Starting Language Client with options: ${JSON.stringify({
 			serverOptions: serverOptions,
 			clientOptions: clientOptions
 		}, null, 2)}`);
-		const disposable = lc.start();
-
-		// Push the disposable to the context's subscriptions so that the
-		// client can be deactivated on extension deactivation
-		context.subscriptions.push(disposable);
-		return disposable;
+		await client.start();
 	}
 
 	function registerExportCommand() {
@@ -286,23 +268,16 @@ export async function activate(context: ExtensionContext) {
 		context.subscriptions.push(commands.registerCommand(commandId, commandHandler));
     }
 
-	let running: Disposable = undefined;
 	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
 
 	if (enable) {
-		running = await startServerAndClient();
+		await startServerAndClient();
 	}
 
-	function stopIfRunning() {
-		if (running !== undefined) {
-			running.dispose();
-			running = undefined;
-		}
-	}
-
-	function restartLS() {
+	// TODO: THIS CAUSES A RACE CONDITION?
+	async function restartLS() {
 		log("restarting Language Server");
-		stopIfRunning();
+		await stopServerAndClient();
 		startServerAndClient();
 	}
 
@@ -310,14 +285,31 @@ export async function activate(context: ExtensionContext) {
 		if (e.affectsConfiguration('inmanta')) {
 			const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
 
-			stopIfRunning();
+			await stopServerAndClient();
 
 			if (enable) {
-				running = await startServerAndClient();
+				await startServerAndClient();
 			}
 		}
 	}));
 
 	let exportToServerChannel: OutputChannel = null;
 	registerExportCommand();
+}
+
+async function stopServerAndClient() {
+	if (client) {
+		await client.stop();
+		client = undefined;
+	}
+	if(serverProcess){
+		serverProcess.kill();
+		serverProcess = undefined;
+	}
+}
+
+export async function deactivate(){
+	await stopServerAndClient();
+	// Return undefined because the cleanup process is done synchronously.
+	return undefined;
 }
