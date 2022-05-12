@@ -85,7 +85,7 @@
         "log-symbols": "^5.1.0",
         "lru-cache": "^7.9.0",
         "minimatch": "^5.0.1",
-        "vscode-languageclient": "^7.0.0"
+        "vscode-languageclient": "^8.0.0"
     },
     "activationEvents": [
         "onLanguage:inmanta",
@@ -125,3 +125,4 @@
     },
     "main": "./out/extension"
 }
+
