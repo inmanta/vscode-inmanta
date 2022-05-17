@@ -25,6 +25,13 @@ pipeline {
     }
 
     stages {
+        stage('Style checking') {
+             steps {
+                sh '''
+                    ${env.WORKSPACE}/env/bin/flake8 src tests
+                '''
+            }
+        }
         stage('Language server tests') {
             when {
                 expression { ! onDependabotBranch("npm_and_yarn") }
