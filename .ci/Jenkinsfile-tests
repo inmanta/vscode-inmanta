@@ -26,15 +26,6 @@ pipeline {
     }
 
     stages {
-        stage('Style checking') {
-             steps {
-                sh '''
-                    "pwd"
-                    "ls"
-                    "$INMANTA_LS_PATH/env/bin/flake8 $DIR_TO_LINT"
-                '''
-            }
-        }
         stage('Language server tests') {
             when {
                 expression { ! onDependabotBranch("npm_and_yarn") }
@@ -62,6 +53,13 @@ pipeline {
                     rm -rf node_modules
                     npm i --also=dev
                     xvfb-run npm run test
+                '''
+            }
+        }
+        stage('Style checking') {
+             steps {
+                sh '''
+                    "$INMANTA_LS_PATH/env/bin/flake8 $DIR_TO_LINT"
                 '''
             }
         }
