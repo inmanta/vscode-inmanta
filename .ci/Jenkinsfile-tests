@@ -28,7 +28,7 @@ pipeline {
         stage('Style checking') {
              steps {
                 sh '''
-                    ${env.WORKSPACE}/env/bin/flake8 src tests
+                    "$INMANTA_LS_PATH/env/bin/flake8 src tests"
                 '''
             }
         }
