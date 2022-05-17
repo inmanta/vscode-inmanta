@@ -29,6 +29,8 @@ pipeline {
         stage('Style checking') {
              steps {
                 sh '''
+                    "pwd"
+                    "ls"
                     "$INMANTA_LS_PATH/env/bin/flake8 $DIR_TO_LINT"
                 '''
             }
