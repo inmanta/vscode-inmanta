@@ -22,13 +22,14 @@ pipeline {
       INMANTA_LS_PATH="${env.WORKSPACE}/server"
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
+      DIR_TO_LINT="$INMANTA_LS_PATH/src $INMANTA_LS_PATH/tests"
     }
 
     stages {
         stage('Style checking') {
              steps {
                 sh '''
-                    "$INMANTA_LS_PATH/env/bin/flake8 src tests"
+                    "$INMANTA_LS_PATH/env/bin/flake8 $DIR_TO_LINT"
                 '''
             }
         }
