@@ -22,6 +22,7 @@ pipeline {
       INMANTA_LS_PATH="${env.WORKSPACE}/server"
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
+      INMANTA_STYLE_CHECK_ENV="${env.WORKSPACE}/style-check-venv"
     }
 
     stages {
@@ -53,6 +54,19 @@ pipeline {
                     npm i --also=dev
                     xvfb-run npm run test
                 '''
+            }
+        }
+        stage('Style checking') {
+             steps {
+                dir("server"){
+                    sh '''
+                        rm -rf $INMANTA_STYLE_CHECK_ENV
+                        python3 -m venv $INMANTA_STYLE_CHECK_ENV
+                        source $INMANTA_STYLE_CHECK_ENV/bin/activate
+                        pip install --upgrade pip
+                        make pep8
+                    '''
+                }
             }
         }
     }
