@@ -9,5 +9,5 @@ format:
 
 .PHONY: pep8
 pep8:
-	pip install -c requirements.dev.txt pep8-naming flake8-black flake8-isort
+	pip install -r requirements.dev.txt pep8-naming flake8-black flake8-isort
 	flake8 src tests
