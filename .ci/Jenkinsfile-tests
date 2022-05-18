@@ -60,7 +60,7 @@ pipeline {
         stage('Style checking') {
              steps {
                 sh '''
-                    "rm -rf $INMANTA_STYLE_CHECK_ENV"
+                    "rm -rf $INMANTA_STYLE_CHECK_ENV || true"
                     "python3 -m venv $INMANTA_STYLE_CHECK_ENV"
                     "source $INMANTA_STYLE_CHECK_ENV/bin/activate"
                     "$INMANTA_STYLE_CHECK_ENV/bin/pip install -U pip"
