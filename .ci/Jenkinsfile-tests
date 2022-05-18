@@ -23,6 +23,7 @@ pipeline {
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
       DIR_TO_LINT="$INMANTA_LS_PATH/src $INMANTA_LS_PATH/tests"
+      INMANTA_STYLE_CHECK_ENV="${env.WORKSPACE}/style-check-venv"
     }
 
     stages {
@@ -59,10 +60,12 @@ pipeline {
         stage('Style checking') {
              steps {
                 sh '''
-                    "python3 -m venv ${env.WORKSPACE}/env"
-                    ""${env.WORKSPACE}/env/bin/pip install -U pip"
-                    ""${env.WORKSPACE}/env/bin/pip install -r requirements.dev.txt"
-                    "$INMANTA_LS_PATH/env/bin/flake8 $DIR_TO_LINT"
+                    "rm -rf $INMANTA_STYLE_CHECK_ENV"
+                    "python3 -m venv $INMANTA_STYLE_CHECK_ENV"
+                    "source $INMANTA_STYLE_CHECK_ENV/bin/activate"
+                    "$INMANTA_STYLE_CHECK_ENV/bin/pip install -U pip"
+                    "$INMANTA_STYLE_CHECK_ENV/bin/pip install -r requirements.dev.txt"
+                    "$INMANTA_STYLE_CHECK_ENV/bin/flake8 $DIR_TO_LINT"
                 '''
             }
         }
