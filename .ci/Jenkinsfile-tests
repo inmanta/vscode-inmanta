@@ -70,8 +70,8 @@ pipeline {
                         python3 -m venv $INMANTA_STYLE_CHECK_ENV
                         source $INMANTA_STYLE_CHECK_ENV/bin/activate
                         pip install --upgrade pip
-                        make format
                         make pep8
+                        make format
                     '''
                 }
             }
