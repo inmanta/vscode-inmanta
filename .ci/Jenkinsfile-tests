@@ -22,7 +22,7 @@ pipeline {
       INMANTA_LS_PATH="${env.WORKSPACE}/server"
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
-      INMANTA_STYLE_CHECK_ENV="./style-check-venv"
+      INMANTA_STYLE_CHECK_ENV="${env.WORKSPACE}/style-check-venv"
     }
 
     stages {
@@ -65,7 +65,6 @@ pipeline {
                         source $INMANTA_STYLE_CHECK_ENV/bin/activate
                         pip install --upgrade pip
                         make pep8
-                        make format
                     '''
                 }
             }
