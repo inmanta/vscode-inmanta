@@ -59,9 +59,9 @@ pipeline {
         stage('Style checking') {
              steps {
                 sh '''
-                    python3 -m venv ${env.WORKSPACE}/env
-                    ${WORKSPACE}/env/bin/pip install -U pip
-                    ${WORKSPACE}/env/bin/pip install -r requirements.dev.txt
+                    "python3 -m venv ${env.WORKSPACE}/env"
+                    ""${env.WORKSPACE}/env/bin/pip install -U pip"
+                    ""${env.WORKSPACE}/env/bin/pip install -r requirements.dev.txt"
                     "$INMANTA_LS_PATH/env/bin/flake8 $DIR_TO_LINT"
                 '''
             }
