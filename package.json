@@ -81,6 +81,7 @@
         }
     },
     "dependencies": {
+        "async-mutex": "^0.3.2",
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
         "lru-cache": "^7.10.1",
@@ -125,4 +126,3 @@
     },
     "main": "./out/extension"
 }
-

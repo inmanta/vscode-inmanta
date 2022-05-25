@@ -11,12 +11,16 @@ import { workspace, ExtensionContext, window, Uri, commands, OutputChannel, exte
 import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction, ErrorHandlerResult, CloseHandlerResult } from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
+import { Mutex } from 'async-mutex';
 
 
 export function log(message: string) {
 	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
 }
 
+// Make sure starting and stopping the server is protected by a mutex
+// To avoid a potential race condition when changing the active venv leading to multiple running language servers
+const mutex = new Mutex();
 let client: LanguageClient;
 let serverProcess: cp.ChildProcess;
 
@@ -41,16 +45,18 @@ export async function activate(context: ExtensionContext) {
 		} catch (err) {
 			return;
 		}
-		try{
-			if (os.platform() === "win32") {
-				await startTcp(clientOptions);
-			} else {
-				await startPipe(clientOptions);
+		await mutex.runExclusive(async () => {
+			try{
+				if (os.platform() === "win32") {
+					await startTcp(clientOptions);
+				} else {
+					await startPipe(clientOptions);
+				}
+			} catch (err) {
+				log(`Could not start Language Server: ${err.message}`);
+				window.showErrorMessage('Inmanta Language Server: rejected to start' + err.message);
 			}
-		} catch (err) {
-			log(`Could not start Language Server: ${err.message}`);
-			window.showErrorMessage('Inmanta Language Server: rejected to start' + err.message);
-		}
+		});
 	}
 
 	async function getClientOptions(): Promise<LanguageClientOptions> {
@@ -292,14 +298,16 @@ export async function activate(context: ExtensionContext) {
 }
 
 async function stopServerAndClient() {
-	if (client) {
-		await client.stop();
-		client = undefined;
-	}
-	if(serverProcess){
-		serverProcess.kill();
-		serverProcess = undefined;
-	}
+	mutex.runExclusive(async () => {
+		if (client) {
+			await client.stop();
+			client = undefined;
+		}
+		if(serverProcess){
+			serverProcess.kill();
+			serverProcess = undefined;
+		}
+	});
 }
 
 export async function deactivate(){
