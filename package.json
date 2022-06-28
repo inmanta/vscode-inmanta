@@ -113,7 +113,7 @@
         "@types/vscode": "^1.63.2",
         "@typescript-eslint/eslint-plugin": "^5.30.0",
         "@typescript-eslint/parser": "^5.29.0",
-        "@vscode/test-electron": "^2.1.4",
+        "@vscode/test-electron": "^2.1.5",
         "eslint": "^8.18.0",
         "eslint-config-google": "^0.14.0",
         "fs-extra": "^10.1.0",
