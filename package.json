@@ -86,7 +86,7 @@
         "log-symbols": "^5.1.0",
         "lru-cache": "^7.12.0",
         "minimatch": "^5.1.0",
-        "vscode-languageclient": "^8.0.1"
+        "vscode-languageclient": "^8.0.2"
     },
     "activationEvents": [
         "onLanguage:inmanta",
