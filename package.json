@@ -109,7 +109,7 @@
         "@types/mocha": "^10.0.0",
         "@types/node": "^18.11.6",
         "@types/rimraf": "^3.0.2",
-        "@types/semver": "^7.3.12",
+        "@types/semver": "^7.3.13",
         "@types/vscode": "^1.63.2",
         "@typescript-eslint/eslint-plugin": "^5.41.0",
         "@typescript-eslint/parser": "^5.41.0",
