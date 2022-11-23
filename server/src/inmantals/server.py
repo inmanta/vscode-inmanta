@@ -30,7 +30,7 @@ import pkg_resources
 from inmanta import compiler, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
-from inmanta.ast.entity import Entity, EntityLike, Implementation
+from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
 from inmanta.module import Project
 from inmanta.plugins import Plugin
@@ -299,8 +299,6 @@ class InmantaLSHandler(JsonRpcHandler):
             if isinstance(tp, Plugin):
                 return lsp_types.SymbolKind.Function
             if isinstance(tp, inmanta_type.ConstraintType):
-                return lsp_types.SymbolKind.Class
-            if isinstance(tp, EntityLike):
                 return lsp_types.SymbolKind.Class
             if isinstance(tp, Implementation):
                 return lsp_types.SymbolKind.Constructor
