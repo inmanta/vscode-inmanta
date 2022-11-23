@@ -1,5 +1,6 @@
 # v 1.2.0 (?)
 Changes in this release:
+- remove EntityLike as it doesn't exist anymore.
 
 # v 1.1.0 (2022-01-14)
 Changes in this release:
