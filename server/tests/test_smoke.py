@@ -283,6 +283,7 @@ async def test_symbol_provider(client: JsonRPC) -> None:
     testmodule_dir: str = os.path.join(project_dir, "libs", "testmodule")
     uri_testmodule_model: str = "file://%s" % os.path.join(testmodule_dir, "model", "_init.cf")
     uri_testmodule_plugins: str = "file://%s" % os.path.join(testmodule_dir, "plugins", "__init__.py")
+
     assert symbol_info == [
         lsp_types.SymbolInformation(
             name="__config__::my_symbol_test_type",
