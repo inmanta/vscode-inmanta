@@ -300,6 +300,8 @@ class InmantaLSHandler(JsonRpcHandler):
                 return lsp_types.SymbolKind.Function
             if isinstance(tp, inmanta_type.ConstraintType):
                 return lsp_types.SymbolKind.Class
+            if isinstance(tp, Entity):
+                return lsp_types.SymbolKind.Class
             if isinstance(tp, Implementation):
                 return lsp_types.SymbolKind.Constructor
 
