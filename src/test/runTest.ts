@@ -34,7 +34,7 @@ async function main() {
 			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH  // eslint-disable-line @typescript-eslint/naming-convention
 		};
 
-		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
+		const vscodeExecutablePath = await downloadAndUnzipVSCode('1.73.0');
 		const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath, "linux-x64");
 		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python'], {
 		encoding: 'utf-8',
