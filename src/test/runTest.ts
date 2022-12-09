@@ -36,7 +36,7 @@ async function main() {
 
 		const vscodeExecutablePath = await downloadAndUnzipVSCode('1.73.0');
 		const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath, "linux-x64");
-		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python'], {
+		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python@2022.18.2'], {
 		encoding: 'utf-8',
 		stdio: 'inherit'
 		});
