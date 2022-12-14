@@ -75,7 +75,6 @@ pipeline {
     post {
         always {
             junit allowEmptyResults: true, testResults: 'server/junit*.xml'
-            archiveArtifacts artifacts: "${env.INMANTA_LS_LOG_PATH}", allowEmptyArchive: true
             deleteDir()
         }
     }
