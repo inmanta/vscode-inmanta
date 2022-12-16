@@ -20,14 +20,16 @@ export class PythonExtension {
 	private onChange(pythonApi : IExtensionApi) {
 		pythonApi.settings.onDidChangeExecutionDetails(
 			(resource: Resource) => {
-				log(`Active interpreter changed for: ${resource}`);
-				log(`Execution details: ${JSON.stringify(this.executionDetails)}`);
-				this.executionDetails = pythonApi.settings.getExecutionDetails(resource);
-				this.onChangeCallback();
+				let newExecutionDetails = pythonApi.settings.getExecutionDetails(resource);
+				if(this.executionDetails.execCommand[0] !== newExecutionDetails.execCommand[0]){
+					log(`Active interpreter changed for: ${resource}`);
+					log(`Execution details: ${JSON.stringify(this.executionDetails)}`);
+					this.executionDetails = newExecutionDetails;
+					this.onChangeCallback();
+				}
 			}
 		);
 	}
 
 
   }
-
