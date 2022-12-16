@@ -24,9 +24,9 @@ export class PythonExtension {
 				if(this.executionDetails.execCommand[0] !== newExecutionDetails.execCommand[0]){
 					log(`Active interpreter changed for: ${resource}`);
 					log(`Execution details: ${JSON.stringify(this.executionDetails)}`);
+					this.executionDetails = newExecutionDetails;
 					this.onChangeCallback();
 				}
-				this.executionDetails = newExecutionDetails;
 			}
 		);
 	}
