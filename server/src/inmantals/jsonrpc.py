@@ -127,6 +127,7 @@ class JsonRpcHandler(object):
         self.outstream = outstream
         self.address = address
         self.running = True
+        self.shutdown_requested = False
         self.io_loop = IOLoop.current()
         self.writelock = Semaphore(1)
 
@@ -206,7 +207,7 @@ class JsonRpcHandler(object):
             while self.running:
                 length = await self.decode_header()
                 if length == -1:
-                    self.running = False
+                    self.shutdown_requested = True
 
                 body = await self.instream.read_bytes(length)
                 body = body.decode("utf8")

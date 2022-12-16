@@ -298,7 +298,7 @@ export async function activate(context: ExtensionContext) {
 }
 
 async function stopServerAndClient() {
-	mutex.runExclusive(async () => {
+	await mutex.runExclusive(async () => {
 		if (client) {
 			await client.stop();
 			client = undefined;

@@ -167,6 +167,8 @@ class InmantaLSHandler(JsonRpcHandler):
             }
 
         try:
+            if self.shutdown_requested:
+                return
             # run synchronous part in executor to allow context switching while awaiting
             await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
             await self.publish_diagnostics(None)
@@ -199,7 +201,8 @@ class InmantaLSHandler(JsonRpcHandler):
         await self.compile_and_anchor()
 
     async def shutdown(self, **kwargs):
-        pass
+        self.shutdown_requested = True
+        self.threadpool.shutdown(wait=True)
 
     async def exit(self, **kwargs):
         self.running = False
