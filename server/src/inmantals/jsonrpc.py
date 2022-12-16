@@ -208,6 +208,8 @@ class JsonRpcHandler(object):
                 length = await self.decode_header()
                 if length == -1:
                     self.shutdown_requested = True
+                    self.running = False
+                    return
 
                 body = await self.instream.read_bytes(length)
                 body = body.decode("utf8")

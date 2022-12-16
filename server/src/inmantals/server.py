@@ -173,7 +173,9 @@ class InmantaLSHandler(JsonRpcHandler):
             await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
             await self.publish_diagnostics(None)
             logger.info("Compilation succeeded")
-
+        except asyncio.CancelledError:
+            # Language server is shutting down. Tasks in threadpool were cancelled.
+            pass
         except CompilerException as e:
             params: Optional[lsp_types.PublishDiagnosticsParams]
             if e.location is None:
@@ -202,7 +204,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
     async def shutdown(self, **kwargs):
         self.shutdown_requested = True
-        self.threadpool.shutdown(wait=True)
+        self.threadpool.shutdown(cancel_futures=True)
 
     async def exit(self, **kwargs):
         self.running = False
