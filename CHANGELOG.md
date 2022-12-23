@@ -1,4 +1,7 @@
-# v 1.2.0 (?)
+# v 1.3.0 (?)
+Changes in this release:
+
+# v 1.2.0 (2022-12-23)
 Changes in this release:
 - remove EntityLike as it doesn't exist anymore.
 - Fix bug where two Inmanta language servers would run simultaneously for a short period of time when the language server is restarted.
