@@ -1,5 +1,6 @@
-# v 1.3.0 (?)
+# v 1.3.0 (2022-12-23)
 Changes in this release:
+- Ensure that the language server stops compiling when it receives a shutdown request. This prevents that two language servers are acting on the same project simultaneously.
 
 # v 1.2.0 (2022-01-13)
 Changes in this release:

@@ -7,15 +7,22 @@ import * as path from 'path';
 import * as os from 'os';
 import * as getPort from 'get-port';
 
-import { workspace, ExtensionContext, Disposable, window, Uri, commands, OutputChannel, extensions } from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction } from 'vscode-languageclient';
+import { workspace, ExtensionContext, window, Uri, commands, OutputChannel, extensions } from 'vscode';
+import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction, ErrorHandlerResult, CloseHandlerResult } from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
+import { Mutex } from 'async-mutex';
 
 
 export function log(message: string) {
 	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
 }
+
+// Make sure starting and stopping the server is protected by a mutex
+// To avoid a potential race condition when changing the active venv leading to multiple running language servers
+const mutex = new Mutex();
+let client: LanguageClient;
+let serverProcess: cp.ChildProcess;
 
 export async function activate(context: ExtensionContext) {
 	//use Python extension
@@ -25,23 +32,31 @@ export async function activate(context: ExtensionContext) {
 	}
 	log("Activate Python extension");
 	await pythonExtension.activate();
-	const pythonExtentionApi = new PythonExtension(pythonExtension.exports, restartLS);
+	const pythonExtentionApi = new PythonExtension(pythonExtension.exports, startOrRestartLS);
 
 	let lsOutputChannel = null;
 
 	async function startServerAndClient() {
+		/**
+		 * Should always run under `mutex` lock.
+		 */
 		log("Start server and client");
 		let clientOptions;
 		try {
 			clientOptions = await getClientOptions();
 			log("Retrieved client options");
 		} catch (err) {
-			return undefined;
+			return;
 		}
-		if (os.platform() === "win32") {
-			return await startTcp(clientOptions);
-		} else {
-			return await startPipe(clientOptions);
+		try{
+			if (os.platform() === "win32") {
+				await startTcp(clientOptions);
+			} else {
+				await startPipe(clientOptions);
+			}
+		} catch (err) {
+			log(`Could not start Language Server: ${err.message}`);
+			window.showErrorMessage('Inmanta Language Server: rejected to start' + err.message);
 		}
 	}
 
@@ -78,7 +93,7 @@ export async function activate(context: ExtensionContext) {
 			};
 		}
 
-		const serverProcess = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
+		serverProcess = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
 		serverProcess.stdout.on('data', (data) => {
 			lsOutputChannel.appendLine(`stdout: ${data}`);
@@ -111,32 +126,18 @@ export async function activate(context: ExtensionContext) {
 			}, 500);
 		});
 
-		const serverDisposable = new Disposable(function disposeOfServerProcess() {
-			serverProcess.kill();
-		});
 		let serverOptions: ServerOptions = function () {
-			let client = net.connect({ port: serverPort, host: host});
+			let socket = net.connect({ port: serverPort, host: host});
 			const streamInfo = {
-				reader: client,
-				writer: client
+				reader: socket,
+				writer: socket
 			};
 			return Promise.resolve(streamInfo);
 		};
 
-		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
+		client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		// Create the language client and start the client.
-		const clientDisposable = lc.start();
-		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
-
-		// Push the disposable to the context's subscriptions so that the
-		// client can be deactivated on extension deactivation
-		const commonDisposable = new Disposable(function() {
-			clientDisposable.dispose();
-			serverDisposable.dispose();
-		});
-		context.subscriptions.push(commonDisposable);
-
-		return commonDisposable;
+		await client.start();
 	}
 
 	function installLanguageServer(pythonPath: string, startServer?: boolean): void {
@@ -153,7 +154,7 @@ export async function activate(context: ExtensionContext) {
 			window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
 		} else if (startServer) {
 			log(`Starting server and client`);
-			startServerAndClient();
+			startOrRestartLS(true);
 		}
 	}
 
@@ -185,35 +186,25 @@ export async function activate(context: ExtensionContext) {
 				"except:\n" +
 				"  sys.exit(3)";
 
-			this._child = cp.spawn(pythonExtentionApi.pythonPath, ["-c", script]);
-
-			this._child.on('close', (code) => {
-				if (code === 4) {
-					window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pythonExtentionApi.pythonPath} is an older version`);
-				} else if (code === 3) {
-					this.notInstalled();
-				} else {
-					const data = this._child.stdout.read();
-					window.showErrorMessage("Inmanta Language Server could not start, could not determined cause of failure" + data);
-				}
-				this._child = undefined;
-			});
-
+			let spawn_result = cp.spawnSync(pythonExtentionApi.pythonPath, ["-c", script]);
+			if (spawn_result.status === 4) {
+				window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pythonExtentionApi.pythonPath} is an older version`);
+			} else if (spawn_result.status === 3) {
+				this.notInstalled();
+			} else {
+				const data = this._child.stdout.read();
+				window.showErrorMessage("Inmanta Language Server could not start, could not determined cause of failure" + data);
+			}
 		}
 
-		error(error: Error, message: Message, count: number): ErrorAction {
+		error(error: Error, message: Message | undefined, count: number | undefined): ErrorHandlerResult {
 			this.diagnose();
-			return ErrorAction.Shutdown;
+			return {action: ErrorAction.Shutdown};
 		}
 
-		closed(): CloseAction {
+		closed(): CloseHandlerResult{
 			this.diagnose();
-			return CloseAction.DoNotRestart;
-		}
-
-		rejected(reason) {
-			log(`Could not start Language Server: ${reason}`);
-			window.showErrorMessage('Inmanta Language Server: rejected to start' + reason);
+			return {action: CloseAction.DoNotRestart};
 		}
 
 	}
@@ -234,20 +225,13 @@ export async function activate(context: ExtensionContext) {
 			serverOptions.options.env["LOG_PATH"] = process.env.INMANTA_LS_LOG_PATH;
 		}
 
-		const lc = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
-		lc.onReady().catch((clientOptions.errorHandler as LsErrorHandler).rejected);
-
 		// Create the language client and start the client.
+		client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		log(`Starting Language Client with options: ${JSON.stringify({
 			serverOptions: serverOptions,
 			clientOptions: clientOptions
 		}, null, 2)}`);
-		const disposable = lc.start();
-
-		// Push the disposable to the context's subscriptions so that the
-		// client can be deactivated on extension deactivation
-		context.subscriptions.push(disposable);
-		return disposable;
+		await client.start();
 	}
 
 	function registerExportCommand() {
@@ -286,38 +270,56 @@ export async function activate(context: ExtensionContext) {
 		context.subscriptions.push(commands.registerCommand(commandId, commandHandler));
     }
 
-	let running: Disposable = undefined;
+	async function startOrRestartLS(start: boolean = false) {
+		await mutex.runExclusive(async () => {
+			if(start){
+				log("starting Language Server");
+			} else {
+				log("restarting Language Server");
+			}
+			const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
+			await stopServerAndClient();
+			if (enable) {
+				startServerAndClient();
+			}
+		});
+	}
+
 	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
-
 	if (enable) {
-		running = await startServerAndClient();
-	}
-
-	function stopIfRunning() {
-		if (running !== undefined) {
-			running.dispose();
-			running = undefined;
-		}
-	}
-
-	function restartLS() {
-		log("restarting Language Server");
-		stopIfRunning();
-		startServerAndClient();
+		await startOrRestartLS(true);
 	}
 
 	context.subscriptions.push(workspace.onDidChangeConfiguration(async e => {
 		if (e.affectsConfiguration('inmanta')) {
-			const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
-
-			stopIfRunning();
-
-			if (enable) {
-				running = await startServerAndClient();
-			}
+			await startOrRestartLS();
 		}
 	}));
 
 	let exportToServerChannel: OutputChannel = null;
 	registerExportCommand();
+}
+
+async function stopServerAndClient() {
+	/**
+	 * Should always execute under the `mutex` lock.
+	 */
+	if (client) {
+		if(client.needsStop()){
+			await client.stop();
+		}
+		client = undefined;
+	}
+	if(serverProcess){
+		if(!serverProcess.exitCode){
+			serverProcess.kill();
+		}
+		serverProcess = undefined;
+	}
+}
+
+export async function deactivate(){
+	await mutex.runExclusive(async () => {
+		return stopServerAndClient();
+	});
 }

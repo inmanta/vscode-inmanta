@@ -30,7 +30,7 @@ import pkg_resources
 from inmanta import compiler, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
-from inmanta.ast.entity import Entity, EntityLike, Implementation
+from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
 from inmanta.module import Project
 from inmanta.plugins import Plugin
@@ -114,7 +114,7 @@ class InmantaLSHandler(JsonRpcHandler):
         }
 
     def flatten(self, line, char):
-        """ convert linenr char combination into a single number"""
+        """convert linenr char combination into a single number"""
         assert char < 100000
         return line * 100000 + char
 
@@ -167,11 +167,15 @@ class InmantaLSHandler(JsonRpcHandler):
             }
 
         try:
+            if self.shutdown_requested:
+                return
             # run synchronous part in executor to allow context switching while awaiting
             await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
             await self.publish_diagnostics(None)
             logger.info("Compilation succeeded")
-
+        except asyncio.CancelledError:
+            # Language server is shutting down. Tasks in threadpool were cancelled.
+            pass
         except CompilerException as e:
             params: Optional[lsp_types.PublishDiagnosticsParams]
             if e.location is None:
@@ -199,7 +203,8 @@ class InmantaLSHandler(JsonRpcHandler):
         await self.compile_and_anchor()
 
     async def shutdown(self, **kwargs):
-        pass
+        self.shutdown_requested = True
+        self.threadpool.shutdown(cancel_futures=True)
 
     async def exit(self, **kwargs):
         self.running = False
@@ -300,7 +305,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 return lsp_types.SymbolKind.Function
             if isinstance(tp, inmanta_type.ConstraintType):
                 return lsp_types.SymbolKind.Class
-            if isinstance(tp, EntityLike):
+            if isinstance(tp, Entity):
                 return lsp_types.SymbolKind.Class
             if isinstance(tp, Implementation):
                 return lsp_types.SymbolKind.Constructor
