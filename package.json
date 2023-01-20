@@ -105,7 +105,7 @@
     },
     "devDependencies": {
         "@types/fs-extra": "^11.0.1",
-        "@types/glob": "^8.0.0",
+        "@types/glob": "^8.0.1",
         "@types/mocha": "^10.0.1",
         "@types/node": "^18.11.18",
         "@types/rimraf": "^3.0.2",
