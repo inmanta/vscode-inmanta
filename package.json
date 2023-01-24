@@ -112,7 +112,7 @@
         "@types/semver": "^7.3.13",
         "@types/vscode": "^1.63.2",
         "@typescript-eslint/eslint-plugin": "^5.49.0",
-        "@typescript-eslint/parser": "^5.48.2",
+        "@typescript-eslint/parser": "^5.49.0",
         "@vscode/test-electron": "^2.2.2",
         "@vscode/vsce": "^2.16.0",
         "eslint": "^8.32.0",
