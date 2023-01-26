@@ -85,7 +85,7 @@
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
         "lru-cache": "^7.14.1",
-        "minimatch": "^5.1.2",
+        "minimatch": "^5.1.2 || ^6.1.6",
         "vscode-languageclient": "^8.0.2"
     },
     "activationEvents": [
