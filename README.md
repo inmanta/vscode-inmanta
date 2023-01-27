@@ -25,7 +25,7 @@ When you hover an element while pressing `Ctrl`, an overview of its Entity type 
 ![Navigation screenshot](images/screenshot-ctrl-click.png)
 
 ### Compilation error reporting
-The extension will run a pre-compilation every time you save your file.  Making it easier for you to spot syntax and basic model errors.  When hovering the problematic bit, an explaination message is shown, and more details can be found in the **Output** panel (when selecting *Inmanta Server Language* in the expandable list on the right).
+The extension will run a pre-compilation every time you save your file. Making it easier for you to spot syntax and basic model errors. When hovering the problematic bit, an explaination message is shown, and more details can be found in the **Output** panel (when selecting *Inmanta Server Language* in the expandable list on the right).
 
 > :bulb: To work properly, this feature requires the Inmanta Language Server to be running:
 > In the inmanta extension configuration (`ctrl+, > extensions > inmanta`), ensure that `LS` is enabled.
@@ -33,7 +33,7 @@ The extension will run a pre-compilation every time you save your file.  Making 
 ![Error reporting screenshot](images/screenshot-error-reporting.png)
 
 ### Model export
-The extension adds a button in the upper right corner of the editing panel of any inmanta model file (ending in `.cf`): **Export to server**.  This buttons allows you to easily export the currently opened model to a running Inmanta server.  Note that for this to work, you need to have previously configured the server and added the following in the `.inmanta` configuration file at the root of the project:
+The extension adds a button in the upper right corner of the editing panel of any inmanta model file (ending in `.cf`): **Export to server**. This buttons allows you to easily export the currently opened model to a running Inmanta server. Note that for this to work, you need to have previously configured the server and added the following in the `.inmanta` configuration file at the root of the project:
 
 ```
 [config]
@@ -67,6 +67,8 @@ The extension currently has two settings:
 ### Python environments
 The plugin uses the Python extension to change environments. This can be done by clicking on the active environment in the bottombar
 and then selecting the environment to activate.
+
+It the environment is not shown in the bottombar, change the setting "python.interpreter.infoVisibility" to "Always".
 
 <img src="images/python-extension.png" width="40%">
 
