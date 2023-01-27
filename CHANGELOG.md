@@ -1,6 +1,6 @@
 # v 1.3.0 (?)
 Changes in this release:
-- Add information about how to show the python interpreter information in status bar.
+- Add information about how to show the python interpreter information in the status bar.
 
 # v 1.2.0 (2022-12-23)
 Changes in this release:
