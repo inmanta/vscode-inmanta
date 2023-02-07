@@ -104,7 +104,6 @@ class Diagnostic(LspModel):
 
 
 class SymbolKind(Enum):
-
     # supported by default
     File: int = 1
     Module: int = 2
