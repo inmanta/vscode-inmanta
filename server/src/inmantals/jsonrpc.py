@@ -178,7 +178,7 @@ class JsonRpcHandler(object):
         return contentlength
 
     async def send(self, body: str):
-        with (await self.writelock.acquire()):
+        with await self.writelock.acquire():
             body = body.encode("utf-8")
             length = len(body)
             header = "Content-Length: %d\r\n\r\n" % length
