@@ -68,7 +68,7 @@ The extension currently has two settings:
 The plugin uses the Python extension to change environments. This can be done by clicking on the active environment in the bottombar
 and then selecting the environment to activate.
 
-It the environment is not shown in the bottombar, change the setting "python.interpreter.infoVisibility" to "Always".
+If the environment is not shown in the bottom bar, change the setting "python.interpreter.infoVisibility" to "Always".
 
 <img src="images/python-extension.png" width="40%">
 
