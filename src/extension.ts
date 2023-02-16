@@ -1,7 +1,7 @@
 'use strict';
 
 import * as net from 'net';
-
+import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as path from 'path';
 import * as os from 'os';
@@ -13,6 +13,14 @@ import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 import { Mutex } from 'async-mutex';
 
+function fileOrDirectoryExists(filePath: string): boolean {
+	try {
+	  fs.accessSync(filePath);
+	  return true;
+	} catch (error) {
+	  return false;
+	}
+  }
 
 export function log(message: string) {
 	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
@@ -40,6 +48,12 @@ export async function activate(context: ExtensionContext) {
 		/**
 		 * Should always run under `mutex` lock.
 		 */
+		if(!pythonExtentionApi.pythonPath || !fileOrDirectoryExists(pythonExtentionApi.pythonPath)){
+			const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
+			if(response === 'Select interpreter'){
+				return await commands.executeCommand('python.setInterpreter');
+			}
+		}
 		log("Start server and client");
 		let clientOptions;
 		try {
