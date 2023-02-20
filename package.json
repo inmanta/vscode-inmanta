@@ -89,7 +89,7 @@
         "async-mutex": "^0.4.0",
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
-        "lru-cache": "^7.16.0",
+        "lru-cache": "^7.16.1",
         "minimatch": "^5.1.2 || ^6.1.6",
         "vscode-languageclient": "^8.1.0"
     },
