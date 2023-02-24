@@ -32,7 +32,7 @@ from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
-from inmanta.module import Project, ModuleLoadingException
+from inmanta.module import ModuleLoadingException, Project
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -177,7 +177,10 @@ class InmantaLSHandler(JsonRpcHandler):
             # Language server is shutting down. Tasks in threadpool were cancelled.
             pass
         except ModuleLoadingException as e:
-            await self.send_show_message(lsp_types.MessageType.Warning, f"{e.format()}. Try running `inmanta project install` to install missing modules.")
+            await self.send_show_message(
+                lsp_types.MessageType.Warning,
+                f"{e.format()}. Try running `inmanta project install` to install missing modules.",
+            )
         except CompilerException as e:
             params: Optional[lsp_types.PublishDiagnosticsParams]
             if e.location is None:
