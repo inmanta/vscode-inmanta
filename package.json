@@ -89,8 +89,8 @@
         "async-mutex": "^0.4.0",
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
-        "lru-cache": "^7.16.1",
-        "minimatch": "^5.1.2 || ^6.1.6",
+        "lru-cache": "^7.17.0",
+        "minimatch": "^5.1.2 || ^7.1.0",
         "vscode-languageclient": "^8.1.0"
     },
     "activationEvents": [
@@ -110,9 +110,9 @@
     },
     "devDependencies": {
         "@types/fs-extra": "^11.0.1",
-        "@types/glob": "^8.0.1",
+        "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.1",
-        "@types/node": "^18.14.0",
+        "@types/node": "^18.14.1",
         "@types/semver": "^7.3.13",
         "@types/vscode": "^1.63.2",
         "@typescript-eslint/eslint-plugin": "^5.53.0",
