@@ -90,7 +90,7 @@
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
         "lru-cache": "^7.17.0",
-        "minimatch": "^7.3.0",
+        "minimatch": "^7.2.0",
         "vscode-languageclient": "^8.1.0"
     },
     "activationEvents": [
@@ -110,6 +110,7 @@
     },
     "devDependencies": {
         "@types/fs-extra": "^11.0.1",
+        "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.1",
         "@types/node": "^18.14.2",
         "@types/semver": "^7.3.13",
