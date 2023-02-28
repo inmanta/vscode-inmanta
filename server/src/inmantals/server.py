@@ -27,12 +27,11 @@ from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
 import pkg_resources
-from inmanta import compiler, resources
+from inmanta import compiler, module, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
-from inmanta.module import Project
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -128,12 +127,12 @@ class InmantaLSHandler(JsonRpcHandler):
             if LEGACY_MODE_COMPILER_VENV:
                 if self.compiler_venv_path:
                     logger.debug("Using venv path " + str(self.compiler_venv_path))
-                    Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
+                    module.Project.set(module.Project(self.rootPath, venv_path=self.compiler_venv_path))
                 else:
-                    Project.set(Project(self.rootPath))
+                    module.Project.set(module.Project(self.rootPath))
             else:
-                Project.set(Project(self.rootPath))
-                Project.get().install_modules()
+                module.Project.set(module.Project(self.rootPath))
+                module.Project.get().install_modules()
 
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
@@ -193,11 +192,28 @@ class InmantaLSHandler(JsonRpcHandler):
                     ],
                 )
             await self.publish_diagnostics(params)
+            await self.check_module_install_failure(e)
             logger.exception("Compilation failed")
 
         except Exception:
             await self.publish_diagnostics(None)
             logger.exception("Compilation failed")
+
+    async def check_module_install_failure(self, e: CompilerException):
+        """
+        Send a suggestion to the user to run the inmanta project install command when a module install failure is detected.
+        """
+        if CORE_VERSION < version.Version("5"):
+            # ModuleLoadingException doesn't exist in iso4, use ModuleNotFoundException instead.
+            module_loading_exception = module.ModuleNotFoundException
+        else:
+            module_loading_exception = module.ModuleLoadingException
+
+        if isinstance(e, module_loading_exception):
+            await self.send_show_message(
+                lsp_types.MessageType.Warning,
+                f"{e.format()}. Try running `inmanta project install` to install missing modules.",
+            )
 
     async def initialized(self):
         await self.compile_and_anchor()

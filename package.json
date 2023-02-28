@@ -90,7 +90,7 @@
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
         "lru-cache": "^7.17.0",
-        "minimatch": "^5.1.2 || ^7.3.0",
+        "minimatch": "^7.3.0",
         "vscode-languageclient": "^8.1.0"
     },
     "activationEvents": [
@@ -115,8 +115,8 @@
         "@types/node": "^18.14.2",
         "@types/semver": "^7.3.13",
         "@types/vscode": "^1.63.2",
-        "@typescript-eslint/eslint-plugin": "^5.53.0",
-        "@typescript-eslint/parser": "^5.53.0",
+        "@typescript-eslint/eslint-plugin": "^5.54.0",
+        "@typescript-eslint/parser": "^5.54.0",
         "@vscode/test-electron": "^2.2.3",
         "@vscode/vsce": "^2.18.0",
         "eslint": "^8.35.0",
