@@ -16,7 +16,6 @@ server/dist
 junit-*
 .pytest_cache
 .idea
-*.cfcache/
 
 .vscode/*
 !.vscode/settings.json.example
