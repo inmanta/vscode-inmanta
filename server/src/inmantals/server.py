@@ -19,10 +19,15 @@ import asyncio
 import json
 import logging
 import os
+import shutil
+import string
+import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
+import random
 from typing import Dict, Iterator, List, Optional, Set, Tuple
 
+import yaml
 from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
@@ -32,7 +37,7 @@ from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
-from inmanta.module import Project, ProjectNotFoundException, ModuleV1, ModuleV2
+from inmanta.module import Project, InstallMode, Module, ModuleV2, ModuleV1
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -118,23 +123,99 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
+    def create_tmp_project(self) -> str:
+        """
+          A factory that constructs a single Project.
+          """
+        # _sys_path = sys.path # TODO remove?
+
+        ten_random_digits = "".join(random.choice(string.digits) for _ in range(10))
+        project_name = "project" + ten_random_digits
+        self.project_dir = os.path.join("/tmp", "vs-code", project_name)
+
+        os.makedirs(self.project_dir, exist_ok=True)
+        logger.info(f"project created at {self.project_dir}")
+
+        os.mkdir(os.path.join(self.project_dir, "libs"))
+
+        # TODO pull repos from the vscode config
+        # repo_options = inm_mod_repo.resolve(request.config)
+        # repos: typing.Sequence[object] = get_project_repos(
+        #     chain.from_iterable(
+        #         repo.split(" ")
+        #         for repo in (
+        #             repo_options if isinstance(repo_options, list) else [repo_options]
+        #         )
+        #     )
+        # )
+        # v2_source = [["type" "package"],["url", "https://pypi.org/simple"]]
+        # repos = ["https://github.com/inmanta/", v2_source]
+        repos = [{'url': 'https://github.com/inmanta/', 'type': 'git'}, {'url': 'https://pypi.org/simple', 'type': 'package'}]
+        install_mode = InstallMode.master
+
+        modulepath = ["libs", os.path.dirname(self.rootPath)]
+
+        # env_dir = os.path.join(project_dir, ".env")
+
+
+        with open(os.path.join(self.project_dir, "project.yml"), "w+") as fd:
+            metadata: typing.Mapping[str, object] = {
+                "name": "testcase",
+                "description": "Project for testcase",
+                "repo": repos,
+                "modulepath": modulepath,
+                "downloadpath": "libs",
+                "install_mode": install_mode.value,
+            }
+            yaml.dump(metadata, fd)
+
+        v2_metadata_file: str = os.path.join(self.rootPath, ModuleV2.MODULE_FILE)
+        v1_metadata_file: str = os.path.join(self.rootPath, ModuleV1.MODULE_FILE)
+
+        module_name: Optional[str] = None
+        if os.path.exists(v2_metadata_file):
+            mv2 = ModuleV2(project= None, path=self.rootPath)
+            module_name = mv2.name
+        elif os.path.exists(v1_metadata_file):
+            mv1 = ModuleV1(project= None, path=self.rootPath)
+            module_name = mv1.name
+
+        if not module_name:
+            raise ModuleNotFoundError
+
+        with open(os.path.join(self.project_dir, "main.cf"), "w+") as fd:
+            fd.write(f"import {module_name}\n")
+        # ensure_current_module_install(os.path.join(project_dir, "libs"), in_place)
+
+        # def create_project(**kwargs: object):
+        #     load_plugins = not inm_no_load_plugins.resolve(request.config)
+        #     no_strict_deps_check = inm_no_strict_deps_check.resolve(request.config)
+        #     extended_kwargs: typing.Dict[str, object] = {
+        #         "no_strict_deps_check": no_strict_deps_check,
+        #         "load_plugins": load_plugins,
+        #         "env_path": env_dir,
+        #         **kwargs,
+        #     }
+        #     test_project = Project.get()
+
+        return self.project_dir
+
+
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
             def setup_project():
+                logger.info(f"root url {self.rootUrl}")
+                logger.info(f"root path {self.rootPath}")
+
                 # Check that we are working inside an existing project:
                 project_file: str = os.path.join(self.rootPath, Project.PROJECT_FILE)
                 if os.path.exists(project_file):
                     project_dir: str = self.rootPath
 
                 else:
-                    # Else we are checking out a module on its own
-                    modv1_file: str = os.path.join(self.rootPath, ModuleV1.MODULE_FILE)
-                    if os.path.exists(modv1_file):
-                        mv1 = ModuleV1(modv1_file)
-                        libs_folder: str = "libs"
-                        os.makedirs(os.path.join(self.rootPath, libs_folder , mv1.get_name_from_metadata()))
+                    # Create a project in the vscode temp folder
+                    project_dir = self.create_tmp_project()
 
-                    raise
                 if LEGACY_MODE_COMPILER_VENV:
                     if self.compiler_venv_path:
                         logger.debug("Using venv path " + str(self.compiler_venv_path))
@@ -145,6 +226,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     logger.info(f"rootrootrootrootroot path {self.rootPath}")
                     Project.set(Project(project_dir))
                     Project.get().install_modules()
+                    # Project.get().load()
 
 
             # reset all
@@ -225,7 +307,11 @@ class InmantaLSHandler(JsonRpcHandler):
 
     async def shutdown(self, **kwargs):
         self.shutdown_requested = True
+        self.cleanup_tmp()
         self.threadpool.shutdown(cancel_futures=True)
+
+    def cleanup_tmp(self):
+        shutil.rmtree(self.project_dir)
 
     async def exit(self, **kwargs):
         self.running = False
