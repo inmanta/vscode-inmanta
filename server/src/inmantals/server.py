@@ -32,7 +32,7 @@ from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
-from inmanta.module import Project
+from inmanta.module import Project, ProjectNotFoundException, ModuleV1, ModuleV2
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -120,20 +120,39 @@ class InmantaLSHandler(JsonRpcHandler):
 
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
+            def setup_project():
+                # Check that we are working inside an existing project:
+                project_file: str = os.path.join(self.rootPath, Project.PROJECT_FILE)
+                if os.path.exists(project_file):
+                    project_dir: str = self.rootPath
+
+                else:
+                    # Else we are checking out a module on its own
+                    modv1_file: str = os.path.join(self.rootPath, ModuleV1.MODULE_FILE)
+                    if os.path.exists(modv1_file):
+                        mv1 = ModuleV1(modv1_file)
+                        libs_folder: str = "libs"
+                        os.makedirs(os.path.join(self.rootPath, libs_folder , mv1.get_name_from_metadata()))
+
+                    raise
+                if LEGACY_MODE_COMPILER_VENV:
+                    if self.compiler_venv_path:
+                        logger.debug("Using venv path " + str(self.compiler_venv_path))
+                        Project.set(Project(project_dir, venv_path=self.compiler_venv_path))
+                    else:
+                        Project.set(Project(project_dir))
+                else:
+                    logger.info(f"rootrootrootrootroot path {self.rootPath}")
+                    Project.set(Project(project_dir))
+                    Project.get().install_modules()
+
+
             # reset all
             resources.resource.reset()
             handler.Commander.reset()
 
             # fresh project
-            if LEGACY_MODE_COMPILER_VENV:
-                if self.compiler_venv_path:
-                    logger.debug("Using venv path " + str(self.compiler_venv_path))
-                    Project.set(Project(self.rootPath, venv_path=self.compiler_venv_path))
-                else:
-                    Project.set(Project(self.rootPath))
-            else:
-                Project.set(Project(self.rootPath))
-                Project.get().install_modules()
+            setup_project()
 
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
@@ -165,6 +184,8 @@ class InmantaLSHandler(JsonRpcHandler):
             self.reverse_anchormap = {
                 os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
             }
+
+
 
         try:
             if self.shutdown_requested:

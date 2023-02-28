@@ -32,12 +32,12 @@ def main():
     stdout = PipeIOStream(sys.stdout.fileno())
     handler = InmantaLSHandler(stdin, stdout, "0.0.0.0")
 
-    logger.info("Starting language server")
+    logger.info("Starting language server, OR AM I????")
 
     try:
         IOLoop.current().run_sync(handler.start)
     except Exception as e:
-        logging.error(e)
+        logger.error(e)
 
     logger.info("Language server stopped")
 
