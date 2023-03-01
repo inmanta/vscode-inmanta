@@ -1,6 +1,6 @@
 import * as path from 'path';
-import * as Mocha from 'mocha';
-import * as glob from 'glob';
+import glob from 'glob';
+import Mocha from 'mocha';
 
 export function innerRun(regexToTestFiles: string): Promise<void> {
 	// Create the mocha test
@@ -12,14 +12,8 @@ export function innerRun(regexToTestFiles: string): Promise<void> {
 	const testsRoot = __dirname;
 
 	return new Promise((c, e) => {
-		glob(regexToTestFiles, { cwd: testsRoot }, (err, files) => {
-			if (err) {
-				return e(err);
-			}
-
-			// Add files to the test suite
+		glob(regexToTestFiles, { cwd: testsRoot }).then((files)=>{
 			files.forEach(f => mocha.addFile(path.resolve(testsRoot, f)));
-
 			try {
 				// Run the mocha test
 				mocha.run(failures => {
@@ -36,3 +30,4 @@ export function innerRun(regexToTestFiles: string): Promise<void> {
 		});
 	});
 }
+
