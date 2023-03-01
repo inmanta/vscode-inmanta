@@ -32,12 +32,12 @@ from tornado.iostream import BaseIOStream
 import inmanta.ast.type as inmanta_type
 import pkg_resources
 import yaml
-from inmanta import compiler, resources
+from inmanta import compiler, module, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
-from inmanta.module import InstallMode, ModuleV1, ModuleV2, Project
+# from inmanta.module import InstallMode, ModuleV1, ModuleV2, Project
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -135,7 +135,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
         os.mkdir(os.path.join(self.project_dir, "libs"))
 
-        install_mode = InstallMode.master
+        install_mode = module.InstallMode.master
 
         modulepath = ["libs", os.path.dirname(self.rootPath)]
 
@@ -150,15 +150,15 @@ class InmantaLSHandler(JsonRpcHandler):
             }
             yaml.dump(metadata, fd)
 
-        v2_metadata_file: str = os.path.join(self.rootPath, ModuleV2.MODULE_FILE)
-        v1_metadata_file: str = os.path.join(self.rootPath, ModuleV1.MODULE_FILE)
+        v2_metadata_file: str = os.path.join(self.rootPath, module.ModuleV2.MODULE_FILE)
+        v1_metadata_file: str = os.path.join(self.rootPath, module.ModuleV1.MODULE_FILE)
 
         module_name: Optional[str] = None
         if os.path.exists(v2_metadata_file):
-            mv2 = ModuleV2(project=None, path=self.rootPath)
+            mv2 = module.ModuleV2(project=None, path=self.rootPath)
             module_name = mv2.name
         elif os.path.exists(v1_metadata_file):
-            mv1 = ModuleV1(project=None, path=self.rootPath)
+            mv1 = module.ModuleV1(project=None, path=self.rootPath)
             module_name = mv1.name
 
         if not module_name:
@@ -172,11 +172,8 @@ class InmantaLSHandler(JsonRpcHandler):
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
             def setup_project():
-                logger.info(f"root url {self.rootUrl}")
-                logger.info(f"root path {self.rootPath}")
-
                 # Check that we are working inside an existing project:
-                project_file: str = os.path.join(self.rootPath, Project.PROJECT_FILE)
+                project_file: str = os.path.join(self.rootPath, module.Project.PROJECT_FILE)
                 if os.path.exists(project_file):
                     project_dir: str = self.rootPath
 
@@ -187,14 +184,12 @@ class InmantaLSHandler(JsonRpcHandler):
                 if LEGACY_MODE_COMPILER_VENV:
                     if self.compiler_venv_path:
                         logger.debug("Using venv path " + str(self.compiler_venv_path))
-                        Project.set(Project(project_dir, venv_path=self.compiler_venv_path))
+                        module.Project.set(module.Project(project_dir, venv_path=self.compiler_venv_path))
                     else:
-                        Project.set(Project(project_dir))
+                        module.Project.set(module.Project(project_dir))
                 else:
-                    logger.info(f"rootrootrootrootroot path {self.rootPath}")
-                    Project.set(Project(project_dir))
-                    Project.get().install_modules()
-                    # Project.get().load()
+                    module.Project.set(module.Project(project_dir))
+                    module.Project.get().install_modules()
 
             # reset all
             resources.resource.reset()
@@ -202,6 +197,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
             # fresh project
             setup_project()
+
 
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
@@ -261,11 +257,28 @@ class InmantaLSHandler(JsonRpcHandler):
                     ],
                 )
             await self.publish_diagnostics(params)
+            await self.check_module_install_failure(e)
             logger.exception("Compilation failed")
 
         except Exception:
             await self.publish_diagnostics(None)
             logger.exception("Compilation failed")
+
+    async def check_module_install_failure(self, e: CompilerException):
+        """
+        Send a suggestion to the user to run the inmanta project install command when a module install failure is detected.
+        """
+        if CORE_VERSION < version.Version("5"):
+            # ModuleLoadingException doesn't exist in iso4, use ModuleNotFoundException instead.
+            module_loading_exception = module.ModuleNotFoundException
+        else:
+            module_loading_exception = module.ModuleLoadingException
+
+        if isinstance(e, module_loading_exception):
+            await self.send_show_message(
+                lsp_types.MessageType.Warning,
+                f"{e.format()}. Try running `inmanta project install` to install missing modules.",
+            )
 
     async def initialized(self):
         await self.compile_and_anchor()
