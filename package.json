@@ -64,7 +64,7 @@
                 "inmanta.repos": {
                     "type": "string",
                     "default": "",
-                    "markdownDescription": "Optional yaml list of repositories to indicate the inmanta extension where to look for modules when working on an individual module.\nWhen working on a project, the inmanta extension will look for modules in the repositories defined in the repo section of the [project.yaml](https://docs.inmanta.com/inmanta-service-orchestrator/latest/reference/projectyml.html#project-yml) file.",
+                    "markdownDescription": "Optional yaml list of repositories to indicate the Inmanta extension where to look for modules when working on an individual module.\nWhen working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories defined in the repo section of the [project.yaml](https://docs.inmanta.com/inmanta-service-orchestrator/latest/reference/projectyml.html#project-yml) file.",
                     "scope": "window"
                 }
             }
