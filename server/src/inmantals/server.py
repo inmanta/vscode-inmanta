@@ -82,8 +82,10 @@ class InmantaLSHandler(JsonRpcHandler):
         self.rootUrl = rootUri
         os.chdir(rootPath)
         init_options = kwargs.get("initializationOptions", None)
+
         if init_options:
             self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
+            self.repos = init_options.get("repos", None)
 
         value_set: List[int]
         try:
@@ -124,11 +126,6 @@ class InmantaLSHandler(JsonRpcHandler):
         return line * 100000 + char
 
     def create_tmp_project(self) -> str:
-        """
-          A factory that constructs a single Project.
-          """
-        # _sys_path = sys.path # TODO remove?
-
         ten_random_digits = "".join(random.choice(string.digits) for _ in range(10))
         project_name = "project" + ten_random_digits
         self.project_dir = os.path.join("/tmp", "vs-code", project_name)
@@ -138,31 +135,16 @@ class InmantaLSHandler(JsonRpcHandler):
 
         os.mkdir(os.path.join(self.project_dir, "libs"))
 
-        # TODO pull repos from the vscode config
-        # repo_options = inm_mod_repo.resolve(request.config)
-        # repos: typing.Sequence[object] = get_project_repos(
-        #     chain.from_iterable(
-        #         repo.split(" ")
-        #         for repo in (
-        #             repo_options if isinstance(repo_options, list) else [repo_options]
-        #         )
-        #     )
-        # )
-        # v2_source = [["type" "package"],["url", "https://pypi.org/simple"]]
-        # repos = ["https://github.com/inmanta/", v2_source]
-        repos = [{'url': 'https://github.com/inmanta/', 'type': 'git'}, {'url': 'https://pypi.org/simple', 'type': 'package'}]
         install_mode = InstallMode.master
 
         modulepath = ["libs", os.path.dirname(self.rootPath)]
-
-        # env_dir = os.path.join(project_dir, ".env")
 
 
         with open(os.path.join(self.project_dir, "project.yml"), "w+") as fd:
             metadata: typing.Mapping[str, object] = {
                 "name": "testcase",
                 "description": "Project for testcase",
-                "repo": repos,
+                "repo": yaml.safe_load(self.repos),
                 "modulepath": modulepath,
                 "downloadpath": "libs",
                 "install_mode": install_mode.value,
@@ -185,18 +167,6 @@ class InmantaLSHandler(JsonRpcHandler):
 
         with open(os.path.join(self.project_dir, "main.cf"), "w+") as fd:
             fd.write(f"import {module_name}\n")
-        # ensure_current_module_install(os.path.join(project_dir, "libs"), in_place)
-
-        # def create_project(**kwargs: object):
-        #     load_plugins = not inm_no_load_plugins.resolve(request.config)
-        #     no_strict_deps_check = inm_no_strict_deps_check.resolve(request.config)
-        #     extended_kwargs: typing.Dict[str, object] = {
-        #         "no_strict_deps_check": no_strict_deps_check,
-        #         "load_plugins": load_plugins,
-        #         "env_path": env_dir,
-        #         **kwargs,
-        #     }
-        #     test_project = Project.get()
 
         return self.project_dir
 
