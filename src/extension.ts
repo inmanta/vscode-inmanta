@@ -203,10 +203,10 @@ export async function activate(context: ExtensionContext) {
 				"except:\n" +
 				"  sys.exit(3)";
 
-			let spawn_result = cp.spawnSync(pythonExtentionApi.pythonPath, ["-c", script]);
-			if (spawn_result.status === 4) {
+			let spawnResult = cp.spawnSync(pythonExtentionApi.pythonPath, ["-c", script]);
+			if (spawnResult.status === 4) {
 				window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pythonExtentionApi.pythonPath} is an older version`);
-			} else if (spawn_result.status === 3) {
+			} else if (spawnResult.status === 3) {
 				this.notInstalled();
 			} else {
 				const data = this._child.stdout.read();
