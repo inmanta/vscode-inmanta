@@ -19,9 +19,7 @@ import asyncio
 import json
 import logging
 import os
-import random
-import shutil
-import string
+import tempfile
 import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
@@ -129,22 +127,18 @@ class InmantaLSHandler(JsonRpcHandler):
         return line * 100000 + char
 
     def create_tmp_project(self) -> str:
-        ten_random_digits = "".join(random.choice(string.digits) for _ in range(10))
-        project_name = "project" + ten_random_digits
-        self.project_dir = os.path.join("/tmp", "vs-code", project_name)
+        self.project_dir = tempfile.TemporaryDirectory()
+        logger.info(f"Temporary project created at {self.project_dir.name}.")
 
-        os.makedirs(self.project_dir, exist_ok=True)
-        logger.info(f"project created at {self.project_dir}")
-
-        os.mkdir(os.path.join(self.project_dir, "libs"))
+        os.mkdir(os.path.join(self.project_dir.name, "libs"))
 
         install_mode = module.InstallMode.master
 
         modulepath = ["libs", os.path.dirname(self.rootPath)]
 
-        with open(os.path.join(self.project_dir, "project.yml"), "w+") as fd:
+        with open(os.path.join(self.project_dir.name, "project.yml"), "w+") as fd:
             metadata: typing.Mapping[str, object] = {
-                "name": project_name,
+                "name": "Temporary project",
                 "description": "Temporary project",
                 "repo": yaml.safe_load(self.repos),
                 "modulepath": modulepath,
@@ -172,10 +166,10 @@ class InmantaLSHandler(JsonRpcHandler):
                 "module (https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)."
             )
 
-        with open(os.path.join(self.project_dir, "main.cf"), "w+") as fd:
+        with open(os.path.join(self.project_dir.name, "main.cf"), "w+") as fd:
             fd.write(f"import {module_name}\n")
 
-        return self.project_dir
+        return self.project_dir.name
 
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
@@ -299,7 +293,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
 
     def cleanup_tmp(self):
-        shutil.rmtree(self.project_dir)
+        self.project_dir.cleanup()
 
     async def exit(self, **kwargs):
         self.running = False
