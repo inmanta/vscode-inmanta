@@ -58,6 +58,10 @@ Recent versions use the encapsulating environment and require explicit project i
 logger = logging.getLogger(__name__)
 
 
+class InvalidExtensionSetup(Exception):
+    """The extension can only run on a valid project or module, and not on a single file."""
+
+
 class InmantaLSHandler(JsonRpcHandler):
     def __init__(self, instream: BaseIOStream, outstream: BaseIOStream, address):
         super(InmantaLSHandler, self).__init__(instream, outstream, address)
@@ -75,7 +79,7 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("Init: " + json.dumps(kwargs))
 
         if rootPath is None:
-            raise Exception("A folder should be opened instead of a file in order to use the inmanta extension.")
+            raise InvalidExtensionSetup("A folder should be opened instead of a file in order to use the inmanta extension.")
 
         self.rootPath = rootPath
         self.rootUrl = rootUri
@@ -161,7 +165,12 @@ class InmantaLSHandler(JsonRpcHandler):
             module_name = mv1.name
 
         if not module_name:
-            raise ModuleNotFoundError
+            raise InvalidExtensionSetup(
+                "The Inmanta extension only works on projects and modules. "
+                "Please make sure the current workspace is a valid project "
+                "(https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html) or "
+                "module (https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)."
+            )
 
         with open(os.path.join(self.project_dir, "main.cf"), "w+") as fd:
             fd.write(f"import {module_name}\n")
@@ -257,6 +266,9 @@ class InmantaLSHandler(JsonRpcHandler):
             await self.publish_diagnostics(params)
             await self.check_module_install_failure(e)
             logger.exception("Compilation failed")
+        except InvalidExtensionSetup as e:
+            await self.publish_diagnostics(None)
+            logger.error(e)
 
         except Exception:
             await self.publish_diagnostics(None)
