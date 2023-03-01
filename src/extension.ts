@@ -76,6 +76,8 @@ export async function activate(context: ExtensionContext) {
 
 	async function getClientOptions(): Promise<LanguageClientOptions> {
 		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
+		let repos: string = workspace.getConfiguration('inmanta').repos;
+
 		if (context.storageUri === undefined) {
 			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
@@ -89,6 +91,7 @@ export async function activate(context: ExtensionContext) {
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
+				repos: repos,
 			}
 		};
 		return clientOptions;
