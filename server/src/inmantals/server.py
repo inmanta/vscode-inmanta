@@ -19,25 +19,25 @@ import asyncio
 import json
 import logging
 import os
+import random
 import shutil
 import string
 import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
-import random
 from typing import Dict, Iterator, List, Optional, Set, Tuple
 
-import yaml
 from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
 import pkg_resources
+import yaml
 from inmanta import compiler, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
-from inmanta.module import Project, InstallMode, Module, ModuleV2, ModuleV1
+from inmanta.module import InstallMode, ModuleV1, ModuleV2, Project
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -139,7 +139,6 @@ class InmantaLSHandler(JsonRpcHandler):
 
         modulepath = ["libs", os.path.dirname(self.rootPath)]
 
-
         with open(os.path.join(self.project_dir, "project.yml"), "w+") as fd:
             metadata: typing.Mapping[str, object] = {
                 "name": "testcase",
@@ -156,10 +155,10 @@ class InmantaLSHandler(JsonRpcHandler):
 
         module_name: Optional[str] = None
         if os.path.exists(v2_metadata_file):
-            mv2 = ModuleV2(project= None, path=self.rootPath)
+            mv2 = ModuleV2(project=None, path=self.rootPath)
             module_name = mv2.name
         elif os.path.exists(v1_metadata_file):
-            mv1 = ModuleV1(project= None, path=self.rootPath)
+            mv1 = ModuleV1(project=None, path=self.rootPath)
             module_name = mv1.name
 
         if not module_name:
@@ -169,7 +168,6 @@ class InmantaLSHandler(JsonRpcHandler):
             fd.write(f"import {module_name}\n")
 
         return self.project_dir
-
 
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
@@ -197,7 +195,6 @@ class InmantaLSHandler(JsonRpcHandler):
                     Project.set(Project(project_dir))
                     Project.get().install_modules()
                     # Project.get().load()
-
 
             # reset all
             resources.resource.reset()
@@ -236,8 +233,6 @@ class InmantaLSHandler(JsonRpcHandler):
             self.reverse_anchormap = {
                 os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
             }
-
-
 
         try:
             if self.shutdown_requested:
