@@ -37,7 +37,6 @@ from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
-# from inmanta.module import InstallMode, ModuleV1, ModuleV2, Project
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -197,7 +196,6 @@ class InmantaLSHandler(JsonRpcHandler):
 
             # fresh project
             setup_project()
-
 
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
