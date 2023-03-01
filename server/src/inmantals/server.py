@@ -141,8 +141,8 @@ class InmantaLSHandler(JsonRpcHandler):
 
         with open(os.path.join(self.project_dir, "project.yml"), "w+") as fd:
             metadata: typing.Mapping[str, object] = {
-                "name": "testcase",
-                "description": "Project for testcase",
+                "name": project_name,
+                "description": "Temporary project",
                 "repo": yaml.safe_load(self.repos),
                 "modulepath": modulepath,
                 "downloadpath": "libs",
