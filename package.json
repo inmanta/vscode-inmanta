@@ -89,14 +89,10 @@
         "async-mutex": "^0.4.0",
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
-        "lru-cache": "^7.17.0",
+        "lru-cache": "^7.18.1",
         "minimatch": "^7.4.1",
         "vscode-languageclient": "^8.1.0"
     },
-    "activationEvents": [
-        "onLanguage:inmanta",
-        "onCommand:inmanta.exportToServer"
-    ],
     "extensionDependencies": [
         "ms-python.python"
     ],
