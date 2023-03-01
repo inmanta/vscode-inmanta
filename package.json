@@ -98,9 +98,9 @@
     ],
     "scripts": {
         "vscode:prepublish": "npm run compile",
-        "compile": "rimraf out && tsc",
+        "compile": "rimraf out && tsc -p ./",
         "lint": "eslint src --ext ts",
-        "watch": "rimraf out && tsc -watch",
+        "watch": "rimraf out && tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
         "test": "node ./out/test/runTest.js"
     },
