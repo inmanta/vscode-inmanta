@@ -1,5 +1,4 @@
 import testmodule
-
 entity Person:
     string name
     number age
