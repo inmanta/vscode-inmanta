@@ -167,7 +167,11 @@ export async function activate(context: ExtensionContext) {
 		if (child.status !== 0) {
 			log(`Can not start server and client`);
 			window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
-		} else if (startServer) {
+		} else{
+			window.showInformationMessage("Inmanta Language server was installed successfully");
+		}
+
+		if (startServer) {
 			log(`Starting server and client`);
 			startOrRestartLS(true);
 		}
@@ -218,7 +222,6 @@ export async function activate(context: ExtensionContext) {
 		}
 
 		closed(): CloseHandlerResult{
-			this.diagnose();
 			return {action: CloseAction.DoNotRestart};
 		}
 
@@ -250,9 +253,8 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	function registerExportCommand() {
-		const commandId = 'inmanta.exportToServer';
-
-		const commandHandler = (openedFileObj: object) => {
+		const commandExportToServerId = 'inmanta.exportToServer';
+		const commandHandlerExportToServer = (openedFileObj: object) => {
 			const pathOpenedFile: string = String(openedFileObj);
 			const cwdCommand: string = path.dirname(Uri.parse(pathOpenedFile).fsPath);
 			const child = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
@@ -282,7 +284,12 @@ export async function activate(context: ExtensionContext) {
 			});
 		};
 
-		context.subscriptions.push(commands.registerCommand(commandId, commandHandler));
+		const commandInstallLSId = 'inmanta.installLS';
+		const commandInstallLSHandler = () => {
+			installLanguageServer(pythonExtentionApi.pythonPath, false);
+		};
+		context.subscriptions.push(commands.registerCommand(commandExportToServerId, commandHandlerExportToServer));
+		context.subscriptions.push(commands.registerCommand(commandInstallLSId, commandInstallLSHandler));
     }
 
 	async function startOrRestartLS(start: boolean = false) {

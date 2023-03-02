@@ -68,6 +68,11 @@
                 "command": "inmanta.exportToServer",
                 "title": "Export to server",
                 "category": "inmanta"
+            },
+            {
+                "command": "inmanta.installLS",
+                "title": "Install the inmanta Language Server",
+                "category": "inmanta"
             }
         ],
         "menus": {
@@ -83,7 +88,28 @@
             "[inmanta]": {
               "python.interpreter.infoVisibility": "always"
             }
-        }
+        },
+        "walkthroughs": [
+            {
+              "id": "inmanta.walkthrough",
+              "title": "Get started with the Inmanta extension",
+              "description": "An extenstion to help with the development of Inamnta modules and projects",
+              "steps": [
+                {
+                  "id": "inmanta.setVenv",
+                  "title": "Select a virtual environment",
+                  "description": "This step is to ensure a virtual environment will be used. \n[Select Environment](command:python.setInterpreter)",
+                  "media": { "markdown": "media/markdown_env.md" }
+                },
+                {
+                  "id": "inmanta.installLanguageServer",
+                  "title": "Install the Language Server",
+                  "description": "Install the language server to enjoy features like Syntax highlighting, Code navigation and many more. \n[Install Language Server](command:inmanta.installLS)",
+                  "media": { "markdown": "media/markdown_ls.md" }
+                }
+              ]
+            }
+          ]
     },
     "dependencies": {
         "async-mutex": "^0.4.0",
