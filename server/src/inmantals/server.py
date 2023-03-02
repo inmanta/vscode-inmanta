@@ -59,6 +59,10 @@ logger = logging.getLogger(__name__)
 class InvalidExtensionSetup(Exception):
     """The extension can only run on a valid project or module, and not on a single file."""
 
+    def __init__(self, message: str) -> None:
+        Exception.__init__(self, message)
+        self.message = message
+
 
 class InmantaLSHandler(JsonRpcHandler):
     def __init__(self, instream: BaseIOStream, outstream: BaseIOStream, address):
@@ -259,19 +263,23 @@ class InmantaLSHandler(JsonRpcHandler):
                     ],
                 )
             await self.publish_diagnostics(params)
-            await self.check_module_install_failure(e)
+            await self.handle_module_loading_exception(e)
             logger.exception("Compilation failed")
         except InvalidExtensionSetup as e:
-            await self.publish_diagnostics(lsp_types.Diagnostic(
-                            message=e.get_message(),
-                        ))
+            await self.handle_invalid_extension_setup(e)
             logger.error(e)
 
         except Exception:
             await self.publish_diagnostics(None)
             logger.exception("Compilation failed")
 
-    async def check_module_install_failure(self, e: CompilerException):
+    async def handle_invalid_extension_setup(self, e: InvalidExtensionSetup):
+        await self.send_show_message(
+            lsp_types.MessageType.Warning,
+            f"{e.message}.",
+        )
+
+    async def handle_module_loading_exception(self, e: CompilerException):
         """
         Send a suggestion to the user to run the inmanta project install command when a module install failure is detected.
         """
