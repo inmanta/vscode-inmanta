@@ -159,12 +159,17 @@ class InmantaLSHandler(JsonRpcHandler):
             module_name = mv1.name
 
         if not module_name:
-            raise InvalidExtensionSetup(
+            error_message: str = (
                 "The Inmanta extension only works on projects and modules. "
                 "Please make sure the current workspace is a valid project "
                 "(https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html) or "
                 "module (https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)."
             )
+            await self.send_show_message(
+                lsp_types.MessageType.Warning,
+                error_message,
+            )
+            raise InvalidExtensionSetup(error_message)
 
         with open(os.path.join(self.project_dir.name, "main.cf"), "w+") as fd:
             fd.write(f"import {module_name}\n")
