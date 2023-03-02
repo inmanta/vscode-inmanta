@@ -22,8 +22,9 @@ import os
 import tempfile
 import typing
 from concurrent.futures.thread import ThreadPoolExecutor
+from dataclasses import dataclass
 from itertools import chain
-from typing import Dict, Iterator, List, Optional, Set, Tuple, Sequence
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 
 from tornado.iostream import BaseIOStream
 
@@ -41,6 +42,7 @@ from inmantals import lsp_types
 from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
+from uri import URI
 
 CORE_VERSION: version.Version = version.Version(pkg_resources.get_distribution("inmanta-core").version)
 """
@@ -64,9 +66,39 @@ class InvalidExtensionSetup(Exception):
         self.message = message
 
 
+@dataclass
+class WorkSpace:
+    """
+    Wrapper class around a workspace
+    """
+
+    folder: URI
+    name: str
+    inmanta_project_dir: Optional[tempfile.TemporaryDirectory]
+
+    @classmethod
+    def unpack_workspaces(cls, workspace_folders: Sequence[object]) -> Dict[str, "WorkSpace"]:
+        return {
+            workspace["uri"]: WorkSpace(URI(workspace["uri"]), workspace["name"], inmanta_project_dir=None)
+            for workspace in workspace_folders
+        }
+
+    def cleanup(self):
+        if self.inmanta_project_dir:
+            self.inmanta_project_dir.cleanup()
+
+    def get_workspace_path(self):
+        """
+        Convert the workspace's uri into a regular path
+        (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#uri)
+        """
+        return self.folder.path
+
+
 class InmantaLSHandler(JsonRpcHandler):
     def __init__(self, instream: BaseIOStream, outstream: BaseIOStream, address):
         super(InmantaLSHandler, self).__init__(instream, outstream, address)
+        self._workspace_folders = None
         self.threadpool = ThreadPoolExecutor(1)
         self.anchormap = None
         self.reverse_anchormap = None
@@ -77,35 +109,37 @@ class InmantaLSHandler(JsonRpcHandler):
         # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
         self.compiler_venv_path: Optional[str] = None
 
-    async def initialize(self, rootPath, rootUri, workspaceFolders: Sequence[object], capabilities: Dict[str, object], **kwargs):  # noqa: N803
+    async def initialize(
+        self, rootPath, rootUri, workspaceFolders: Sequence[object], capabilities: Dict[str, object], **kwargs
+    ):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
 
         if rootPath:
-            logger.info(f"The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
+            logger.info("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
         if rootUri:
-            logger.info(f"The rootUri parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
+            logger.info("The rootUri parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
 
         if workspaceFolders is None:
-            raise InvalidExtensionSetup("no workspace folder specified") # TODO check if this logic makes sense
+            raise InvalidExtensionSetup("no workspace folder specified")  # TODO check if this logic makes sense
 
         self.rootPath = rootPath
         self.rootUrl = rootUri
 
-        # Keep track of the roots folders opened in this workspace
-        self._workspace_folders: Dict[str, str] = self._unpack_workspaces(workspaceFolders)
+        # Keep track of the folders opened in this workspace
+        self._workspace_folders: Dict[str, WorkSpace] = WorkSpace.unpack_workspaces(workspaceFolders)
 
         logger.info(f"rootPath = {rootPath}")
         logger.info(f"rootUri = {rootUri}")
         logger.info(f"workspaceFolders = {workspaceFolders}")
-        logger.info(f"kwargs = {kwargs}")
-        logger.info(f"capabilities = {capabilities}")
+        # logger.info(f"kwargs = {kwargs}")
+        # logger.info(f"capabilities = {capabilities}")
 
-        os.chdir(rootPath) # TODO fix this for workspaces
+        os.chdir(rootPath)  # TODO fix this for workspaces
         init_options = kwargs.get("initializationOptions", None)
 
         if init_options:
             self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
-            self.repos = init_options.get("repos", None) # TODO Postpone this to have a per-folder config + 'resource' scope
+            self.repos = init_options.get("repos", None)  # TODO Postpone this to have a per-folder config + 'resource' scope
 
         value_set: List[int]
         try:
@@ -142,12 +176,9 @@ class InmantaLSHandler(JsonRpcHandler):
                         "supported": True,
                         "changeNotifications": True,
                     }
-                }
+                },
             }
         }
-
-    def _unpack_workspaces(self, workspaceFolders: Sequence[object]):
-        return {workspace["uri"]: workspace["name"] for workspace in workspaceFolders}
 
     def flatten(self, line, char):
         """convert linenr char combination into a single number"""
@@ -189,9 +220,10 @@ class InmantaLSHandler(JsonRpcHandler):
         if not module_name:
             error_message: str = (
                 "The Inmanta extension only works on projects and modules. "
-                "Please make sure the current workspace is a valid project "
-                "(https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html) or "
-                "module (https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)."
+                "Please make sure the current workspace is a valid "
+                "[project](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html)"
+                " or "
+                "[module](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)"
             )
             raise InvalidExtensionSetup(error_message)
 
@@ -207,7 +239,10 @@ class InmantaLSHandler(JsonRpcHandler):
         :parameter folders: When specified, only these folders will be considered instead of all the folders in the workspace.
 
         """
+
         def sync_compile_and_anchor_folder(folder: str):
+            logger.info(f"compile and anchor for folder {folder}")
+
             def setup_project(folder: str):
                 # Check that we are working inside an existing project:
                 project_file: str = os.path.join(folder, module.Project.PROJECT_FILE)
@@ -268,12 +303,10 @@ class InmantaLSHandler(JsonRpcHandler):
         def sync_compile_and_anchor_folders(folders) -> None:
             if folders is None:
                 # No folders specified -> compile and anchor all folders in the workspace
-                folders = self._workspace_folders.keys()
+                folders = [folder.get_workspace_path() for folder in self._workspace_folders.values()]
 
             for folder in folders:
                 sync_compile_and_anchor_folder(folder)
-
-
 
         try:
             if self.shutdown_requested:
@@ -308,7 +341,9 @@ class InmantaLSHandler(JsonRpcHandler):
             await self.handle_invalid_extension_setup(e)
             logger.error(e)
 
-        except Exception:
+        except Exception as e:
+            logger.info(f"Oh god no {e}")
+
             await self.publish_diagnostics(None)
             logger.exception("Compilation failed")
 
@@ -339,11 +374,12 @@ class InmantaLSHandler(JsonRpcHandler):
 
     async def shutdown(self, **kwargs):
         self.shutdown_requested = True
-        self.cleanup_tmp()
+        self._cleanup_tmp_projects()
         self.threadpool.shutdown(cancel_futures=True)
 
-    def cleanup_tmp(self):
-        self.project_dir.cleanup()
+    def _cleanup_tmp_projects(self):
+        for workspace in self._workspace_folders.values():
+            workspace.cleanup()
 
     async def exit(self, **kwargs):
         self.running = False
@@ -362,13 +398,26 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     async def workspace_didChangeWorkspaceFolders(self, **kwargs):  # noqa: N802
-        logger.info(f"workspace changed, should probably do something here {kwargs=}")
-        added = self._unpack_workspaces(kwargs["event"]["added"])
-        removed = self._unpack_workspaces(kwargs["event"]["removed"])
+        logger.info(f"workspace changed, should probably do something HERE {kwargs=}")
+        event = kwargs.get("event", None)
+        if event:
+            added = WorkSpace.unpack_workspaces(event["added"])
+            removed = WorkSpace.unpack_workspaces(event["removed"])
 
-        self._workspace_folders += added
-        self._workspace_folders -= removed
-        pass
+            logger.info(f"before change {self._workspace_folders}")
+            logger.info(f"{added=}")
+            logger.info(f"{removed=}")
+
+            self._workspace_folders.update(added)
+            logger.info(f"midle change {self._workspace_folders}")
+
+            self._workspace_folders = {k: v for k, v in self._workspace_folders.items() if k not in removed.keys()}
+
+            logger.info(f"after change {self._workspace_folders}")
+            for folder in removed.values():
+                folder.cleanup()
+
+            await self.compile_and_anchor(added)
 
     def convert_location(self, loc):
         prefix = "file:///" if os.name == "nt" else "file://"
