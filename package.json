@@ -90,7 +90,7 @@
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
         "lru-cache": "^7.18.1",
-        "minimatch": "^7.4.1",
+        "minimatch": "^7.4.2",
         "vscode-languageclient": "^8.1.0"
     },
     "extensionDependencies": [
