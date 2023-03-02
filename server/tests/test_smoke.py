@@ -130,6 +130,7 @@ async def initialize(
         "initialize",
         rootPath=path,
         rootUri=f"file://{path}",
+        workspaceFolders = [path],
         capabilities=client_capabilities,
     )
     await client.assert_one(ret)
@@ -178,7 +179,7 @@ async def test_connection(client, caplog):
     caplog.set_level(logging.DEBUG)
 
     path = os.path.join(os.path.dirname(__file__), "project")
-    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", capabilities={})
+    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[path] , capabilities={})
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
@@ -189,6 +190,7 @@ async def test_connection(client, caplog):
                 "willSaveWaitUntil": False,
                 "save": {"includeText": False},
             },
+            'workspace': {'workspaceFolders': {'supported': True, 'changeNotifications': True}},
             "definitionProvider": True,
             "referencesProvider": True,
             "workspaceSymbolProvider": {"workDoneProgress": False},
@@ -207,6 +209,12 @@ async def test_connection(client, caplog):
     result = await client.assert_one(ret)
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
     assert "Anchormap took" in caplog.text
+    caplog.clear()
+
+    ret = await client.call("workspace/didChangeWorkspaceFolders")
+    result = await client.assert_one(ret)
+    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
+    assert "workspace changed" in caplog.text
     caplog.clear()
 
     await assert_lnr(client)

@@ -73,7 +73,7 @@ class InmantaLSHandler(JsonRpcHandler):
         # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
         self.compiler_venv_path: Optional[str] = None
 
-    async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
+    async def initialize(self, rootPath, rootUri, workspaceFolders, capabilities: Dict[str, object], **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
 
         if rootPath is None:
@@ -81,6 +81,14 @@ class InmantaLSHandler(JsonRpcHandler):
 
         self.rootPath = rootPath
         self.rootUrl = rootUri
+        self.workspace_folders = workspaceFolders
+
+        logger.info(f"rootPath = {rootPath}")
+        logger.info(f"rootUri = {rootUri}")
+        logger.info(f"workspaceFolders = {workspaceFolders}")
+        logger.info(f"kwargs = {kwargs}")
+        logger.info(f"capabilities = {capabilities}")
+
         os.chdir(rootPath)
         init_options = kwargs.get("initializationOptions", None)
 
@@ -118,6 +126,12 @@ class InmantaLSHandler(JsonRpcHandler):
                     # the language server does not report work done progress for workspace symbol requests
                     "workDoneProgress": False,
                 },
+                "workspace": {
+                    "workspaceFolders": {
+                        "supported": True,
+                        "changeNotifications": True,
+                    }
+                }
             }
         }
 
@@ -305,9 +319,15 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
+        logger.info("document saved, should probably do something hereHERE")
         await self.compile_and_anchor()
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
+        pass
+
+    async def workspace_didChangeWorkspaceFolders(self, **kwargs):  # noqa: N802
+        logger.info("workspace changed, should probably do something here")
+        logger.info(f"{kwargs=}")
         pass
 
     def convert_location(self, loc):
