@@ -165,10 +165,6 @@ class InmantaLSHandler(JsonRpcHandler):
                 "(https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html) or "
                 "module (https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)."
             )
-            await self.send_show_message(
-                lsp_types.MessageType.Warning,
-                error_message,
-            )
             raise InvalidExtensionSetup(error_message)
 
         with open(os.path.join(self.project_dir.name, "main.cf"), "w+") as fd:
@@ -266,7 +262,9 @@ class InmantaLSHandler(JsonRpcHandler):
             await self.check_module_install_failure(e)
             logger.exception("Compilation failed")
         except InvalidExtensionSetup as e:
-            await self.publish_diagnostics(None)
+            await self.publish_diagnostics(lsp_types.Diagnostic(
+                            message=e.get_message(),
+                        ))
             logger.error(e)
 
         except Exception:
