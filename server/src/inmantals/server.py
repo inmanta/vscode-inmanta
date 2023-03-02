@@ -23,7 +23,7 @@ import tempfile
 import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Set, Tuple, Sequence
 
 from tornado.iostream import BaseIOStream
 
@@ -73,15 +73,22 @@ class InmantaLSHandler(JsonRpcHandler):
         # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
         self.compiler_venv_path: Optional[str] = None
 
-    async def initialize(self, rootPath, rootUri, workspaceFolders, capabilities: Dict[str, object], **kwargs):  # noqa: N803
+    async def initialize(self, rootPath, rootUri, workspaceFolders: Sequence[object], capabilities: Dict[str, object], **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
 
-        if rootPath is None:
-            raise InvalidExtensionSetup("A folder should be opened instead of a file in order to use the inmanta extension.")
+        if rootPath:
+            logger.info(f"The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
+        if rootUri:
+            logger.info(f"The rootUri parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
+
+        if workspaceFolders is None:
+            raise InvalidExtensionSetup("no workspace folder specified") # TODO check if this logic makes sense
 
         self.rootPath = rootPath
         self.rootUrl = rootUri
-        self.workspace_folders = workspaceFolders
+
+        # Keep track of the roots folders opened in this workspace
+        self._workspace_folders: Dict[str, str] = self._unpack_workspaces(workspaceFolders)
 
         logger.info(f"rootPath = {rootPath}")
         logger.info(f"rootUri = {rootUri}")
@@ -89,12 +96,12 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.info(f"kwargs = {kwargs}")
         logger.info(f"capabilities = {capabilities}")
 
-        os.chdir(rootPath)
+        os.chdir(rootPath) # TODO fix this for workspaces
         init_options = kwargs.get("initializationOptions", None)
 
         if init_options:
             self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
-            self.repos = init_options.get("repos", None)
+            self.repos = init_options.get("repos", None) # TODO Postpone this to have a per-folder config + 'resource' scope
 
         value_set: List[int]
         try:
@@ -134,6 +141,9 @@ class InmantaLSHandler(JsonRpcHandler):
                 }
             }
         }
+
+    def _unpack_workspaces(self, workspaceFolders: Sequence[object]):
+        return {workspace["uri"]: workspace["name"] for workspace in workspaceFolders}
 
     def flatten(self, line, char):
         """convert linenr char combination into a single number"""
@@ -190,16 +200,21 @@ class InmantaLSHandler(JsonRpcHandler):
 
         return self.project_dir.name
 
-    async def compile_and_anchor(self) -> None:
-        def sync_compile_and_anchor() -> None:
-            def setup_project():
-                # Check that we are working inside an existing project:
-                project_file: str = os.path.join(self.rootPath, module.Project.PROJECT_FILE)
-                if os.path.exists(project_file):
-                    project_dir: str = self.rootPath
+    async def compile_and_anchor(self, folders: Optional[Sequence[str]] = None) -> None:
+        """
+        Perform a compile and compute an anchormap for the currently open folder or workspace.
 
+        :parameter folders: When specified, only these folders will be considered instead of all the folders in the workspace.
+
+        """
+        def sync_compile_and_anchor_folder(folder: str):
+            def setup_project(folder: str):
+                # Check that we are working inside an existing project:
+                project_file: str = os.path.join(folder, module.Project.PROJECT_FILE)
+                if os.path.exists(project_file):
+                    project_dir: str = folder
                 else:
-                    # Create a project in the vscode temp folder
+                    # Create a temporary project
                     project_dir = self.create_tmp_project()
 
                 if LEGACY_MODE_COMPILER_VENV:
@@ -217,7 +232,7 @@ class InmantaLSHandler(JsonRpcHandler):
             handler.Commander.reset()
 
             # fresh project
-            setup_project()
+            setup_project(folder)
 
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
@@ -250,11 +265,21 @@ class InmantaLSHandler(JsonRpcHandler):
                 os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
             }
 
+        def sync_compile_and_anchor_folders(folders) -> None:
+            if folders is None:
+                # No folders specified -> compile and anchor all folders in the workspace
+                folders = self._workspace_folders.keys()
+
+            for folder in folders:
+                sync_compile_and_anchor_folder(folder)
+
+
+
         try:
             if self.shutdown_requested:
                 return
             # run synchronous part in executor to allow context switching while awaiting
-            await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
+            await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor_folders, folders)
             await self.publish_diagnostics(None)
             logger.info("Compilation succeeded")
         except asyncio.CancelledError:
@@ -324,15 +349,19 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
-        logger.info("document saved, should probably do something hereHERE")
+        logger.info(f"document saved, should probably do something here {kwargs=}")
         await self.compile_and_anchor()
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass
 
     async def workspace_didChangeWorkspaceFolders(self, **kwargs):  # noqa: N802
-        logger.info("workspace changed, should probably do something here")
-        logger.info(f"{kwargs=}")
+        logger.info(f"workspace changed, should probably do something here {kwargs=}")
+        added = self._unpack_workspaces(kwargs["event"]["added"])
+        removed = self._unpack_workspaces(kwargs["event"]["removed"])
+
+        self._workspace_folders += added
+        self._workspace_folders -= removed
         pass
 
     def convert_location(self, loc):
