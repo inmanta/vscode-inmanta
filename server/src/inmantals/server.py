@@ -24,7 +24,7 @@ import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from dataclasses import dataclass
 from itertools import chain
-from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Union
 
 from tornado.iostream import BaseIOStream
 
@@ -67,33 +67,62 @@ class InvalidExtensionSetup(Exception):
 
 
 @dataclass
-class WorkSpace:
+class Folder:
     """
-    Wrapper class around a workspace
+    Wrapper class around a folder living in a workspace
     """
 
-    folder: URI
+    folder_uri: URI
     name: str
-    inmanta_project_dir: Optional[tempfile.TemporaryDirectory]
+    inmanta_project_dir: Union[Optional[tempfile.TemporaryDirectory], str]
+
+    def __init__(self, folder_uri: URI, name: str):
+        self.folder_uri = folder_uri
+        self.name = name
+
+        # Check that we are working inside an existing project:
+        project_file: str = os.path.join(folder_uri.path, module.Project.PROJECT_FILE)
+        if os.path.exists(project_file):
+            self.inmanta_project_dir = os.path.dirname(project_file)
+        else:
+            self.inmanta_project_dir = None
+
+    def get_project_dir(self) -> Optional[str]:
+        if not self.inmanta_project_dir:
+            return None
+        if isinstance(self.inmanta_project_dir, str):
+            return self.inmanta_project_dir
+        else:
+            return self.inmanta_project_dir.name
+
+
 
     @classmethod
-    def unpack_workspaces(cls, workspace_folders: Sequence[object]) -> Dict[str, "WorkSpace"]:
+    def unpack_workspaces(cls, workspace_folders: Sequence[object]) -> Dict[str, "Folder"]:
         return {
-            workspace["uri"]: WorkSpace(URI(workspace["uri"]), workspace["name"], inmanta_project_dir=None)
-            for workspace in workspace_folders
+            folder["uri"]: Folder(URI(folder["uri"]), folder["name"])
+            for folder in workspace_folders
         }
 
     def cleanup(self):
+        logger.info(f"calling cleanup for {self}")
         if self.inmanta_project_dir:
             self.inmanta_project_dir.cleanup()
 
-    def get_workspace_path(self):
+    def get_folder_path(self):
         """
-        Convert the workspace's uri into a regular path
+        Convert the folders's uri into a regular path
         (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#uri)
         """
-        return self.folder.path
+        return self.folder_uri.path
 
+    def __repr__(self):
+        pj = self.get_project_dir()
+        if pj is None:
+            pj = "."
+        else:
+            pj = "with a project at " + pj + "."
+        return f"Folder {self.name} opened at {self.get_folder_path()}" + pj
 
 class InmantaLSHandler(JsonRpcHandler):
     def __init__(self, instream: BaseIOStream, outstream: BaseIOStream, address):
@@ -126,7 +155,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.rootUrl = rootUri
 
         # Keep track of the folders opened in this workspace
-        self._workspace_folders: Dict[str, WorkSpace] = WorkSpace.unpack_workspaces(workspaceFolders)
+        self._workspace_folders: Dict[str, Folder] = Folder.unpack_workspaces(workspaceFolders)
 
         logger.info(f"rootPath = {rootPath}")
         logger.info(f"rootUri = {rootUri}")
@@ -140,7 +169,7 @@ class InmantaLSHandler(JsonRpcHandler):
         if init_options:
             self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
             self.repos = init_options.get("repos", None)  # TODO Postpone this to have a per-folder config + 'resource' scope
-
+            # self.repos = self.repos.strip('][').split(', ')
         value_set: List[int]
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
@@ -185,54 +214,63 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
-    def create_tmp_project(self) -> str:
-        self.project_dir = tempfile.TemporaryDirectory()
-        logger.info(f"Temporary project created at {self.project_dir.name}.")
+    def create_tmp_project(self, folder: Folder) -> str:
+        folder.inmanta_project_dir = tempfile.TemporaryDirectory()
+        logger.info(f"Temporary project created at {folder.inmanta_project_dir.name}.")
 
-        os.mkdir(os.path.join(self.project_dir.name, "libs"))
+        os.mkdir(os.path.join(folder.inmanta_project_dir.name, "libs"))
 
         install_mode = module.InstallMode.master
 
-        modulepath = ["libs", os.path.dirname(self.rootPath)]
+        os.chdir(folder.inmanta_project_dir.name)
+        logger.info(f"curdir is now {folder.inmanta_project_dir.name}")
 
-        with open(os.path.join(self.project_dir.name, "project.yml"), "w+") as fd:
-            metadata: typing.Mapping[str, object] = {
-                "name": "Temporary project",
-                "description": "Temporary project",
-                "repo": yaml.safe_load(self.repos),
-                "modulepath": modulepath,
-                "downloadpath": "libs",
-                "install_mode": install_mode.value,
-            }
-            yaml.dump(metadata, fd)
 
-        v2_metadata_file: str = os.path.join(self.rootPath, module.ModuleV2.MODULE_FILE)
-        v1_metadata_file: str = os.path.join(self.rootPath, module.ModuleV1.MODULE_FILE)
+        v2_metadata_file: str = os.path.join(folder.get_folder_path(), module.ModuleV2.MODULE_FILE)
+        v1_metadata_file: str = os.path.join(folder.get_folder_path(), module.ModuleV1.MODULE_FILE)
 
         module_name: Optional[str] = None
+        mv2_repo = []
+        modulepath = ["libs"]
         if os.path.exists(v2_metadata_file):
-            mv2 = module.ModuleV2(project=None, path=self.rootPath)
+            mv2 = module.ModuleV2(project=None, path=folder.get_folder_path())
             module_name = mv2.name
+            logger.info(self.repos)
+            # repos_list = self.repos.strip('][').split(', ')
+            # mv2_repo.append(yaml.safe_load(str({'url': folder, 'type': 'package'})))
+
         elif os.path.exists(v1_metadata_file):
-            mv1 = module.ModuleV1(project=None, path=self.rootPath)
+            mv1 = module.ModuleV1(project=None, path=folder.get_folder_path())
             module_name = mv1.name
+            modulepath.append(os.path.dirname(folder.get_folder_path()))
 
         if not module_name:
             error_message: str = (
                 "The Inmanta extension only works on projects and modules. "
-                "Please make sure the current workspace is a valid "
+                f"Please make sure the folder opened at {folder.get_folder_path()} is a valid "
                 "[project](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html)"
                 " or "
                 "[module](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)"
             )
             raise InvalidExtensionSetup(error_message)
 
-        with open(os.path.join(self.project_dir.name, "main.cf"), "w+") as fd:
+        with open(os.path.join(folder.inmanta_project_dir.name, "project.yml"), "w+") as fd:
+            metadata: typing.Mapping[str, object] = {
+                "name": "Temporary project",
+                "description": "Temporary project",
+                "repo": yaml.safe_load(self.repos) + mv2_repo,  # TODO get resource scoped settings here
+                "modulepath": modulepath,
+                "downloadpath": "libs",
+                "install_mode": install_mode.value,
+            }
+            yaml.dump(metadata, fd)
+
+        with open(os.path.join(folder.inmanta_project_dir.name, "main.cf"), "w+") as fd:
             fd.write(f"import {module_name}\n")
 
-        return self.project_dir.name
+        return folder.inmanta_project_dir.name
 
-    async def compile_and_anchor(self, folders: Optional[Sequence[str]] = None) -> None:
+    async def compile_and_anchor(self, folders: Optional[Sequence[Folder]] = None) -> None:
         """
         Perform a compile and compute an anchormap for the currently open folder or workspace.
 
@@ -240,17 +278,20 @@ class InmantaLSHandler(JsonRpcHandler):
 
         """
 
-        def sync_compile_and_anchor_folder(folder: str):
+        def sync_compile_and_anchor_folder(folder: Folder):
             logger.info(f"compile and anchor for folder {folder}")
-
-            def setup_project(folder: str):
+            def setup_project(folder: Folder):
                 # Check that we are working inside an existing project:
-                project_file: str = os.path.join(folder, module.Project.PROJECT_FILE)
-                if os.path.exists(project_file):
-                    project_dir: str = folder
+                # project_file: str = os.path.join(folder, module.Project.PROJECT_FILE)
+                # if os.path.exists(project_file):
+                if folder.inmanta_project_dir:
+                    # project_dir: str = folder.inmanta_project_dir.name
+                    project_dir: str = folder.get_project_dir()
+                    logger.info(f"using  existing project {project_dir}")
                 else:
                     # Create a temporary project
-                    project_dir = self.create_tmp_project()
+                    project_dir = self.create_tmp_project(folder)
+                    logger.info(f"New project created: TMP dir {project_dir}")
 
                 if LEGACY_MODE_COMPILER_VENV:
                     if self.compiler_venv_path:
@@ -300,21 +341,26 @@ class InmantaLSHandler(JsonRpcHandler):
                 os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
             }
 
-        def sync_compile_and_anchor_folders(folders) -> None:
-            if folders is None:
+        async def sync_compile_and_anchor_folders(folders: Optional[Sequence[Folder]]) -> None:
+            if folders is None or folders[0] is None:
                 # No folders specified -> compile and anchor all folders in the workspace
-                folders = [folder.get_workspace_path() for folder in self._workspace_folders.values()]
+                folders = self._workspace_folders.values()
+                logger.info(f"Folders was none, got these paths insteasd {folders}")
 
             for folder in folders:
-                sync_compile_and_anchor_folder(folder)
+                # sync_compile_and_anchor_folder(folder)
+                # run synchronous part in executor to allow context switching while awaiting
+                await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor_folder, folder)
+                await self.publish_diagnostics(None)
+                logger.info(f"Compilation succeeded for folder {folder}")
 
         try:
             if self.shutdown_requested:
                 return
+            await sync_compile_and_anchor_folders(folders)
             # run synchronous part in executor to allow context switching while awaiting
-            await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor_folders, folders)
-            await self.publish_diagnostics(None)
-            logger.info("Compilation succeeded")
+            # await self.publish_diagnostics(None)
+            # logger.info("Compilation succeeded")
         except asyncio.CancelledError:
             # Language server is shutting down. Tasks in threadpool were cancelled.
             pass
@@ -346,6 +392,10 @@ class InmantaLSHandler(JsonRpcHandler):
 
             await self.publish_diagnostics(None)
             logger.exception("Compilation failed")
+
+        logger.info(f"DONE compile_and_anchor for folders {folders}")
+        logger.info(f"cur dir {os.path.abspath(os.curdir)}")
+        logger.info("-"*100)
 
     async def handle_invalid_extension_setup(self, e: InvalidExtensionSetup):
         await self.send_show_message(
@@ -385,14 +435,37 @@ class InmantaLSHandler(JsonRpcHandler):
         self.running = False
 
     async def textDocument_didOpen(self, **kwargs):  # noqa: N802
+        logger.info(f"document opened, should probably do something here {kwargs=}")
+        pass
+
+    async def window_onDidChangeTextEditorViewColumn(self, **kwargs):  # noqa: N802
+        logger.info(f"window_onDidChangeTextEditorViewColumn, should probably do something here {kwargs=}")
+        pass
+
+
+    async def window_onDidChangeActiveTextEditor(self, **kwargs):  # noqa: N802
+        logger.info(f"onDidChangeActiveTextEditor, should probably do something here {kwargs=}")
         pass
 
     async def textDocument_didChange(self, **kwargs):  # noqa: N802
+        logger.info(f"document changed, should probably do something here {kwargs=}")
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
         logger.info(f"document saved, should probably do something here {kwargs=}")
-        await self.compile_and_anchor()
+        # {'textDocument': {'uri': 'file:///home/hugo/tmp/tmp_module/test-module-v2/model/_init.cf'}}
+        file_uri: URI = kwargs["textDocument"]["uri"]
+        try:
+            # r = await self.dispatch_method(1, "getWorkspaceFolder", file_uri)
+            # await self.send_notification("textDocument/publishDiagnostics", publish_params.dict())
+            r = await self.send_notification("workspace/getWorkspaceFolder", {"uri": file_uri})
+
+            logger.info(f"YEEHA {r}")
+
+            # folder = self.getWorkspaceFolder(file_uri)
+        except Exception as e:
+            logger.info(f"SOOP {e}")
+        await self.compile_and_anchor([r])
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass
@@ -401,8 +474,8 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.info(f"workspace changed, should probably do something HERE {kwargs=}")
         event = kwargs.get("event", None)
         if event:
-            added = WorkSpace.unpack_workspaces(event["added"])
-            removed = WorkSpace.unpack_workspaces(event["removed"])
+            added = Folder.unpack_workspaces(event["added"])
+            removed = Folder.unpack_workspaces(event["removed"])
 
             logger.info(f"before change {self._workspace_folders}")
             logger.info(f"{added=}")
@@ -417,7 +490,7 @@ class InmantaLSHandler(JsonRpcHandler):
             for folder in removed.values():
                 folder.cleanup()
 
-            await self.compile_and_anchor(added)
+            await self.compile_and_anchor()
 
     def convert_location(self, loc):
         prefix = "file:///" if os.name == "nt" else "file://"
