@@ -151,6 +151,7 @@ class InmantaLSHandler(JsonRpcHandler):
         if workspaceFolders is None:
             raise InvalidExtensionSetup("no workspace folder specified")  # TODO check if this logic makes sense
 
+
         self.rootPath = rootPath
         self.rootUrl = rootUri
 
@@ -169,7 +170,7 @@ class InmantaLSHandler(JsonRpcHandler):
         if init_options:
             self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
             self.repos = init_options.get("repos", None)  # TODO Postpone this to have a per-folder config + 'resource' scope
-            # self.repos = self.repos.strip('][').split(', ')
+
         value_set: List[int]
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
