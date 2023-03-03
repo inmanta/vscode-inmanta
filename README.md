@@ -60,9 +60,11 @@ You can find the settings of the extension, in the Settings panel, under `Extens
 
 ![Settings screenshot](images/screenshot-settings.png)
 
-The extension currently has two settings:
+The extension currently has three settings:
  - inmanta.compilerVenv: Absolute path to the virtual environment the compiler and language server should use.
  - inmanta.ls.enabled: Whether or not activate the Inmanta Language server (you probably want to).
+ - inmanta.repos: A yaml list of repositories to tell the Inmanta extension where to look for modules. This setting is only used when working on a module.
+
 
 ### Python environments
 The plugin uses the Python extension to change environments. This can be done by clicking on the active environment in the bottombar
