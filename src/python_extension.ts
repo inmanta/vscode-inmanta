@@ -1,13 +1,15 @@
 'use strict';
 
 import { workspace } from 'vscode';
-import { log } from './extension';
 import { IExtensionApi, Resource } from './types';
+import { log } from './utils';
 
 export const PYTHONEXTENSIONID = "ms-python.python";
 
 export class PythonExtension {
 	executionDetails: {execCommand: string[] | undefined;};
+
+
 	constructor(pythonApi : IExtensionApi, private onChangeCallback: Function) {
 		this.executionDetails = pythonApi.settings.getExecutionDetails(workspace.workspaceFolders?.[0].uri);
 		this.onChange(pythonApi);
@@ -30,6 +32,4 @@ export class PythonExtension {
 			}
 		);
 	}
-
-
   }
