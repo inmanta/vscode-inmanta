@@ -58,6 +58,12 @@
                     "default": "",
                     "description": "Path to the Python virtual environment used by the compiler. Will only be used by language server if inmanta-core<6. Leave empty to use the default. Only available when using Inmanta versions higher than 2020.5 in the language server environment.",
                     "scope": "window"
+                },
+                "inmanta.repos": {
+                    "type": "string",
+                    "default": "",
+                    "markdownDescription": "Optional yaml list of repositories to indicate the Inmanta extension where to look for modules when working on an individual module.\nWhen working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories defined in the repo section of the [project.yaml](https://docs.inmanta.com/inmanta-service-orchestrator/latest/reference/projectyml.html#project-yml) file.",
+                    "scope": "window"
                 }
             }
         },
@@ -115,7 +121,7 @@
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
         "lru-cache": "^7.18.1",
-        "minimatch": "^7.4.1",
+        "minimatch": "^7.4.2",
         "vscode-languageclient": "^8.1.0"
     },
     "extensionDependencies": [
@@ -132,7 +138,7 @@
     "devDependencies": {
         "@types/fs-extra": "^11.0.1",
         "@types/mocha": "^10.0.1",
-        "@types/node": "^18.14.2",
+        "@types/node": "^18.14.5",
         "@types/semver": "^7.3.13",
         "@types/vscode": "^1.63.2",
         "@typescript-eslint/eslint-plugin": "^5.54.0",
@@ -142,9 +148,9 @@
         "eslint": "^8.35.0",
         "eslint-config-google": "^0.14.0",
         "fs-extra": "^11.1.0",
-        "glob": "^9.0.1",
+        "glob": "^9.2.1",
         "mocha": "^10.2.0",
-        "rimraf": "^4.1.2",
+        "rimraf": "^4.2.0",
         "semver": "^7.3.8",
         "typescript": "^4.9.5"
     },

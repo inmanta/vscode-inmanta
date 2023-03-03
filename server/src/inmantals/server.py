@@ -19,6 +19,8 @@ import asyncio
 import json
 import logging
 import os
+import tempfile
+import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Set, Tuple
@@ -27,6 +29,7 @@ from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
 import pkg_resources
+import yaml
 from inmanta import compiler, module, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Range
@@ -53,6 +56,14 @@ Recent versions use the encapsulating environment and require explicit project i
 logger = logging.getLogger(__name__)
 
 
+class InvalidExtensionSetup(Exception):
+    """The extension can only run on a valid project or module, and not on a single file."""
+
+    def __init__(self, message: str) -> None:
+        Exception.__init__(self, message)
+        self.message = message
+
+
 class InmantaLSHandler(JsonRpcHandler):
     def __init__(self, instream: BaseIOStream, outstream: BaseIOStream, address):
         super(InmantaLSHandler, self).__init__(instream, outstream, address)
@@ -70,14 +81,16 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("Init: " + json.dumps(kwargs))
 
         if rootPath is None:
-            raise Exception("A folder should be opened instead of a file in order to use the inmanta extension.")
+            raise InvalidExtensionSetup("A folder should be opened instead of a file in order to use the inmanta extension.")
 
         self.rootPath = rootPath
         self.rootUrl = rootUri
         os.chdir(rootPath)
         init_options = kwargs.get("initializationOptions", None)
+
         if init_options:
             self.compiler_venv_path = init_options.get("compilerVenv", os.path.join(self.rootPath, ".env-ls-compiler"))
+            self.repos = init_options.get("repos", None)
 
         value_set: List[int]
         try:
@@ -117,22 +130,80 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
+    def create_tmp_project(self) -> str:
+        self.project_dir = tempfile.TemporaryDirectory()
+        logger.info(f"Temporary project created at {self.project_dir.name}.")
+
+        os.mkdir(os.path.join(self.project_dir.name, "libs"))
+
+        install_mode = module.InstallMode.master
+
+        modulepath = ["libs", os.path.dirname(self.rootPath)]
+
+        with open(os.path.join(self.project_dir.name, "project.yml"), "w+") as fd:
+            metadata: typing.Mapping[str, object] = {
+                "name": "Temporary project",
+                "description": "Temporary project",
+                "repo": yaml.safe_load(self.repos),
+                "modulepath": modulepath,
+                "downloadpath": "libs",
+                "install_mode": install_mode.value,
+            }
+            yaml.dump(metadata, fd)
+
+        v2_metadata_file: str = os.path.join(self.rootPath, module.ModuleV2.MODULE_FILE)
+        v1_metadata_file: str = os.path.join(self.rootPath, module.ModuleV1.MODULE_FILE)
+
+        module_name: Optional[str] = None
+        if os.path.exists(v2_metadata_file):
+            mv2 = module.ModuleV2(project=None, path=self.rootPath)
+            module_name = mv2.name
+        elif os.path.exists(v1_metadata_file):
+            mv1 = module.ModuleV1(project=None, path=self.rootPath)
+            module_name = mv1.name
+
+        if not module_name:
+            error_message: str = (
+                "The Inmanta extension only works on projects and modules. "
+                "Please make sure the current workspace is a valid project "
+                "(https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html) or "
+                "module (https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)."
+            )
+            raise InvalidExtensionSetup(error_message)
+
+        with open(os.path.join(self.project_dir.name, "main.cf"), "w+") as fd:
+            fd.write(f"import {module_name}\n")
+
+        return self.project_dir.name
+
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
+            def setup_project():
+                # Check that we are working inside an existing project:
+                project_file: str = os.path.join(self.rootPath, module.Project.PROJECT_FILE)
+                if os.path.exists(project_file):
+                    project_dir: str = self.rootPath
+
+                else:
+                    # Create a project in the vscode temp folder
+                    project_dir = self.create_tmp_project()
+
+                if LEGACY_MODE_COMPILER_VENV:
+                    if self.compiler_venv_path:
+                        logger.debug("Using venv path " + str(self.compiler_venv_path))
+                        module.Project.set(module.Project(project_dir, venv_path=self.compiler_venv_path))
+                    else:
+                        module.Project.set(module.Project(project_dir))
+                else:
+                    module.Project.set(module.Project(project_dir))
+                    module.Project.get().install_modules()
+
             # reset all
             resources.resource.reset()
             handler.Commander.reset()
 
             # fresh project
-            if LEGACY_MODE_COMPILER_VENV:
-                if self.compiler_venv_path:
-                    logger.debug("Using venv path " + str(self.compiler_venv_path))
-                    module.Project.set(module.Project(self.rootPath, venv_path=self.compiler_venv_path))
-                else:
-                    module.Project.set(module.Project(self.rootPath))
-            else:
-                module.Project.set(module.Project(self.rootPath))
-                module.Project.get().install_modules()
+            setup_project()
 
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
@@ -192,14 +263,23 @@ class InmantaLSHandler(JsonRpcHandler):
                     ],
                 )
             await self.publish_diagnostics(params)
-            await self.check_module_install_failure(e)
+            await self.handle_module_loading_exception(e)
             logger.exception("Compilation failed")
+        except InvalidExtensionSetup as e:
+            await self.handle_invalid_extension_setup(e)
+            logger.error(e)
 
         except Exception:
             await self.publish_diagnostics(None)
             logger.exception("Compilation failed")
 
-    async def check_module_install_failure(self, e: CompilerException):
+    async def handle_invalid_extension_setup(self, e: InvalidExtensionSetup):
+        await self.send_show_message(
+            lsp_types.MessageType.Warning,
+            f"{e.message}.",
+        )
+
+    async def handle_module_loading_exception(self, e: CompilerException):
         """
         Send a suggestion to the user to run the inmanta project install command when a module install failure is detected.
         """
@@ -220,7 +300,11 @@ class InmantaLSHandler(JsonRpcHandler):
 
     async def shutdown(self, **kwargs):
         self.shutdown_requested = True
+        self.cleanup_tmp()
         self.threadpool.shutdown(cancel_futures=True)
+
+    def cleanup_tmp(self):
+        self.project_dir.cleanup()
 
     async def exit(self, **kwargs):
         self.running = False
