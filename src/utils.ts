@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import { ErrorHandler, Message, ErrorAction, CloseAction, ErrorHandlerResult, CloseHandlerResult } from 'vscode-languageclient';
 
 
 /**
@@ -24,17 +23,3 @@ export function log(message: string) {
 	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
 }
 
-
-/**
- * An implementation of the ErrorHandler interface for the language server client.
- */
-export class LsErrorHandler implements ErrorHandler{
-	error(error: Error, message: Message | undefined, count: number | undefined): ErrorHandlerResult {;
-		return {action: ErrorAction.Shutdown};
-	}
-
-	closed(): CloseHandlerResult{
-		return {action: CloseAction.DoNotRestart};
-	}
-
-}

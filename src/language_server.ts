@@ -10,7 +10,8 @@ import { RevealOutputChannelOn, LanguageClientOptions} from 'vscode-languageclie
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
 import { PythonExtension } from './python_extension';
-import { fileOrDirectoryExists, log, LsErrorHandler } from './utils';
+import { fileOrDirectoryExists, log } from './utils';
+import { LsErrorHandler } from './extension';
 
 enum LanguageServerDiagnoseResult {
 	wrongInterpreter,
@@ -26,10 +27,10 @@ export class LanguageServer {
 	serverProcess: cp.ChildProcess;
 	context: ExtensionContext;
 	pythonExtentionApi: PythonExtension;
-	errorhandler = new LsErrorHandler();
+	errorHandler = new LsErrorHandler();
 	lsOutputChannel:OutputChannel = null;
 
-	constructor(context: ExtensionContext, pythonExtension: Extension<any>) {
+	constructor(context: ExtensionContext, pythonExtension: Extension<any>, errorHandler: LsErrorHandler) {
 		/**
 		 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
          *
@@ -38,6 +39,7 @@ export class LanguageServer {
          */
 		this.context = context;
 		this.pythonExtentionApi = new PythonExtension(pythonExtension.exports, this.startOrRestartLS.bind(this));
+		this.errorHandler = errorHandler;
 	}
 
 	async canServerStart():Promise<LanguageServerDiagnoseResult>{
@@ -183,7 +185,7 @@ export class LanguageServer {
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
-			errorHandler: this.errorhandler,
+			errorHandler: this.errorHandler,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6

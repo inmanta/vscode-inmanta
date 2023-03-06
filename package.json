@@ -77,6 +77,11 @@
                 "command": "inmanta.installLS",
                 "title": "Install the inmanta Language Server",
                 "category": "inmanta"
+            },
+            {
+                "command": "inmanta.activateLS",
+                "title": "Activate the inmanta Language Server",
+                "category": "inmanta"
             }
         ],
         "menus": {
@@ -110,7 +115,13 @@
                   "id": "inmanta.installLanguageServer",
                   "title": "Install the Language Server",
                   "description": "Install the language server to enjoy features like Syntax highlighting, Code navigation and many more. \n[Install Language Server](command:inmanta.installLS)",
-                  "media": { "markdown": "media/markdown_ls.md" }
+                  "media": { "markdown": "media/markdown_install_ls.md" }
+                },
+                {
+                  "id": "inmanta.activateLanguageServer",
+                  "title": "Make sure the Language Server is enabled",
+                  "description": "To have the language server start, it needs to be activated in the settings.  \n[Activate Language Server](command:inmanta.activateLS)",
+                  "media": { "markdown": "media/markdown_activate_ls.md" }
                 }
               ]
             }

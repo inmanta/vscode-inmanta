@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as cp from 'child_process';
 
-import { ExtensionContext,window, OutputChannel, Uri, commands } from "vscode";
+import { ExtensionContext,window, OutputChannel, Uri, commands, workspace } from "vscode";
 import { LanguageServer } from './language_server';
 
 /**
@@ -54,9 +54,18 @@ export function registerExportCommand(context: ExtensionContext, pythonPath:stri
 export function registerInstallLangueServerCommand(context: ExtensionContext, languageserver: LanguageServer){
 	const commandInstallLSId = 'inmanta.installLS';
 	const commandInstallLSHandler = () => {
-	languageserver.installLanguageServer(false);
-};
+		languageserver.installLanguageServer(false);
+	};
 	context.subscriptions.push(commands.registerCommand(commandInstallLSId, commandInstallLSHandler));
 }
 
 
+export function registerActivateLangueServer(context: ExtensionContext){
+	const commandActivateLSId = 'inmanta.activateLS';
+	const commandActivateLSHandler = () => {
+		const config = workspace.getConfiguration();
+		config.update('inmanta.ls.enabled', true);
+		window.showInformationMessage("The Language server has been enabled");
+	};
+	context.subscriptions.push(commands.registerCommand(commandActivateLSId, commandActivateLSHandler));
+}
