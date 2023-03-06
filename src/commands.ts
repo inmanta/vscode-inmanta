@@ -4,7 +4,12 @@ import * as cp from 'child_process';
 import { ExtensionContext,window, OutputChannel, Uri, commands } from "vscode";
 import { LanguageServer } from './language_server';
 
-
+/**
+ * Registers the 'exportToServer' command with VS Code. which exports the configuration to an Inmanta server.
+ *
+ * @param {ExtensionContext} context The extension context object provided by VS Code.
+ * @param {string} pythonPath The path to the Python interpreter.
+ */
 export function registerExportCommand(context: ExtensionContext, pythonPath:string) {
 	let exportToServerChannel: OutputChannel = null;
 	const commandExportToServerId = 'inmanta.exportToServer';
@@ -40,6 +45,12 @@ export function registerExportCommand(context: ExtensionContext, pythonPath:stri
 	context.subscriptions.push(commands.registerCommand(commandExportToServerId, commandHandlerExportToServer));
 }
 
+/**
+ * Registers the 'installLS' command with VS Code, which installs the Inmanta language server.
+ *
+ * @param {ExtensionContext} context The extension context object provided by VS Code.
+ * @param {LanguageServer} languageserver An instance of the LanguageServer class, which provides methods for installing and managing the language server.
+ */
 export function registerInstallLangueServerCommand(context: ExtensionContext, languageserver: LanguageServer){
 	const commandInstallLSId = 'inmanta.installLS';
 	const commandInstallLSHandler = () => {

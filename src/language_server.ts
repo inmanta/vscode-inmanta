@@ -6,15 +6,12 @@ import * as os from 'os';
 import getPort from 'get-port';
 
 import { commands, Extension, ExtensionContext, OutputChannel, window, workspace} from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction, ErrorHandlerResult, CloseHandlerResult } from 'vscode-languageclient';
+import { RevealOutputChannelOn, LanguageClientOptions} from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
 import { PythonExtension } from './python_extension';
-import { fileOrDirectoryExists, log } from './utils';
+import { fileOrDirectoryExists, log, LsErrorHandler } from './utils';
 
-/**
- * Enum representing possible errors that can occur when starting the Inmanta language server.
- */
 enum LanguageServerDiagnoseResult {
 	wrongInterpreter,
 	wrongPythonVersion,
@@ -23,9 +20,6 @@ enum LanguageServerDiagnoseResult {
 	ok,
   }
 
-/**
- * Language server class responsible for starting and managing the Inmanta language server process.
- */
 export class LanguageServer {
 	mutex = new Mutex();
 	client: LanguageClient;
@@ -35,20 +29,23 @@ export class LanguageServer {
 	errorhandler = new LsErrorHandler();
 	lsOutputChannel:OutputChannel = null;
 
-	/**
-	 * @param context - The extension context
-	 * @param pythonExtension - The Python extension used to start the language server
-	 */
 	constructor(context: ExtensionContext, pythonExtension: Extension<any>) {
+		/**
+		 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
+         *
+         * @param {ExtensionContext} context the extension context.
+         * @param {Extension<any>} pythonExtension the Python extension.
+         */
 		this.context = context;
 		this.pythonExtentionApi = new PythonExtension(pythonExtension.exports, this.startOrRestartLS.bind(this));
 	}
 
-	/**
-	 * Method used to check if the language server can start or if an error occurred.
-	 * @returns A LanguageServerError if an error occurred or undefined if the server can start
-	 */
 	async canServerStart():Promise<LanguageServerDiagnoseResult>{
+		/**
+         * Check if the server can start.
+         *
+         * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
+         */
 		if (!this.pythonExtentionApi.pythonPath || !fileOrDirectoryExists(this.pythonExtentionApi.pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
@@ -79,11 +76,12 @@ export class LanguageServer {
 		}
 	}
 
-	/**
-	 * Method used to propose a solution for a given error that occurs when starting the language server.
-	 * @param error - The error that occurred when starting the language server
-	 */
 	async proposeSolution(error:LanguageServerDiagnoseResult){
+		/**
+		 * Propose a solution according to the given error.
+         *
+         * @param {LanguageServerDiagnoseResult} error the extension language server error for wich we propose a solution
+         */
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
 				await this.selectInterpreter();
@@ -100,15 +98,17 @@ export class LanguageServer {
 		}
 	}
 
-	/**
-	 * Method used to select the interpreter when none is available or an invalid interpreter is selected.
-	 */
 	async selectInterpreter(){
+		/**
+		* Prompt the user to select a Python interpreter.
+		* @returns {Promise<any>} A Promise that resolves to the result of startOrRestartLS() after the interpreter is selected.
+		*    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
+		*/
 		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
 		if(response === 'Select interpreter'){
 			return await commands.executeCommand('python.setInterpreter').then(()=>{
 				log(`Starting server and client`);
-				this.startOrRestartLS(true);
+				return this.startOrRestartLS(true);
 			});
 
 		} else{
@@ -117,10 +117,13 @@ export class LanguageServer {
 		}
 	}
 
-	/**
-	 * Method used to propose the user to install the Inmanta Language Server
-	 */
 	async proposeInstallLS() {
+		/**
+		 * Propose to install the Language server.
+		 * If the Python interpreter is not set or invalid, prompts the user to select a valid interpreter.
+		 * @returns {Promise<any>} - A Promise that resolves to the result of `installLanguageServer()` after the server is installed.
+		 * If the user declines to install the server, returns a Promise that rejects with an error message.
+		 */
 		if (!this.pythonExtentionApi.pythonPath || !fileOrDirectoryExists(this.pythonExtentionApi.pythonPath)) {
 			await this.selectInterpreter();
 		}
@@ -135,6 +138,11 @@ export class LanguageServer {
 	}
 
 	async installLanguageServer(startServer?: boolean): Promise<void> {
+		/**
+		 * Install the Inmanta Language Server and start it if specified.
+		 * @param {boolean} [startServer=true] Optional boolean to indicate whether to start the language server after installation. Default is true.
+		 * @returns {Promise<void>}
+		 */
 		if (!this.pythonExtentionApi.pythonPath || !fileOrDirectoryExists(this.pythonExtentionApi.pythonPath)) {
 			await this.selectInterpreter();
 		}
@@ -160,6 +168,11 @@ export class LanguageServer {
 	}
 
 	private	async getClientOptions(): Promise<LanguageClientOptions> {
+		/**
+		 * Get options for initializing the language client.
+		 * @returns {Promise<LanguageClientOptions>} A Promise that resolves to an object containing options for the language client, including document selector, error handler, output channel settings, and initialization options.
+		 * @throws {Error} Throws an error if a file is opened instead of a folder.
+		 */
 		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
 		let repos: string = workspace.getConfiguration('inmanta').repos;
 		if (this.context.storageUri === undefined) {
@@ -182,9 +195,10 @@ export class LanguageServer {
 
 	private async startServerAndClient(): Promise<void> {
 		/**
-		 * Should always run under `mutex` lock.
+		 * Starts the Inmanta Language Server and client.
+		 * This function should always run under the `mutex` lock.
+		 * @returns {Promise<void>} A Promise that resolves when the server and client are started successfully.
 		 */
-
 		log("Start server and client");
 		let clientOptions;
 		try {
@@ -206,6 +220,11 @@ export class LanguageServer {
 	}
 
 	private async startTcp(clientOptions: LanguageClientOptions) {
+		/**
+		 * Starts the TCP server and the Inmanta Language Server.
+		 *
+		 * @param clientOptions The options for the language client.
+		 */
 		const host = "127.0.0.1";
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
@@ -267,6 +286,11 @@ export class LanguageServer {
 	}
 
 	async startPipe(clientOptions: LanguageClientOptions) {
+		/**
+		 * Starts the Inmanta Language Server by creating a new LanguageClient and starting it with the given clientOptions.
+		 *
+		 * @param {LanguageClientOptions} clientOptions The options for the LanguageClient.
+		 */
 		log(`Python path is ${this.pythonExtentionApi.pythonPath}`);
 
 		const serverOptions: ServerOptions = {
@@ -291,52 +315,47 @@ export class LanguageServer {
 		await this.client.start();
 	}
 
-	async startOrRestartLS(start: boolean = false): Promise<void> {
+	async startOrRestartLS(start: boolean = false){
+		/**
+		 * Starts or restarts the language server.
+		 * @param {boolean} start Whether to start the server or restart it.
+		 */
 		const canStart = await this.canServerStart();
 		if (canStart !== LanguageServerDiagnoseResult.ok){
 			await this.proposeSolution(canStart);
 			return;
 		}
+
+		if(start){
+			log("starting Language Server");
+		} else {
+			log("restarting Language Server");
+		}
+		const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
+		await this.stopServerAndClient();
+		if (enable) {
+			await this.startServerAndClient();
+		}
+
+	}
+
+	private async stopServerAndClient() {
+		/**
+		 * Stops the language server and its client.
+		 */
 		await this.mutex.runExclusive(async () => {
-			if(start){
-				log("starting Language Server");
-			} else {
-				log("restarting Language Server");
+			if (this.client) {
+				if(this.client.needsStop()){
+					await this.client.stop();
+				}
+				this.client = undefined;
 			}
-			const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
-			await this.stopServerAndClient();
-			if (enable) {
-				await this.startServerAndClient();
+			if(this.serverProcess){
+				if(!this.serverProcess.exitCode){
+					this.serverProcess.kill();
+				}
+				this.serverProcess = undefined;
 			}
 		});
 	}
-
-	private async stopServerAndClient(): Promise<void> {
-		/**
-		 * Should always execute under the `mutex` lock.
-		 */
-		if (this.client) {
-			if(this.client.needsStop()){
-				await this.client.stop();
-			}
-			this.client = undefined;
-		}
-		if(this.serverProcess){
-			if(!this.serverProcess.exitCode){
-				this.serverProcess.kill();
-			}
-			this.serverProcess = undefined;
-		}
-	}
-}
-
-class LsErrorHandler implements ErrorHandler{
-	error(error: Error, message: Message | undefined, count: number | undefined): ErrorHandlerResult {;
-		return {action: ErrorAction.Shutdown};
-	}
-
-	closed(): CloseHandlerResult{
-		return {action: CloseAction.DoNotRestart};
-	}
-
 }

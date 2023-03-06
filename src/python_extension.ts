@@ -11,15 +11,28 @@ export class PythonExtension {
 
 
 	constructor(pythonApi : IExtensionApi, private onChangeCallback: Function) {
+		/**
+		 * Creates an instance of PythonExtension.
+		 * @param {IExtensionApi} pythonApi The Python extension API.
+		 * @param {Function} onChangeCallback The callback function to be called when the active interpreter is changed.
+		 */
 		this.executionDetails = pythonApi.settings.getExecutionDetails(workspace.workspaceFolders?.[0].uri);
 		this.onChange(pythonApi);
 	}
 
 	get pythonPath(): string {
+		/**
+		 * Gets the path to the Python interpreter being used by the extension.
+		 * @returns {string} A string representing the path to the Python interpreter.
+		 */
 		return this.executionDetails.execCommand[0];
 	}
 
 	private onChange(pythonApi : IExtensionApi) {
+		/**
+		 * Registers a listener for changes to the active interpreter and calls the onChangeCallback function when the interpreter changes.
+		 * @param {IExtensionApi} pythonApi The Python extension API.
+		 */
 		pythonApi.settings.onDidChangeExecutionDetails(
 			(resource: Resource) => {
 				let newExecutionDetails = pythonApi.settings.getExecutionDetails(resource);
