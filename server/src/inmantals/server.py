@@ -247,7 +247,7 @@ class InmantaLSHandler(JsonRpcHandler):
             logger.warning("The rootUri parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
 
         if workspaceFolders is None:
-            raise InvalidExtensionSetup("no workspace folder specified")  # TODO check if this logic makes sense
+            raise InvalidExtensionSetup("No workspace folder specified.")
 
         # Keep track of the folders opened in this workspace
         self._workspace_folders: Dict[str, Folder] = Folder.unpack_workspaces(workspaceFolders, self)
@@ -472,17 +472,6 @@ class InmantaLSHandler(JsonRpcHandler):
     async def exit(self, **kwargs):
         self.running = False
 
-    async def textDocument_didOpen(self, **kwargs):  # noqa: N802
-        pass
-
-    async def window_onDidChangeTextEditorViewColumn(self, **kwargs):  # noqa: N802
-        pass
-
-    async def window_onDidChangeActiveTextEditor(self, **kwargs):  # noqa: N802
-        pass
-
-    async def textDocument_didChange(self, **kwargs):  # noqa: N802
-        pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
         logger.info(f"document saved, should probably do something here {kwargs=}")
@@ -505,36 +494,28 @@ class InmantaLSHandler(JsonRpcHandler):
 
         await self.compile_and_anchor([folder])
 
-    async def textDocument_didClose(self, **kwargs):  # noqa: N802
-        pass
-
     async def workspace_DidChangeConfiguration(self, **kwargs):  # noqa: N802
-        logger.info(f"workspace_DidChangeConfiguration, should probably do something HERE {kwargs=}")
+        logger.debug(f"workspace_DidChangeConfiguration, should probably do something HERE {kwargs=}")
         await self.compile_and_anchor()
 
-    async def workspace_workspaceFolders(self, **kwargs):  # noqa: N802
-        logger.info(f"workspace_workspaceFolders, should probably do something HERE {kwargs=}")
-
-    async def workspace_getWorkspaceFolder(self, **kwargs):  # noqa: N802
-        logger.info(f"workspace_getWorkspaceFolder, should probably do something HERE {kwargs=}")
 
     async def workspace_didChangeWorkspaceFolders(self, **kwargs):  # noqa: N802
-        logger.info(f"workspace changed, should probably do something HERE {kwargs=}")
+        logger.debug(f"Change in the workspace detected {kwargs=}")
         event = kwargs.get("event", None)
         if event:
             added = Folder.unpack_workspaces(event["added"])
             removed = Folder.unpack_workspaces(event["removed"])
 
-            logger.info(f"before change {self._workspace_folders}")
-            logger.info(f"{added=}")
-            logger.info(f"{removed=}")
+            logger.debug(f"before change {self._workspace_folders}")
+            logger.debug(f"{added=}")
+            logger.debug(f"{removed=}")
 
             self._workspace_folders.update(added)
-            logger.info(f"midle change {self._workspace_folders}")
+            logger.debug(f"middle change {self._workspace_folders}")
 
             self._workspace_folders = {k: v for k, v in self._workspace_folders.items() if k not in removed.keys()}
 
-            logger.info(f"after change {self._workspace_folders}")
+            logger.debug(f"after change {self._workspace_folders}")
             for folder in removed.values():
                 folder.cleanup()
 
