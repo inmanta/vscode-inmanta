@@ -3,6 +3,7 @@ Changes in this release:
 - Add information about how to show the python interpreter information in the status bar and make it so the status bar should appear when opening an inmanta file.
 - A warning that suggests running the `inmanta project install` command is now shown when the compiler fails to install modules. (#894)
 - Add support to work on a module. (#891)
+- Add support for workspaces. (#892)
 
 # v 1.2.0 (2022-12-23)
 Changes in this release:
