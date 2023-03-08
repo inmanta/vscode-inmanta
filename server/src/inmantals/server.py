@@ -124,13 +124,13 @@ class Folder:
     def unpack_workspaces(cls, workspace_folders: Sequence[object], ls_handler: "InmantaLSHandler") -> Dict[str, "Folder"]:
         return {folder["uri"]: Folder(URI(folder["uri"]), folder["name"], ls_handler) for folder in workspace_folders}
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         logger.info(f"calling cleanup for {self}")
         if self.inmanta_project_dir:
             self.handler.remove_folder(str(self.folder_uri))
             self.inmanta_project_dir.cleanup()
 
-    def get_folder_path(self):
+    def get_folder_path(self) -> str:
         """
         Convert the folders's uri into a regular path
         (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#uri)
@@ -190,12 +190,12 @@ class Folder:
         return self.inmanta_project_dir.name
 
     def __repr__(self):
-        pj = self.get_project_dir()
-        if pj is None:
-            pj = "."
+        project_dir = self.get_project_dir()
+        if project_dir is None:
+            project_dir = ""
         else:
-            pj = "with a project at " + pj + "."
-        return f"Folder {self.name} opened at {self.get_folder_path()}" + pj
+            project_dir = " with a project at " + project_dir + "."
+        return f"Folder {self.name} opened at {self.get_folder_path()}" + project_dir
 
 
 class InmantaLSHandler(JsonRpcHandler):
