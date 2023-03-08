@@ -22,7 +22,6 @@ import os
 import tempfile
 import typing
 from concurrent.futures.thread import ThreadPoolExecutor
-from dataclasses import dataclass
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Union
 
@@ -66,15 +65,21 @@ class InvalidExtensionSetup(Exception):
         self.message = message
 
 
-@dataclass
 class Folder:
     """
-    Wrapper class around a folder living in a workspace
+    Wrapper class around a folder (inmanta module or inmanta project). This folder can either be standalone or live in a
+    workspace alongside other folders.
+
+    The constructor should not be called explicitly. Instantiation is done through the unpack_workspaces method
+    :param folder_uri: uri of the folder that is assumed to live in a workspace
+    :param name: name of the folder
+    :param handler: reference to the InmantaLSHandler responsible for this folder
     """
 
     folder_uri: URI
     name: str
     inmanta_project_dir: Union[Optional[tempfile.TemporaryDirectory], str]
+    handler: "InmantaLSHandler"
 
     def __init__(self, folder_uri: URI, name: str, handler: "InmantaLSHandler"):
         self.folder_uri = folder_uri
@@ -89,6 +94,11 @@ class Folder:
             self.inmanta_project_dir = None
 
     def get_project_dir(self) -> Optional[str]:
+        """
+        If this folder holds an inmanta project, this returns the path to this project.
+        If this folder holds an inmanta module, this returns the path of the temporary
+        inmanta project used to load this module (see BLABAL).
+        """
         if not self.inmanta_project_dir:
             return None
         if isinstance(self.inmanta_project_dir, str):
@@ -96,16 +106,19 @@ class Folder:
         else:
             return self.inmanta_project_dir.name
 
-    def get_setting(self, key: str) -> Optional[str]:
+    def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
+        """
+        Get an inmanta extension setting for this folder
+        """
         if key == "compiler_venv_path":  # support for versions of core that require a compiler venv.
             return os.path.join(self.get_folder_path(), ".env-ls-compiler")
         try:
             # Look for some custom settings for this folder
             with open(os.path.join(self.get_folder_path(), ".vscode", "settings.json")) as settings_file:
                 settings: dict[str, str] = json.load(settings_file)
-                return settings.get(key, None)
+                return settings.get(key, default)
         except FileNotFoundError:
-            return None
+            return default
 
     @classmethod
     def unpack_workspaces(cls, workspace_folders: Sequence[object], ls_handler: "InmantaLSHandler") -> Dict[str, "Folder"]:
@@ -123,6 +136,58 @@ class Folder:
         (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#uri)
         """
         return self.folder_uri.path
+
+    def create_tmp_project(self) -> str:
+        self.inmanta_project_dir = tempfile.TemporaryDirectory()
+        logger.debug(f"Temporary project created at {self.inmanta_project_dir.name}.")
+
+        os.mkdir(os.path.join(self.inmanta_project_dir.name, "libs"))
+
+        install_mode = module.InstallMode.master
+
+        v2_metadata_file: str = os.path.join(self.get_folder_path(), module.ModuleV2.MODULE_FILE)
+        v1_metadata_file: str = os.path.join(self.get_folder_path(), module.ModuleV1.MODULE_FILE)
+
+        module_name: Optional[str] = None
+        modulepath = ["libs"]
+        if os.path.exists(v2_metadata_file):
+            mv2 = module.ModuleV2(project=None, path=self.get_folder_path())
+            module_name = mv2.name
+
+        elif os.path.exists(v1_metadata_file):
+            mv1 = module.ModuleV1(project=None, path=self.get_folder_path())
+            module_name = mv1.name
+            modulepath.append(os.path.dirname(self.get_folder_path()))
+
+        if not module_name:
+            error_message: str = (
+                "The Inmanta extension only works on projects and modules. "
+                f"Please make sure the folder opened at {self.get_folder_path()} is a valid "
+                "[project](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html)"
+                " or "
+                "[module](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)"
+            )
+            self.cleanup()
+            raise InvalidExtensionSetup(error_message)
+
+        repos = self.handler.get_setting("inmanta.repos", self, "")
+
+        logger.debug(f"project.yaml created at {os.path.join(self.inmanta_project_dir.name, 'project.yml')} {repos=}.")
+        with open(os.path.join(self.inmanta_project_dir.name, "project.yml"), "w+") as fd:
+            metadata: typing.Mapping[str, object] = {
+                "name": "Temporary project",
+                "description": "Temporary project",
+                "repo": yaml.safe_load(repos),
+                "modulepath": modulepath,
+                "downloadpath": "libs",
+                "install_mode": install_mode.value,
+            }
+            yaml.dump(metadata, fd)
+
+        with open(os.path.join(self.inmanta_project_dir.name, "main.cf"), "w+") as fd:
+            fd.write(f"import {module_name}\n")
+
+        return self.inmanta_project_dir.name
 
     def __repr__(self):
         pj = self.get_project_dir()
@@ -152,8 +217,18 @@ class InmantaLSHandler(JsonRpcHandler):
         if value is not None:
             self.inmanta_settings[key] = value
 
+    def get_setting(self, key, folder: Optional[Folder] = None, default: Optional[str] = None) -> Optional[str]:
+        """
+        Fetch a given setting in the provided folder. If the setting isn't found or no folder is provided, this will look
+        for the default value for this setting.
+        """
+        if folder:
+            folder_setting = folder.get_setting(key, default)
+            return folder_setting if folder_setting else self.get_default_setting(key, default)
+        return self.get_default_setting(key, default)
+
     def get_default_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        """Reads the default value for a setting."""
+        """Reads the default value for a setting set by the initializationOptions argument in the initialize method."""
         logger.info(f"{key=} {self.inmanta_settings=}")
         return self.inmanta_settings.get(key, default)
 
@@ -227,60 +302,6 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
-    def create_tmp_project(self, folder: Folder) -> str:
-        folder.inmanta_project_dir = tempfile.TemporaryDirectory()
-        logger.debug(f"Temporary project created at {folder.inmanta_project_dir.name}.")
-
-        os.mkdir(os.path.join(folder.inmanta_project_dir.name, "libs"))
-
-        install_mode = module.InstallMode.master
-
-        v2_metadata_file: str = os.path.join(folder.get_folder_path(), module.ModuleV2.MODULE_FILE)
-        v1_metadata_file: str = os.path.join(folder.get_folder_path(), module.ModuleV1.MODULE_FILE)
-
-        module_name: Optional[str] = None
-        modulepath = ["libs"]
-        if os.path.exists(v2_metadata_file):
-            mv2 = module.ModuleV2(project=None, path=folder.get_folder_path())
-            module_name = mv2.name
-
-        elif os.path.exists(v1_metadata_file):
-            mv1 = module.ModuleV1(project=None, path=folder.get_folder_path())
-            module_name = mv1.name
-            modulepath.append(os.path.dirname(folder.get_folder_path()))
-
-        if not module_name:
-            error_message: str = (
-                "The Inmanta extension only works on projects and modules. "
-                f"Please make sure the folder opened at {folder.get_folder_path()} is a valid "
-                "[project](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html)"
-                " or "
-                "[module](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)"
-            )
-            folder.cleanup()
-            raise InvalidExtensionSetup(error_message)
-
-        repos: str = folder.get_setting("inmanta.repos")
-        if repos is None:
-            repos = self.get_default_setting("inmanta.repos", "")
-
-        logger.debug(f"project.yaml created at {os.path.join(folder.inmanta_project_dir.name, 'project.yml')} {repos=}.")
-        with open(os.path.join(folder.inmanta_project_dir.name, "project.yml"), "w+") as fd:
-            metadata: typing.Mapping[str, object] = {
-                "name": "Temporary project",
-                "description": "Temporary project",
-                "repo": yaml.safe_load(repos),
-                "modulepath": modulepath,
-                "downloadpath": "libs",
-                "install_mode": install_mode.value,
-            }
-            yaml.dump(metadata, fd)
-
-        with open(os.path.join(folder.inmanta_project_dir.name, "main.cf"), "w+") as fd:
-            fd.write(f"import {module_name}\n")
-
-        return folder.inmanta_project_dir.name
-
     async def compile_and_anchor(self, folders: Optional[Sequence[Folder]] = None) -> None:
         """
         Perform a compile and compute an anchormap for the currently open folder or workspace.
@@ -302,13 +323,14 @@ class InmantaLSHandler(JsonRpcHandler):
                     logger.info(f"using  existing project {project_dir}")
                 else:
                     # Create a temporary project
-                    project_dir = self.create_tmp_project(folder)
+                    project_dir = folder.create_tmp_project()
                     logger.info(f"New project created: TMP dir {project_dir}")
 
                 if LEGACY_MODE_COMPILER_VENV:
-                    if self.compiler_venv_path:
-                        logger.debug("Using venv path " + str(self.compiler_venv_path))
-                        module.Project.set(module.Project(project_dir, venv_path=self.compiler_venv_path))
+                    compiler_venv_path: Optional[str] = self.get_setting("inmanta.compiler_venv", folder, None)
+                    if compiler_venv_path:
+                        logger.debug("Using venv path " + str(compiler_venv_path))
+                        module.Project.set(module.Project(project_dir, venv_path=compiler_venv_path))
                     else:
                         module.Project.set(module.Project(project_dir))
                 else:
