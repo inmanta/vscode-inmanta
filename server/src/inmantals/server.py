@@ -340,9 +340,7 @@ class InmantaLSHandler(JsonRpcHandler):
             if not self.anchormap:
                 self.anchormap = {}
 
-            folder_anchor_map = {
-                os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)
-            }
+            folder_anchor_map = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
 
             self.anchormap = {**self.anchormap, **folder_anchor_map}
 
@@ -491,7 +489,6 @@ class InmantaLSHandler(JsonRpcHandler):
     async def workspace_DidChangeConfiguration(self, **kwargs):  # noqa: N802
         logger.info(f"workspace_DidChangeConfiguration, should probably do something HERE {kwargs=}")
         await self.compile_and_anchor()
-
 
     async def workspace_workspaceFolders(self, **kwargs):  # noqa: N802
         logger.info(f"workspace_workspaceFolders, should probably do something HERE {kwargs=}")
