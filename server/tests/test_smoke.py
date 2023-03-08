@@ -214,7 +214,7 @@ async def test_connection(client, caplog):
 
     ret = await client.call("workspace/didChangeWorkspaceFolders")
     result = await client.assert_one(ret)
-    assert "workspace changed" in caplog.text
+    assert "Change in the workspace detected" in caplog.text
     caplog.clear()
 
     await assert_lnr(client)
