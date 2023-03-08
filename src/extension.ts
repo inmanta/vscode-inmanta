@@ -76,13 +76,34 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function getClientOptions(): Promise<LanguageClientOptions> {
-		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
-		let repos: string = workspace.getConfiguration('inmanta').repos;
-
 		if (context.storageUri === undefined) {
 			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 		}
+		const editor = window.activeTextEditor;
+		const resource = editor.document.uri;
+		const folder = workspace.getWorkspaceFolder(resource);
+
+
+		let compilerVenv: string | undefined;
+		let repos: string | undefined;
+		try{
+			if (!folder) {
+				// Not in a workspace
+				compilerVenv = workspace.getConfiguration('inmanta').compilerVenv;
+				repos = workspace.getConfiguration('inmanta').repos;
+
+			} else {
+				// In a workspace
+				const multiRootConfigForResource = workspace.getConfiguration('inmanta', resource);
+				compilerVenv = multiRootConfigForResource.get('compilerVenv');
+				repos = multiRootConfigForResource.get('repos');
+			}
+		} catch (err) {
+			log(`Could not start Language Server: ${err.message}`);
+			window.showErrorMessage('Inmanta Language Server: rejected to start' + err.message);
+		}
+
 		const errorhandler = new LsErrorHandler();
 
 		const clientOptions: LanguageClientOptions = {
