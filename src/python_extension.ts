@@ -8,9 +8,10 @@ export const PYTHONEXTENSIONID = "ms-python.python";
 
 export class PythonExtension {
 	executionDetails: {execCommand: string[] | undefined;};
+	callBacksOnchange: Array<() => void> = [];
 
 
-	constructor(pythonApi : IExtensionApi, private onChangeCallback: Function) {
+	constructor(pythonApi : IExtensionApi) {
 		/**
 		 * Creates an instance of PythonExtension.
 		 * @param {IExtensionApi} pythonApi The Python extension API.
@@ -28,19 +29,34 @@ export class PythonExtension {
 		return this.executionDetails.execCommand[0];
 	}
 
+	get activatePath(): string {
+		/**
+		 * Gets the path to activate script of the venv.
+		 * @returns {string} A string representing the path to activate script.
+		 */
+		const lastSlashIndex = this.pythonPath.lastIndexOf("/");
+		const path = this.pythonPath.substring(0, lastSlashIndex);
+		return `${path}/activate`;
+	}
+
+	registerCallbackOnChange(onChangeCallback: () => void) {
+		this.callBacksOnchange.push(onChangeCallback);
+
+	}
+
 	private onChange(pythonApi : IExtensionApi) {
 		/**
-		 * Registers a listener for changes to the active interpreter and calls the onChangeCallback function when the interpreter changes.
+		 * Registers a listener for changes to the active interpreter and calls the callBacksOnchange functions when the interpreter changes.
 		 * @param {IExtensionApi} pythonApi The Python extension API.
 		 */
 		pythonApi.settings.onDidChangeExecutionDetails(
 			(resource: Resource) => {
 				let newExecutionDetails = pythonApi.settings.getExecutionDetails(resource);
 				if(this.executionDetails.execCommand[0] !== newExecutionDetails.execCommand[0]){
-					log(`Active interpreter changed for: ${resource}`);
-					log(`Execution details: ${JSON.stringify(this.executionDetails)}`);
 					this.executionDetails = newExecutionDetails;
-					this.onChangeCallback();
+					for (const callback of this.callBacksOnchange) {
+						callback();
+					}
 				}
 			}
 		);

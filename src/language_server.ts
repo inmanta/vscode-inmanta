@@ -5,11 +5,10 @@ import * as cp from 'child_process';
 import * as os from 'os';
 import getPort from 'get-port';
 
-import { commands, Extension, ExtensionContext, OutputChannel, window, workspace} from 'vscode';
+import { commands, ExtensionContext, OutputChannel, window, workspace} from 'vscode';
 import { RevealOutputChannelOn, LanguageClientOptions} from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
-import { PythonExtension } from './python_extension';
 import { fileOrDirectoryExists, log } from './utils';
 import { LsErrorHandler } from './extension';
 
@@ -26,11 +25,11 @@ export class LanguageServer {
 	client: LanguageClient;
 	serverProcess: cp.ChildProcess;
 	context: ExtensionContext;
-	pythonExtentionApi: PythonExtension;
+	pythonPath: string;
 	errorHandler = new LsErrorHandler();
 	lsOutputChannel:OutputChannel = null;
 
-	constructor(context: ExtensionContext, pythonExtension: Extension<any>, errorHandler: LsErrorHandler) {
+	constructor(context: ExtensionContext, pythonPath: string, errorHandler: LsErrorHandler) {
 		/**
 		 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
          *
@@ -38,7 +37,7 @@ export class LanguageServer {
          * @param {Extension<any>} pythonExtension the Python extension.
          */
 		this.context = context;
-		this.pythonExtentionApi = new PythonExtension(pythonExtension.exports, this.startOrRestartLS.bind(this));
+		this.pythonPath = pythonPath;
 		this.errorHandler = errorHandler;
 	}
 
@@ -48,7 +47,7 @@ export class LanguageServer {
          *
          * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
          */
-		if (!this.pythonExtentionApi.pythonPath || !fileOrDirectoryExists(this.pythonExtentionApi.pythonPath)) {
+		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
 		const script = "import sys\n" +
@@ -63,7 +62,7 @@ export class LanguageServer {
 			"  print(e)\n" +
 			"  sys.exit(5)";
 
-		let spawnResult = cp.spawnSync(this.pythonExtentionApi.pythonPath, ["-c", script]);
+		let spawnResult = cp.spawnSync(this.pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
 		if (spawnResult.status === 4) {
 			return LanguageServerDiagnoseResult.wrongPythonVersion;
@@ -89,7 +88,7 @@ export class LanguageServer {
 				await this.selectInterpreter();
 				break;
 			case LanguageServerDiagnoseResult.wrongPythonVersion:
-				window.showErrorMessage(`The Inmanta Language Server requires at least Python 3.6, but the provided interpreter (${this.pythonExtentionApi.pythonPath}) is an older version.`);
+				window.showErrorMessage(`The Inmanta Language Server requires at least Python 3.6, but the provided interpreter (${this.pythonPath}) is an older version.`);
 				break;
 			case LanguageServerDiagnoseResult.languageServerNotInstalled:
 				this.proposeInstallLS();
@@ -126,10 +125,10 @@ export class LanguageServer {
 		 * @returns {Promise<any>} - A Promise that resolves to the result of `installLanguageServer()` after the server is installed.
 		 * If the user declines to install the server, returns a Promise that rejects with an error message.
 		 */
-		if (!this.pythonExtentionApi.pythonPath || !fileOrDirectoryExists(this.pythonExtentionApi.pythonPath)) {
+		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			await this.selectInterpreter();
 		}
-		const response = await window.showErrorMessage(`Inmanta Language Server not installed, run "${this.pythonExtentionApi.pythonPath} -m pip install inmantals" ?`, 'Yes', 'No');
+		const response = await window.showErrorMessage(`Inmanta Language Server not installed, run "${this.pythonPath} -m pip install inmantals" ?`, 'Yes', 'No');
 		if(response === 'Yes'){
 			this.installLanguageServer(true);
 		} else {
@@ -145,7 +144,7 @@ export class LanguageServer {
 		 * @param {boolean} [startServer=true] Optional boolean to indicate whether to start the language server after installation. Default is true.
 		 * @returns {Promise<void>}
 		 */
-		if (!this.pythonExtentionApi.pythonPath || !fileOrDirectoryExists(this.pythonExtentionApi.pythonPath)) {
+		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			await this.selectInterpreter();
 		}
 		const args = ["-m", "pip", "install"];
@@ -155,7 +154,7 @@ export class LanguageServer {
 		} else {
 			args.push("inmantals");
 		}
-		const child = cp.spawnSync(this.pythonExtentionApi.pythonPath, args);
+		const child = cp.spawnSync(this.pythonPath, args);
 		if (child.status !== 0) {
 			log(`Can not start server and client`);
 			window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
@@ -239,7 +238,7 @@ export class LanguageServer {
 			};
 		}
 
-		this.serverProcess = cp.spawn(this.pythonExtentionApi.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
+		this.serverProcess = cp.spawn(this.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
 
 		if (this.lsOutputChannel === null) {
@@ -264,7 +263,7 @@ export class LanguageServer {
 				if (Date.now() - start > timeout) {
 					window.showErrorMessage("Couldn't start language server");
 					clearInterval(interval);
-					reject();
+					reject("Couldn't start language server");
 				}
 				if (started) {
 					clearInterval(interval);
@@ -293,10 +292,10 @@ export class LanguageServer {
 		 *
 		 * @param {LanguageClientOptions} clientOptions The options for the LanguageClient.
 		 */
-		log(`Python path is ${this.pythonExtentionApi.pythonPath}`);
+		log(`Python path is ${this.pythonPath}`);
 
 		const serverOptions: ServerOptions = {
-			command: this.pythonExtentionApi.pythonPath,
+			command: this.pythonPath,
 			args: ["-m", "inmantals.pipeserver"],
 			options: {
 				env: {}

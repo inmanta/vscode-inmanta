@@ -82,6 +82,11 @@
                 "command": "inmanta.activateLS",
                 "title": "Activate the inmanta Language Server",
                 "category": "inmanta"
+            },
+            {
+                "command": "inmanta.projectInstall",
+                "title": "Install all modules required for the active project",
+                "category": "inmanta"
             }
         ],
         "menus": {
@@ -122,6 +127,12 @@
                   "title": "Make sure the Language Server is enabled",
                   "description": "To have the language server start, it needs to be activated in the settings.  \n[Activate Language Server](command:inmanta.activateLS)",
                   "media": { "markdown": "media/markdown_activate_ls.md" }
+                },
+                {
+                    "id": "inmanta.projectInstall",
+                    "title": "Install all modules required for the active project",
+                    "description": "Make sure all the missing modules are installed in the development venv. \n[Install dependencies](command:inmanta.projectInstall)",
+                    "media": { "markdown": "media/markdown_project_install.md" }
                 }
               ]
             }
