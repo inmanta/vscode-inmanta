@@ -32,7 +32,7 @@ def main():
     stdout = PipeIOStream(sys.stdout.fileno())
     handler = InmantaLSHandler(stdin, stdout, "0.0.0.0")
 
-    logger.info("Starting language server OR AM I")
+    logger.info("Starting language server")
 
     try:
         IOLoop.current().run_sync(handler.start)
