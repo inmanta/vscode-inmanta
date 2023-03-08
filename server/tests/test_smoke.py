@@ -214,7 +214,6 @@ async def test_connection(client, caplog):
 
     ret = await client.call("workspace/didChangeWorkspaceFolders")
     result = await client.assert_one(ret)
-    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
     assert "workspace changed" in caplog.text
     caplog.clear()
 
