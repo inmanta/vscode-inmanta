@@ -172,7 +172,7 @@ class Folder:
 
         repos = self.handler.get_setting("inmanta.repos", self, "")
 
-        logger.debug(f"project.yaml created at {os.path.join(self.inmanta_project_dir.name, 'project.yml')} {repos=}.")
+        logger.debug(f"project.yaml created at {os.path.join(self.inmanta_project_dir.name, 'project.yml')} repos={repos}.")
         with open(os.path.join(self.inmanta_project_dir.name, "project.yml"), "w+") as fd:
             metadata: typing.Mapping[str, object] = {
                 "name": "Temporary project",
@@ -229,7 +229,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
     def get_default_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """Reads the default value for a setting set by the initializationOptions argument in the initialize method."""
-        logger.info(f"{key=} {self.inmanta_settings=}")
+        logger.info(f"key={key} self.inmanta_settings={self.inmanta_settings}")
         return self.inmanta_settings.get(key, default)
 
     def remove_folder(self, folder_uri: str) -> None:
@@ -240,7 +240,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self, workspaceFolders: Sequence[object], capabilities: Dict[str, object], root_path=None, root_uri=None, **kwargs
     ):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
-        logger.info(f"{workspaceFolders=}")
+        logger.info(f"workspaceFolders={workspaceFolders}")
 
         if root_path:
             logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
@@ -474,7 +474,8 @@ class InmantaLSHandler(JsonRpcHandler):
         self.running = False
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
-        logger.info(f"document saved, should probably do something here {kwargs=}")
+        logger.info(f"document saved, should probably do something here kwargs={kwargs}")
+
         # {'textDocument': {'uri': 'file:///home/hugo/tmp/tmp_module/test-module-v2/model/_init.cf'}}
         try:
             # r = await self.dispatch_method(1, "getWorkspaceFolder", file_uri)
@@ -483,8 +484,6 @@ class InmantaLSHandler(JsonRpcHandler):
             file_uri: URI = kwargs["textDocument"]["uri"]
             folder = await self.send_notification("workspace/getWorkspaceFolder", {"uri": file_uri})
 
-            # logger.info(f"{self.anchormap.keys()=}")
-            # logger.info(f"{self.reverse_anchormap.keys()=}")
             logger.debug(f"{folder}")
 
             # folder = self.getWorkspaceFolder(file_uri)
@@ -495,19 +494,19 @@ class InmantaLSHandler(JsonRpcHandler):
         await self.compile_and_anchor([folder])
 
     async def workspace_DidChangeConfiguration(self, **kwargs):  # noqa: N802
-        logger.debug(f"workspace_DidChangeConfiguration, should probably do something HERE {kwargs=}")
+        logger.debug(f"workspace_DidChangeConfiguration, should probably do something HERE kwargs={kwargs}")
         await self.compile_and_anchor()
 
     async def workspace_didChangeWorkspaceFolders(self, **kwargs):  # noqa: N802
-        logger.debug(f"Change in the workspace detected {kwargs=}")
+        logger.debug(f"Change in the workspace detected kwargs={kwargs}")
         event = kwargs.get("event", None)
         if event:
             added = Folder.unpack_workspaces(event["added"])
             removed = Folder.unpack_workspaces(event["removed"])
 
             logger.debug(f"before change {self._workspace_folders}")
-            logger.debug(f"{added=}")
-            logger.debug(f"{removed=}")
+            logger.debug(f"added={added}")
+            logger.debug(f"removed={removed}")
 
             self._workspace_folders.update(added)
             logger.debug(f"middle change {self._workspace_folders}")
