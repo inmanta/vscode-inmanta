@@ -2,14 +2,12 @@
 
 import { workspace } from 'vscode';
 import { IExtensionApi, Resource } from './types';
-import { log } from './utils';
 
 export const PYTHONEXTENSIONID = "ms-python.python";
 
 export class PythonExtension {
 	executionDetails: {execCommand: string[] | undefined;};
 	callBacksOnchange: Array<() => void> = [];
-
 
 	constructor(pythonApi : IExtensionApi) {
 		/**
@@ -27,16 +25,6 @@ export class PythonExtension {
 		 * @returns {string} A string representing the path to the Python interpreter.
 		 */
 		return this.executionDetails.execCommand[0];
-	}
-
-	get activatePath(): string {
-		/**
-		 * Gets the path to activate script of the venv.
-		 * @returns {string} A string representing the path to activate script.
-		 */
-		const lastSlashIndex = this.pythonPath.lastIndexOf("/");
-		const path = this.pythonPath.substring(0, lastSlashIndex);
-		return `${path}/activate`;
 	}
 
 	registerCallbackOnChange(onChangeCallback: () => void) {

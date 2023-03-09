@@ -1,6 +1,6 @@
 'use strict';
 
-import { workspace, ExtensionContext, extensions, window, commands } from 'vscode';
+import { workspace, ExtensionContext, extensions, window, commands, StatusBarAlignment } from 'vscode';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 import { log } from './utils';
 import { LanguageServer } from './language_server';
@@ -23,21 +23,35 @@ export async function activate(context: ExtensionContext) {
 	pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
 
 	// Create a new instance of LanguageServer and an ErrorHandler
+	log("create LanguageServer");
 	const errorhandler: LsErrorHandler = new LsErrorHandler();
 	languageserver = new LanguageServer(context, pythonExtensionInstance.pythonPath, errorhandler);
 	//register listener to restart the LS if the python interpreter changes.
-	pythonExtensionInstance.registerCallbackOnChange(languageserver.startOrRestartLS.bind(languageserver));
+	pythonExtensionInstance.registerCallbackOnChange(()=>{
+		languageserver.updatePythonPath(pythonExtensionInstance.pythonPath);
+	});
 
 	// Create a new instance of InmantaCommands to register commands
+	log("register commands");
 	inmantaCommands = new InmantaCommands(context);
 	inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pythonExtensionInstance.pythonPath));
-	inmantaCommands.registerCommand("inmanta.installLS", () => {languageserver.installLanguageServer(false);});
 	inmantaCommands.registerCommand("inmanta.activateLS", commandActivateLSHandler);
-	inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pythonExtensionInstance.activatePath));
+	inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pythonExtensionInstance.pythonPath));
+	inmantaCommands.registerCommand("inmanta.installLS", () => {
+		languageserver.installLanguageServer(false);
+	});
+	inmantaCommands.registerCommand("inmanta.openWalkthrough", () => {
+		commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
+	});
 
-	//register listener to recreate those commands with the right pythonPath/activatePath if it changes
-	pythonExtensionInstance.registerCallbackOnChange(()=>inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pythonExtensionInstance.pythonPath)));
-	pythonExtensionInstance.registerCallbackOnChange(()=>inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pythonExtensionInstance.activatePath)));
+	//register listener to recreate those commands with the right pythonPath if it changes
+	log("register listeners");
+	pythonExtensionInstance.registerCallbackOnChange(()=>{
+		inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pythonExtensionInstance.pythonPath));
+	});
+	pythonExtensionInstance.registerCallbackOnChange(()=>{
+		inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pythonExtensionInstance.pythonPath));
+	});
 
 
 	// Subscribe to workspace configuration changes and restart the language server if necessary
@@ -48,6 +62,28 @@ export async function activate(context: ExtensionContext) {
 	}));
 
 
+	//add the WalkthroughButton
+	log("add WalkthroughButton");
+	const inmantaWalkthroughButton = window.createStatusBarItem(StatusBarAlignment.Left);
+	inmantaWalkthroughButton.text = "$(book) Inmanta Walkthrough";
+	inmantaWalkthroughButton.command = "inmanta.openWalkthrough";
+	inmantaWalkthroughButton.tooltip = "Open the Inmanta extension walkthrough";
+	inmantaWalkthroughButton.show();
+
+	// Hide the button if the active editor is not a inmanta file
+	function updateInmantaWalkthroughButtonVisibility() {
+		const editor = window.activeTextEditor;
+		if (editor && editor.document.languageId === "inmanta") {
+			inmantaWalkthroughButton.show();
+		} else {
+			inmantaWalkthroughButton.hide();
+		}
+	}
+	// Update the button visibility when the extension is activated
+	updateInmantaWalkthroughButtonVisibility();
+	// Update the button visibility when the active editor changes
+	window.onDidChangeActiveTextEditor(updateInmantaWalkthroughButtonVisibility);
+
 	// Start the language server if enabled in the workspace configuration
 	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
 	if (enable) {
@@ -57,6 +93,7 @@ export async function activate(context: ExtensionContext) {
 }
 
 export async function deactivate(){
+	log("deactivate");
 	return languageserver.stopServerAndClient();
 }
 

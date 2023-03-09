@@ -1,10 +1,10 @@
-import * as path from 'path';
-import * as cp from 'child_process';
-
-import { ExtensionContext, window, OutputChannel, Uri, commands, workspace, TerminalOptions, Disposable } from "vscode";
+import { ExtensionContext, window, commands, workspace, TerminalOptions, Disposable, Terminal } from "vscode";
 import { fileOrDirectoryExists } from './utils';
 
 type DisposableDict = Record<string, Disposable>;
+
+let installProjectTerminal: Terminal | undefined;
+let exportToServerTerminal: Terminal | undefined;
 
 export class InmantaCommands {
 	context: ExtensionContext;
@@ -41,31 +41,20 @@ export class InmantaCommands {
  * @param {string} pythonPath The path to the Python interpreter.
  */
 export function createHandlerExportCommand(pythonPath:string) {
-	return (openedFileObj: object) => {
-		const pathOpenedFile: string = String(openedFileObj);
-		const cwdCommand: string = path.dirname(Uri.parse(pathOpenedFile).fsPath);
-		const child = cp.spawn(pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
-		let exportToServerChannel: OutputChannel = null; window.createOutputChannel("export to inmanta server");
+	return () => {
+		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
+			window.showErrorMessage(`Could not run the export command. Make sure a valid venv is selected`);
+		}
+		if (!exportToServerTerminal) {
+			const options: TerminalOptions = {
+				name:"Export to Inmanta Server",
+				message:"Running command 'inmanta export'"
 
-		// Clear the log and show the `export to inmanta server` log window to the user
-		exportToServerChannel.clear();
-		exportToServerChannel.show();
-
-		child.stdout.on('data', (data) => {
-			exportToServerChannel.appendLine(`stdout: ${data}`);
-		});
-
-		child.stderr.on('data', (data) => {
-			exportToServerChannel.appendLine(`stderr: ${data}`);
-		});
-
-		child.on('close', (code) => {
-			if (code === 0) {
-				exportToServerChannel.appendLine("Export successful");
-			} else {
-				exportToServerChannel.appendLine(`Export failed (exitcode=${code})`);
-			}
-		});
+			};
+			exportToServerTerminal = window.createTerminal(options);
+		}
+		exportToServerTerminal.sendText(pythonPath+' -m inmanta.app -vv export');
+		exportToServerTerminal.show();
 	};
 }
 
@@ -83,24 +72,23 @@ export const commandActivateLSHandler = () => {
 
 /**
  * A function that creates a handler for installing an Inmanta project.
- * @param {string} activatePath The path to the venv activation script.
+ * @param {string} pythonPath The path to the Python interpreter.
  * @returns {() => void} A function that executes the 'inmanta project install' command in a VSCode terminal.
  */
-export function createProjectInstallHandler(activatePath: string){
+export function createProjectInstallHandler(pythonPath: string){
 	return () => {
-		if (!activatePath || !fileOrDirectoryExists(activatePath)) {
-			window.showErrorMessage(`Could not activate the venv to run the command. Make sure a valid venv is selected`);
+		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
+			window.showErrorMessage(`Could not run the 'project install' command. Make sure a valid venv is selected`);
 		}
+		if (!installProjectTerminal) {
+			const options: TerminalOptions = {
+				name:"Inmanta Project Install",
+				message:"Running command 'inmanta project install'"
 
-		const options: TerminalOptions = {
-			name:"Inmanta Project Install",
-			message:"Running command 'inmanta project install'"
-
-		};
-		const terminal = window.createTerminal(options);
-		terminal.sendText('source '+ activatePath);
-		terminal.sendText('inmanta project install');
-		terminal.show();
+			};
+			installProjectTerminal = window.createTerminal(options);
+		}
+		installProjectTerminal.sendText(pythonPath+' -m inmanta.app project install');
+		installProjectTerminal.show();
 	};
 }
-
