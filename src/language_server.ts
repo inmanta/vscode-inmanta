@@ -94,6 +94,7 @@ export class LanguageServer {
 	 * Propose a solution according to the given error.
 	 *
 	 * @param {LanguageServerDiagnoseResult} error the extension language server error for wich we propose a solution
+	 * @param {string} diagnoseId a uuid to identify the diagnose
 	 */
 	async proposeSolution(error:LanguageServerDiagnoseResult, diagnoseId: string){
 		let response;
@@ -120,6 +121,8 @@ export class LanguageServer {
 
 	/**
 	* Prompt the user to select a Python interpreter.
+	*
+	* @param {string} diagnoseId a uuid to identify the diagnose
 	* @returns {Promise<any>} A Promise that resolves to the result of startOrRestartLS() after the interpreter is selected.
 	*    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
 	*/
@@ -144,6 +147,8 @@ export class LanguageServer {
 	/**
 	 * Propose to install the Language server.
 	 * If the Python interpreter is not set or invalid, prompts the user to select a valid interpreter.
+	 * 
+	 * @param {string} diagnoseId a uuid to identify the diagnose
 	 * @returns {Promise<any>} - A Promise that resolves to the result of `installLanguageServer()` after the server is installed.
 	 * If the user declines to install the server, returns a Promise that rejects with an error message.
 	 */
