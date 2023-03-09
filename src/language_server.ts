@@ -31,30 +31,34 @@ export class LanguageServer {
 	pythonPath: string;
 	errorHandler = new LsErrorHandler();
 	diagnoseId: string;
-
+	/**
+	 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
+	 *
+	 * @param {ExtensionContext} context the extension context.
+	 * @param {Extension<any>} pythonExtension the Python extension.
+	 */
 	constructor(context: ExtensionContext, pythonPath: string, errorHandler: LsErrorHandler) {
-		/**
-		 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
-         *
-         * @param {ExtensionContext} context the extension context.
-         * @param {Extension<any>} pythonExtension the Python extension.
-         */
 		this.context = context;
 		this.pythonPath = pythonPath;
 		this.errorHandler = errorHandler;
 	}
 
+	/**
+	 * updates the python path used by the LS.
+	 *
+	 * @param {string} newPath the new python path
+	 */
 	updatePythonPath(newPath: string): void {
     	this.pythonPath = newPath;
 		this.startOrRestartLS();
   	}
 
+	/**
+	 * Check if the server can start.
+	 *
+	 * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
+	 */
 	async canServerStart():Promise<LanguageServerDiagnoseResult>{
-		/**
-         * Check if the server can start.
-         *
-         * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
-         */
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
@@ -85,12 +89,13 @@ export class LanguageServer {
 		}
 	}
 
+
+	/**
+	 * Propose a solution according to the given error.
+	 *
+	 * @param {LanguageServerDiagnoseResult} error the extension language server error for wich we propose a solution
+	 */
 	async proposeSolution(error:LanguageServerDiagnoseResult, diagnoseId: string){
-		/**
-		 * Propose a solution according to the given error.
-         *
-         * @param {LanguageServerDiagnoseResult} error the extension language server error for wich we propose a solution
-         */
 		let response;
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
@@ -113,12 +118,12 @@ export class LanguageServer {
 		}
 	}
 
+	/**
+	* Prompt the user to select a Python interpreter.
+	* @returns {Promise<any>} A Promise that resolves to the result of startOrRestartLS() after the interpreter is selected.
+	*    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
+	*/
 	async selectInterpreter(diagnoseId: string):Promise<any>{
-		/**
-		* Prompt the user to select a Python interpreter.
-		* @returns {Promise<any>} A Promise that resolves to the result of startOrRestartLS() after the interpreter is selected.
-		*    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
-		*/
 		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
 		if(response === 'Select interpreter'){
 			return await commands.executeCommand('python.setInterpreter');
@@ -136,13 +141,13 @@ export class LanguageServer {
 		}
 	}
 
+	/**
+	 * Propose to install the Language server.
+	 * If the Python interpreter is not set or invalid, prompts the user to select a valid interpreter.
+	 * @returns {Promise<any>} - A Promise that resolves to the result of `installLanguageServer()` after the server is installed.
+	 * If the user declines to install the server, returns a Promise that rejects with an error message.
+	 */
 	async proposeInstallLS(diagnoseId: string) {
-		/**
-		 * Propose to install the Language server.
-		 * If the Python interpreter is not set or invalid, prompts the user to select a valid interpreter.
-		 * @returns {Promise<any>} - A Promise that resolves to the result of `installLanguageServer()` after the server is installed.
-		 * If the user declines to install the server, returns a Promise that rejects with an error message.
-		 */
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			await this.selectInterpreter(diagnoseId);
 		}
@@ -164,11 +169,11 @@ export class LanguageServer {
 
 	}
 
+	/**
+	 * Install the Inmanta Language Server and start it if specified.
+	 * @returns {Promise<void>}
+	 */
 	async installLanguageServer(): Promise<void> {
-		/**
-		 * Install the Inmanta Language Server and start it if specified.
-		 * @returns {Promise<void>}
-		 */
 		this.diagnoseId = uuidv4();
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			return this.selectInterpreter(this.diagnoseId);
@@ -195,12 +200,12 @@ export class LanguageServer {
 		}
 	}
 
+	/**
+	 * Get options for initializing the language client.
+	 * @returns {Promise<LanguageClientOptions>} A Promise that resolves to an object containing options for the language client, including document selector, error handler, output channel settings, and initialization options.
+	 * @throws {Error} Throws an error if a file is opened instead of a folder.
+	 */
 	private	async getClientOptions(): Promise<LanguageClientOptions> {
-		/**
-		 * Get options for initializing the language client.
-		 * @returns {Promise<LanguageClientOptions>} A Promise that resolves to an object containing options for the language client, including document selector, error handler, output channel settings, and initialization options.
-		 * @throws {Error} Throws an error if a file is opened instead of a folder.
-		 */
 		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
 		let repos: string = workspace.getConfiguration('inmanta').repos;
 		if (this.context.storageUri === undefined) {
@@ -221,12 +226,12 @@ export class LanguageServer {
 		return clientOptions;
 	}
 
+	/**
+	 * Starts the Inmanta Language Server and client.
+	 * This function should always run under the `mutex` lock.
+	 * @returns {Promise<void>} A Promise that resolves when the server and client are started successfully.
+	 */
 	private async startServerAndClient(): Promise<void> {
-		/**
-		 * Starts the Inmanta Language Server and client.
-		 * This function should always run under the `mutex` lock.
-		 * @returns {Promise<void>} A Promise that resolves when the server and client are started successfully.
-		 */
 		log("Start server and client");
 		let clientOptions;
 		try {
@@ -251,12 +256,12 @@ export class LanguageServer {
 		}
 	}
 
+	/**
+	 * Starts the TCP server and the Inmanta Language Server.
+	 *
+	 * @param clientOptions The options for the language client.
+	 */
 	private async startTcp(clientOptions: LanguageClientOptions) {
-		/**
-		 * Starts the TCP server and the Inmanta Language Server.
-		 *
-		 * @param clientOptions The options for the language client.
-		 */
 		const host = "127.0.0.1";
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
@@ -317,12 +322,12 @@ export class LanguageServer {
 		await this.client.start();
 	}
 
+	/**
+	 * Starts the Inmanta Language Server by creating a new LanguageClient and starting it with the given clientOptions.
+	 *
+	 * @param {LanguageClientOptions} clientOptions The options for the LanguageClient.
+	 */
 	async startPipe(clientOptions: LanguageClientOptions) {
-		/**
-		 * Starts the Inmanta Language Server by creating a new LanguageClient and starting it with the given clientOptions.
-		 *
-		 * @param {LanguageClientOptions} clientOptions The options for the LanguageClient.
-		 */
 		log(`Python path is ${this.pythonPath}`);
 
 		const serverOptions: ServerOptions = {
@@ -347,12 +352,12 @@ export class LanguageServer {
 		await this.client.start();
 	}
 
+	/**
+	 * Starts or restarts the language server.
+	 * @param {boolean} start Whether to start the server or restart it.
+	 * @returns {Promise<void>}
+	 */
 	async startOrRestartLS(start: boolean = false): Promise<void>{
-		/**
-		 * Starts or restarts the language server.
-		 * @param {boolean} start Whether to start the server or restart it.
-		 * @returns {Promise<void>}
-		 */
 		this.diagnoseId = uuidv4();
 		const canStart = await this.canServerStart();
 		if (canStart !== LanguageServerDiagnoseResult.ok){
@@ -372,10 +377,10 @@ export class LanguageServer {
 
 	}
 
+	/**
+	 * Stops the language server and its client.
+	 */
 	private async stopServerAndClient() {
-		/**
-		 * Stops the language server and its client.
-		 */
 		await this.mutex.runExclusive(async () => {
 			if (this.client) {
 				if(this.client.needsStop()){
