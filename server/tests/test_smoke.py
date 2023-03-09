@@ -28,6 +28,7 @@ from tornado.tcpclient import TCPClient
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import InmantaLSHandler
+from uri import URI
 
 
 class JsonRPC(object):
@@ -126,11 +127,10 @@ async def initialize(
     if client_capabilities is None:
         client_capabilities = {}
     path = os.path.join(os.path.dirname(__file__), project)
+    folder = {"uri": str(URI(path)), "name": project}
     ret = await client.call(
         "initialize",
-        rootPath=path,
-        rootUri=f"file://{path}",
-        workspaceFolders=[path],
+        workspaceFolders=[folder],
         capabilities=client_capabilities,
     )
     await client.assert_one(ret)
@@ -358,9 +358,9 @@ async def test_symbol_provider(client: JsonRPC) -> None:
 
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
-async def test_root_path_is_none(client: JsonRPC) -> None:
+async def test_unspecified_workspace_folder(client: JsonRPC) -> None:
     """
-    The language server should return an error when it is started with `rootPath is None`.
+    The language server should return an error when no workspace folder specified.
     """
-    await client.call("initialize", rootPath=None, rootUri=None, capabilities={})
-    await client.assert_error(message="A folder should be opened instead of a file in order to use the inmanta extension.")
+    await client.call("initialize", workspaceFolders=None, capabilities={})
+    await client.assert_error(message="No workspace folder specified.")

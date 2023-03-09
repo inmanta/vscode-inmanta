@@ -237,13 +237,14 @@ class InmantaLSHandler(JsonRpcHandler):
         del self._workspace_folders[folder_uri]
 
     async def initialize(
-        self, rootPath, rootUri, workspaceFolders: Sequence[object], capabilities: Dict[str, object], **kwargs
+        self, workspaceFolders: Sequence[object], capabilities: Dict[str, object], root_path=None, root_uri=None, **kwargs
     ):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
+        logger.info(f"{workspaceFolders=}")
 
-        if rootPath:
+        if root_path:
             logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
-        if rootUri:
+        if root_uri:
             logger.warning("The rootUri parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
 
         if workspaceFolders is None:
@@ -472,7 +473,6 @@ class InmantaLSHandler(JsonRpcHandler):
     async def exit(self, **kwargs):
         self.running = False
 
-
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
         logger.info(f"document saved, should probably do something here {kwargs=}")
         # {'textDocument': {'uri': 'file:///home/hugo/tmp/tmp_module/test-module-v2/model/_init.cf'}}
@@ -497,7 +497,6 @@ class InmantaLSHandler(JsonRpcHandler):
     async def workspace_DidChangeConfiguration(self, **kwargs):  # noqa: N802
         logger.debug(f"workspace_DidChangeConfiguration, should probably do something HERE {kwargs=}")
         await self.compile_and_anchor()
-
 
     async def workspace_didChangeWorkspaceFolders(self, **kwargs):  # noqa: N802
         logger.debug(f"Change in the workspace detected {kwargs=}")
