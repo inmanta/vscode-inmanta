@@ -147,7 +147,7 @@ export class LanguageServer {
 	/**
 	 * Propose to install the Language server.
 	 * If the Python interpreter is not set or invalid, prompts the user to select a valid interpreter.
-	 * 
+	 *
 	 * @param {string} diagnoseId a uuid to identify the diagnose
 	 * @returns {Promise<any>} - A Promise that resolves to the result of `installLanguageServer()` after the server is installed.
 	 * If the user declines to install the server, returns a Promise that rejects with an error message.
@@ -207,7 +207,8 @@ export class LanguageServer {
 
 	/**
 	 * Get options for initializing the language client.
-	 * @returns {Promise<LanguageClientOptions>} A Promise that resolves to an object containing options for the language client, including document selector, error handler, output channel settings, and initialization options.
+	 * @returns {Promise<LanguageClientOptions>} A Promise that resolves to an object containing options for the language client,
+	 * 		including document selector, error handler, output channel settings, and initialization options.
 	 * @throws {Error} Throws an error if a file is opened instead of a folder.
 	 */
 	private	async getClientOptions(): Promise<LanguageClientOptions> {
