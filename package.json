@@ -114,7 +114,7 @@
             {
                 "id": "inmanta.walkthrough",
                 "title": "Get started with the Inmanta extension",
-                "description": "An extenstion to help with the development of Inamnta modules and projects",
+                "description": "This walk-through helps you getting started with the development of Inmanta modules and projects.",
                 "steps": [
                     {
                         "id": "inmanta.setVenv",
