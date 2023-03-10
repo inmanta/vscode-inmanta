@@ -12,6 +12,6 @@ When you hover an element while pressing `Ctrl`, an overview of its Entity type 
 
 ### Compilation error reporting
 
-The extension will run a pre-compilation every time you save your file. Making it easier for you to spot syntax and basic model errors. When hovering the problematic bit, an explaination message is shown, and more details can be found in the **Output** panel (when selecting _Inmanta Server Language_ in the expandable list on the right).
+The extension will run a pre-compilation every time you save your file. Making it easier for you to spot syntax and basic model errors. When hovering the problematic bit, an explanation message is shown, and more details can be found in the **Output** panel (when selecting _Inmanta Server Language_ in the expandable list on the right).
 
 ![Error reporting screenshot](../images/screenshot-error-reporting.png)
