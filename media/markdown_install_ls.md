@@ -1,6 +1,6 @@
 ### Syntax highlighting
 
-The extension makes your life easier by highlighting syntax keywords or the Inmanta language.
+The extension makes your life easier by highlighting syntax keywords of the Inmanta language.
 
 ![Syntax coloring screenshot](../images/screenshot-syntax-coloring.png)
 
