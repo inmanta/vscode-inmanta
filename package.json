@@ -143,7 +143,7 @@
                     {
                         "id": "inmanta.projectInstall",
                         "title": "Install all modules required for the active project",
-                        "description": "Make sure all the missing modules are installed in the development venv. \n[Install dependencies](command:inmanta.projectInstall)",
+                        "description": "Make sure all the missing modules are installed in the development virtual environment. \n[Install dependencies](command:inmanta.projectInstall)",
                         "media": {
                             "markdown": "media/markdown_project_install.md"
                         }
