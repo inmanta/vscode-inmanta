@@ -74,6 +74,26 @@
                 "command": "inmanta.exportToServer",
                 "title": "Export to server",
                 "category": "inmanta"
+            },
+            {
+                "command": "inmanta.installLS",
+                "title": "Install the inmanta Language Server",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.activateLS",
+                "title": "Activate the inmanta Language Server",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.projectInstall",
+                "title": "Install all modules required for the active project",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.openWalkthrough",
+                "title": "Open Inmanta Walkthrough",
+                "category": "inmanta"
             }
         ],
         "menus": {
@@ -85,11 +105,47 @@
                 }
             ]
         },
-        "configurationDefaults": {
-            "[inmanta]": {
-              "python.interpreter.infoVisibility": "always"
+        "walkthroughs": [
+            {
+                "id": "inmanta.walkthrough",
+                "title": "Get started with the Inmanta extension",
+                "description": "This walk-through helps you getting started with the development of Inmanta modules and projects.",
+                "steps": [
+                    {
+                        "id": "inmanta.setVenv",
+                        "title": "Select a virtual environment",
+                        "description": "This step is to ensure a virtual environment will be used. \n[Select Environment](command:python.setInterpreter)",
+                        "media": {
+                            "markdown": "media/markdown_env.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.installLanguageServer",
+                        "title": "Install the Language Server",
+                        "description": "Install the language server to enjoy features like Syntax highlighting, Code navigation and many more. \n[Install Language Server](command:inmanta.installLS)",
+                        "media": {
+                            "markdown": "media/markdown_install_ls.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.activateLanguageServer",
+                        "title": "Make sure the Language Server is enabled",
+                        "description": "To have the language server start, it needs to be activated in the settings.  \n[Activate Language Server](command:inmanta.activateLS)",
+                        "media": {
+                            "markdown": "media/markdown_activate_ls.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.projectInstall",
+                        "title": "Install all modules required for the active project",
+                        "description": "Make sure all the missing modules are installed in the development virtual environment. \n[Install dependencies](command:inmanta.projectInstall)",
+                        "media": {
+                            "markdown": "media/markdown_project_install.md"
+                        }
+                    }
+                ]
             }
-        }
+        ]
     },
     "dependencies": {
         "async-mutex": "^0.4.0",
@@ -97,6 +153,7 @@
         "log-symbols": "^5.1.0",
         "lru-cache": "^7.18.3",
         "minimatch": "^7.4.2",
+        "uuid": "^9.0.0",
         "vscode-languageclient": "^8.1.0"
     },
     "extensionDependencies": [
