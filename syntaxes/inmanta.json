@@ -18,13 +18,13 @@
     },
       {
       "comment": "Multi line string",
-      "begin": "\"\"\"",
+      "begin": "[\"]{3,5}",
       "beginCaptures": {
         "0": {
           "name": "punctuation.definition.string.begin.inmanta"
         }
       },
-      "end": "\"\"\"",
+      "end": "[\"]{3,5}",
       "endCaptures": {
         "0": {
           "name": "punctuation.definition.string.end.inmanta"
