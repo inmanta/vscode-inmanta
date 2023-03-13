@@ -1,11 +1,12 @@
 'use strict';
 
-import { workspace, ExtensionContext, extensions, window, commands, StatusBarAlignment } from 'vscode';
+import { workspace, ExtensionContext, extensions, window, commands } from 'vscode';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 import { log } from './utils';
 import { LanguageServer } from './language_server';
 import { commandActivateLSHandler, createHandlerExportCommand, createProjectInstallHandler, InmantaCommands } from './commands';
 import { ErrorHandler, Message, ErrorAction, CloseAction, ErrorHandlerResult, CloseHandlerResult } from 'vscode-languageclient';
+import { addSetupAssistantButton } from './walkthrough_button';
 
 let languageserver;
 let pythonExtensionInstance;
@@ -21,6 +22,11 @@ export async function activate(context: ExtensionContext) {
 	await pythonExtension.activate();
 
 	pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
+	//add the EnvSelector button
+	pythonExtensionInstance.addEnvSelector();
+
+	//adds the SetupAssistantButton Button
+	addSetupAssistantButton();
 
 	// Create a new instance of LanguageServer and an ErrorHandler
 	log("create LanguageServer");
@@ -44,7 +50,7 @@ export async function activate(context: ExtensionContext) {
 		commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 	});
 
-	//register listener to recreate those commands with the right pythonPath if it changes
+	// register listener to recreate those commands with the right pythonPath if it changes
 	log("register listeners");
 	pythonExtensionInstance.registerCallbackOnChange(()=>{
 		inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pythonExtensionInstance.pythonPath));
@@ -62,33 +68,13 @@ export async function activate(context: ExtensionContext) {
 	}));
 
 
-	//add the WalkthroughButton
-	log("add WalkthroughButton");
-	const inmantaWalkthroughButton = window.createStatusBarItem(StatusBarAlignment.Left);
-	inmantaWalkthroughButton.text = "$(book) Inmanta Walkthrough";
-	inmantaWalkthroughButton.command = "inmanta.openWalkthrough";
-	inmantaWalkthroughButton.tooltip = "Open the Inmanta extension walkthrough";
-	inmantaWalkthroughButton.show();
-
-	// Hide the button if the active editor is not a inmanta file
-	function updateInmantaWalkthroughButtonVisibility() {
-		const editor = window.activeTextEditor;
-		if (editor && editor.document.languageId === "inmanta") {
-			inmantaWalkthroughButton.show();
-		} else {
-			inmantaWalkthroughButton.hide();
-		}
-	}
-	// Update the button visibility when the extension is activated
-	updateInmantaWalkthroughButtonVisibility();
-	// Update the button visibility when the active editor changes
-	window.onDidChangeActiveTextEditor(updateInmantaWalkthroughButtonVisibility);
-
 	// Start the language server if enabled in the workspace configuration
 	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
 	if (enable) {
 		await languageserver.startOrRestartLS(true);
 	}
+
+
 
 }
 

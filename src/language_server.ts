@@ -102,8 +102,8 @@ export class LanguageServer {
 			case LanguageServerDiagnoseResult.wrongInterpreter:
 				return this.selectInterpreter(diagnoseId);
 			case LanguageServerDiagnoseResult.wrongPythonVersion:
-				response = await window.showErrorMessage(`The Inmanta Language Server requires at least Python 3.6, but the provided interpreter (${this.pythonPath}) is an older version.`,  "Open Help");
-				if(response === "Open Help"){
+				response = await window.showErrorMessage(`The Inmanta Language Server requires at least Python 3.6, but the provided interpreter (${this.pythonPath}) is an older version.`,  "Setup assistant");
+				if(response === "Setup assistant"){
 					commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 				};
 				break;
@@ -111,8 +111,8 @@ export class LanguageServer {
 				this.proposeInstallLS(diagnoseId);
 				break;
 			case LanguageServerDiagnoseResult.unknown:
-				response = await window.showErrorMessage(`The Inmanta Language Server failed to start`, "Open Help");
-				if(response === "Open Help"){
+				response = await window.showErrorMessage(`The Inmanta Language Server failed to start`, "Setup assistant");
+				if(response === "Setup assistant"){
 					commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 				};
 				break;
@@ -136,8 +136,8 @@ export class LanguageServer {
 			return Promise.resolve();
 		}
 		else{
-			window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Open Help");
-			if(response === "Open Help"){
+			window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
+			if(response === "Setup assistant"){
 				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 			}
 			return Promise.reject("No Interpreter Selected");
@@ -165,8 +165,8 @@ export class LanguageServer {
 			//another diagnose has been run in the mean time
 			return Promise.resolve();
 		} else {
-			const response = await window.showErrorMessage("The Inmanta language server could not start as the language server was not installed", "Open Help");
-			if(response === "Open Help"){
+			const response = await window.showErrorMessage("The Inmanta language server could not start as the language server was not installed", "Setup assistant");
+			if(response === "Setup assistant"){
 				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 			};
 			return Promise.reject("Inmanta Language Server was not installed");
@@ -190,12 +190,12 @@ export class LanguageServer {
 		} else {
 			args.push("inmantals");
 		}
-		window.showInformationMessage("Installing Inmanta Language server");
+		window.showInformationMessage("Installing Inmanta Language server. This may take a few seconds");
 		const child = cp.spawnSync(this.pythonPath, args);
 		if (child.status !== 0) {
 			log(`Can not start server and client`);
-			const response = await window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`,  "Open Help");
-			if(response === "Open Help"){
+			const response = await window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`,  "Setup assistant");
+			if(response === "Setup assistant"){
 				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 			};
 			return Promise.reject("failed to install LS");
@@ -254,8 +254,8 @@ export class LanguageServer {
 			}
 		} catch (err) {
 			log(`Could not start Language Server: ${err.message}`);
-			const response = await window.showErrorMessage('Inmanta Language Server: rejected to start' + err.message, "Open Help");
-			if(response === "Open Help"){
+			const response = await window.showErrorMessage('Inmanta Language Server: rejected to start' + err.message, "Setup assistant");
+			if(response === "Setup assistant"){
 				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 			};
 			return Promise.reject("failed to start LS");

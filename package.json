@@ -105,11 +105,6 @@
                 }
             ]
         },
-        "configurationDefaults": {
-            "[inmanta]": {
-                "python.interpreter.infoVisibility": "always"
-            }
-        },
         "walkthroughs": [
             {
                 "id": "inmanta.walkthrough",
