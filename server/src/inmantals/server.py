@@ -157,7 +157,6 @@ class Folder:
         if os.path.exists(v1_metadata_file):
             mv1 = module.ModuleV1(project=None, path=self.get_folder_path())
             module_name = mv1.name
-            # modulepath.append(os.path.dirname(self.get_folder_path()))
             os.symlink(self.get_folder_path(), os.path.join(libs_folder, module_name), target_is_directory=True)
 
         elif os.path.exists(v2_metadata_file):
