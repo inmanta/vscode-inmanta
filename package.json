@@ -74,6 +74,26 @@
                 "command": "inmanta.exportToServer",
                 "title": "Export to server",
                 "category": "inmanta"
+            },
+            {
+                "command": "inmanta.installLS",
+                "title": "Install the inmanta Language Server",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.activateLS",
+                "title": "Activate the inmanta Language Server",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.projectInstall",
+                "title": "Install all modules required for the active project",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.openWalkthrough",
+                "title": "Open Inmanta Walkthrough",
+                "category": "inmanta"
             }
         ],
         "menus": {
@@ -85,18 +105,55 @@
                 }
             ]
         },
-        "configurationDefaults": {
-            "[inmanta]": {
-              "python.interpreter.infoVisibility": "always"
+        "walkthroughs": [
+            {
+                "id": "inmanta.walkthrough",
+                "title": "Get started with the Inmanta extension",
+                "description": "This walk-through helps you getting started with the development of Inmanta modules and projects.",
+                "steps": [
+                    {
+                        "id": "inmanta.setVenv",
+                        "title": "Select a virtual environment",
+                        "description": "This step is to ensure a virtual environment will be used. \n[Select Environment](command:python.setInterpreter)",
+                        "media": {
+                            "markdown": "media/markdown_env.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.installLanguageServer",
+                        "title": "Install the Language Server",
+                        "description": "Install the language server to enjoy features like Syntax highlighting, Code navigation and many more. \n[Install Language Server](command:inmanta.installLS)",
+                        "media": {
+                            "markdown": "media/markdown_install_ls.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.activateLanguageServer",
+                        "title": "Make sure the Language Server is enabled",
+                        "description": "To have the language server start, it needs to be activated in the settings.  \n[Activate Language Server](command:inmanta.activateLS)",
+                        "media": {
+                            "markdown": "media/markdown_activate_ls.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.projectInstall",
+                        "title": "Install all modules required for the active project",
+                        "description": "Make sure all the missing modules are installed in the development virtual environment. \n[Install dependencies](command:inmanta.projectInstall)",
+                        "media": {
+                            "markdown": "media/markdown_project_install.md"
+                        }
+                    }
+                ]
             }
-        }
+        ]
     },
     "dependencies": {
         "async-mutex": "^0.4.0",
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
-        "lru-cache": "^7.18.3",
+        "lru-cache": "^8.0.0",
         "minimatch": "^7.4.2",
+        "uuid": "^9.0.0",
         "vscode-languageclient": "^8.1.0"
     },
     "extensionDependencies": [
@@ -113,19 +170,19 @@
     "devDependencies": {
         "@types/fs-extra": "^11.0.1",
         "@types/mocha": "^10.0.1",
-        "@types/node": "^18.14.6",
+        "@types/node": "^18.15.1",
         "@types/semver": "^7.3.13",
         "@types/vscode": "^1.63.2",
         "@typescript-eslint/eslint-plugin": "^5.54.1",
         "@typescript-eslint/parser": "^5.54.1",
         "@vscode/test-electron": "^2.2.3",
         "@vscode/vsce": "^2.18.0",
-        "eslint": "^8.35.0",
+        "eslint": "^8.36.0",
         "eslint-config-google": "^0.14.0",
         "fs-extra": "^11.1.0",
         "glob": "^9.2.1",
         "mocha": "^10.2.0",
-        "rimraf": "^4.3.1",
+        "rimraf": "^4.4.0",
         "semver": "^7.3.8",
         "typescript": "^4.9.5"
     },
