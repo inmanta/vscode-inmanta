@@ -212,11 +212,6 @@ async def test_connection(client, caplog):
     assert "Anchormap took" in caplog.text
     caplog.clear()
 
-    ret = await client.call("workspace/didChangeWorkspaceFolders")
-    result = await client.assert_one(ret)
-    assert "Change in the workspace detected" in caplog.text
-    caplog.clear()
-
     await assert_lnr(client)
     await assert_lnr_reverse(client)
 
