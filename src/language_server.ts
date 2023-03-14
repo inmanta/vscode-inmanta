@@ -24,7 +24,7 @@ enum LanguageServerDiagnoseResult {
 export class LanguageServer {
 	mutex = new Mutex();
 	client: LanguageClient;
-	lsOutputChannel:OutputChannel = null;
+	lsOutputChannel: OutputChannel = null;
 	serverProcess: cp.ChildProcess;
 	context: ExtensionContext;
 	pythonPath: string;
@@ -217,7 +217,9 @@ export class LanguageServer {
 			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 		}
-		this.lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
+		if (this.lsOutputChannel === null) {
+			this.lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
+		}
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
@@ -283,9 +285,6 @@ export class LanguageServer {
 		this.serverProcess = cp.spawn(this.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
 
-		if (this.lsOutputChannel === null) {
-			this.lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
-		}
 		this.serverProcess.stderr.on('data', (data) => {
 			this.lsOutputChannel.appendLine(`stderr: ${data}`);
 		});
@@ -393,9 +392,6 @@ export class LanguageServer {
 					await this.client.stop();
 				}
 				this.client = undefined;
-			}
-			if(this.lsOutputChannel){
-				this.lsOutputChannel.dispose();
 			}
 			if(this.serverProcess){
 				if(!this.serverProcess.exitCode){
