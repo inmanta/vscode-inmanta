@@ -8,6 +8,7 @@ Changes in this release:
 - Walkthrough/setup assistant added (#970)
 - Commands added to: install the language server, activate the language server, run 'project install' and to open the setup assistant (#970)
 - Fixed bug where the multiple outputs of the language server where visible (#991)
+- Fix string syntax highlighting. (#1014)
 
 # v 1.2.0 (2022-12-23)
 Changes in this release:
