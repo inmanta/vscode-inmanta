@@ -381,11 +381,11 @@ class InmantaLSHandler(JsonRpcHandler):
             }
 
         async def sync_compile_and_anchor_folders() -> None:
-            folder = self._workspace_folders.values()[0]
-            # run synchronous part in executor to allow context switching while awaiting
-            await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor_folder, folder)
-            await self.publish_diagnostics(None)
-            logger.info(f"Compilation succeeded for folder {folder}")
+            for folder in self._workspace_folders.values():
+                # run synchronous part in executor to allow context switching while awaiting
+                await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor_folder, folder)
+                await self.publish_diagnostics(None)
+                logger.info(f"Compilation succeeded for folder {folder}")
 
         try:
             if self.shutdown_requested:
@@ -455,8 +455,8 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
 
     def _cleanup_tmp_projects(self):
-        for workspace in self._workspace_folders.values():
-            workspace.cleanup()
+        for folder in self._workspace_folders.values():
+            folder.cleanup()
 
     async def exit(self, **kwargs):
         self.running = False
