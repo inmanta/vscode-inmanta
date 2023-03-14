@@ -30,9 +30,8 @@ from tornado.iostream import BaseIOStream
 import inmanta.ast.type as inmanta_type
 import pkg_resources
 import yaml
-from inmanta import compiler, module, resources, env
+from inmanta import compiler, env, module, resources
 from inmanta.agent import handler
-from inmanta.env import CommandRunner
 from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
@@ -368,10 +367,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     tree[start:end] = t
                 return tree
 
-            if not self.anchormap:
-                self.anchormap = {}
-
-            self.anchormap =  {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
+            self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
 
             def treeify_reverse(iterator):
                 tree = IntervalTree()
@@ -382,9 +378,6 @@ class InmantaLSHandler(JsonRpcHandler):
                         if start <= end:
                             tree[start:end] = f
                 return tree
-
-            if not self.reverse_anchormap:
-                self.reverse_anchormap = {}
 
             self.reverse_anchormap = {
                 os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
