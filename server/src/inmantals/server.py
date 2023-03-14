@@ -30,8 +30,9 @@ from tornado.iostream import BaseIOStream
 import inmanta.ast.type as inmanta_type
 import pkg_resources
 import yaml
-from inmanta import compiler, module, resources
+from inmanta import compiler, module, resources, env
 from inmanta.agent import handler
+from inmanta.env import CommandRunner
 from inmanta.ast import CompilerException, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
@@ -149,15 +150,20 @@ class Folder:
         v1_metadata_file: str = os.path.join(self.get_folder_path(), module.ModuleV1.MODULE_FILE)
 
         module_name: Optional[str] = None
-        modulepath = ["libs"]
-        if os.path.exists(v2_metadata_file):
-            mv2 = module.ModuleV2(project=None, path=self.get_folder_path())
-            module_name = mv2.name
+        libs_folder = os.path.join(self.inmanta_project_dir.name, "libs")
 
-        elif os.path.exists(v1_metadata_file):
+        if os.path.exists(v1_metadata_file):
             mv1 = module.ModuleV1(project=None, path=self.get_folder_path())
             module_name = mv1.name
-            modulepath.append(os.path.dirname(self.get_folder_path()))
+            # modulepath.append(os.path.dirname(self.get_folder_path()))
+            os.symlink(self.get_folder_path(), os.path.join(libs_folder, module_name), target_is_directory=True)
+            CommandRunner(logger).run_command_and_stream_output(["inmanta", "module", "install", "-e"])
+
+        elif os.path.exists(v2_metadata_file):
+            mv2 = module.ModuleV2(project=None, path=self.get_folder_path(), is_editable_install=True)
+            module_name = mv2.name
+            # Install this v2 module in editable mode in the active venv.
+            env.process_env.install_from_source([env.LocalPackagePath(path=self.get_folder_path(), editable=True)])
 
         if not module_name:
             error_message: str = (
@@ -178,7 +184,7 @@ class Folder:
                 "name": "Temporary project",
                 "description": "Temporary project",
                 "repo": yaml.safe_load(repos),
-                "modulepath": modulepath,
+                "modulepath": "libs",
                 "downloadpath": "libs",
                 "install_mode": install_mode.value,
             }
