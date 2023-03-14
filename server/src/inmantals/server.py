@@ -157,7 +157,6 @@ class Folder:
             module_name = mv1.name
             # modulepath.append(os.path.dirname(self.get_folder_path()))
             os.symlink(self.get_folder_path(), os.path.join(libs_folder, module_name), target_is_directory=True)
-            CommandRunner(logger).run_command_and_stream_output(["inmanta", "module", "install", "-e"])
 
         elif os.path.exists(v2_metadata_file):
             mv2 = module.ModuleV2(project=None, path=self.get_folder_path(), is_editable_install=True)
