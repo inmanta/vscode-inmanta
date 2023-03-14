@@ -461,9 +461,17 @@ class InmantaLSHandler(JsonRpcHandler):
     async def exit(self, **kwargs):
         self.running = False
 
+    async def textDocument_didOpen(self, **kwargs):  # noqa: N802
+        pass
+
+    async def textDocument_didChange(self, **kwargs):  # noqa: N802
+        pass
+
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
         await self.compile_and_anchor()
 
+    async def textDocument_didClose(self, **kwargs):  # noqa: N802
+        pass
 
     def convert_location(self, loc):
         prefix = "file:///" if os.name == "nt" else "file://"
