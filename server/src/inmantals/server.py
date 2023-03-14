@@ -98,7 +98,7 @@ class Folder:
         """
         If this folder holds an inmanta project, this returns the path to this project.
         If this folder holds an inmanta module, this returns the path of the temporary
-        inmanta project used to load this module (see BLABAL).
+        inmanta project used to load this module.
         """
         if not self.inmanta_project_dir:
             return None
@@ -139,6 +139,9 @@ class Folder:
         return self.folder_uri.path
 
     def create_tmp_project(self) -> str:
+        """
+        When working on a module, an inmanta project is created in a temporary directory.
+        """
         self.inmanta_project_dir = tempfile.TemporaryDirectory()
         logger.debug(f"Temporary project created at {self.inmanta_project_dir.name}.")
 
@@ -258,6 +261,9 @@ class InmantaLSHandler(JsonRpcHandler):
         # Keep track of the folders opened in this workspace
         self._workspace_folders: Dict[str, Folder] = Folder.unpack_workspaces(workspaceFolders, self)
 
+        if len(self._workspace_folders) > 1:
+            raise NotImplementedError("Working on multiple folders inside a workspace is not supported yet.")
+
         init_options = kwargs.get("initializationOptions", None)
 
         if init_options:
@@ -321,10 +327,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
             def setup_project(folder: Folder):
                 # Check that we are working inside an existing project:
-                # project_file: str = os.path.join(folder, module.Project.PROJECT_FILE)
-                # if os.path.exists(project_file):
                 if folder.inmanta_project_dir:
-                    # project_dir: str = folder.inmanta_project_dir.name
                     project_dir: str = folder.get_project_dir()
                     logger.info(f"using  existing project {project_dir}")
                 else:
@@ -368,9 +371,7 @@ class InmantaLSHandler(JsonRpcHandler):
             if not self.anchormap:
                 self.anchormap = {}
 
-            folder_anchor_map = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
-
-            self.anchormap = {**self.anchormap, **folder_anchor_map}
+            self.anchormap =  {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
 
             def treeify_reverse(iterator):
                 tree = IntervalTree()
@@ -385,10 +386,9 @@ class InmantaLSHandler(JsonRpcHandler):
             if not self.reverse_anchormap:
                 self.reverse_anchormap = {}
 
-            folder_reverse_anchormap = {
+            self.reverse_anchormap = {
                 os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
             }
-            self.reverse_anchormap = {**self.anchormap, **folder_reverse_anchormap}
 
         async def sync_compile_and_anchor_folders(folders: Optional[Sequence[Folder]]) -> None:
             if folders is None or folders[0] is None:
@@ -407,8 +407,6 @@ class InmantaLSHandler(JsonRpcHandler):
                 return
             await sync_compile_and_anchor_folders(folders)
             # run synchronous part in executor to allow context switching while awaiting
-            # await self.publish_diagnostics(None)
-            # logger.info("Compilation succeeded")
         except asyncio.CancelledError:
             # Language server is shutting down. Tasks in threadpool were cancelled.
             pass
@@ -479,19 +477,14 @@ class InmantaLSHandler(JsonRpcHandler):
         self.running = False
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
-        logger.info(f"document saved, should probably do something here kwargs={kwargs}")
+        logger.debug(f"document saved, should probably do something here kwargs={kwargs}")
 
-        # {'textDocument': {'uri': 'file:///home/hugo/tmp/tmp_module/test-module-v2/model/_init.cf'}}
         try:
-            # r = await self.dispatch_method(1, "getWorkspaceFolder", file_uri)
-            # await self.send_notification("textDocument/publishDiagnostics", publish_params.dict())
-            # path = URI(file_uri).path
             file_uri: URI = kwargs["textDocument"]["uri"]
             folder = await self.send_notification("workspace/getWorkspaceFolder", {"uri": file_uri})
 
             logger.debug(f"{folder}")
 
-            # folder = self.getWorkspaceFolder(file_uri)
         except KeyError as e:
             logger.debug(f"{e}")
             folder = None
