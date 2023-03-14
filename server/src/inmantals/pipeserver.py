@@ -42,5 +42,6 @@ def main():
     logger.info("Language server stopped")
     logger.info("---------------------------------------------")
 
+
 if __name__ == "__main__":
     main()
