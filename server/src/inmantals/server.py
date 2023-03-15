@@ -243,14 +243,14 @@ class InmantaLSHandler(JsonRpcHandler):
         del self._workspace_folders[folder_uri]
 
     async def initialize(
-        self, workspaceFolders: Sequence[object], capabilities: Dict[str, object], root_path=None, root_uri=None, **kwargs
+        self, workspaceFolders: Sequence[object], capabilities: Dict[str, object], rootPath=None, rootUri=None, **kwargs
     ):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
         logger.info(f"workspaceFolders={workspaceFolders}")
 
-        if root_path:
+        if rootPath:
             logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
-        if root_uri:
+        if rootUri:
             logger.warning("The rootUri parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
 
         if workspaceFolders is None:
