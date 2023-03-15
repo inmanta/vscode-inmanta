@@ -75,7 +75,7 @@ export class PythonExtension {
 		}
 		const editor = window.activeTextEditor;
 		this.inmantaEnvSelector.text = text;
-		if (editor && editor.document.languageId === "inmanta") {
+		if (editor && ['inmanta','log','pip-requirements','properties'].includes(editor.document.languageId)) {
 			this.inmantaEnvSelector.show();
 		} else {
 			this.inmantaEnvSelector.hide();

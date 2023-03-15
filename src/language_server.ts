@@ -13,8 +13,6 @@ import { fileOrDirectoryExists, log } from './utils';
 import { LsErrorHandler } from './extension';
 import { v4 as uuidv4 } from 'uuid';
 
-let lsOutputChannel:OutputChannel = null;
-
 enum LanguageServerDiagnoseResult {
 	wrongInterpreter,
 	wrongPythonVersion,
@@ -26,6 +24,7 @@ enum LanguageServerDiagnoseResult {
 export class LanguageServer {
 	mutex = new Mutex();
 	client: LanguageClient;
+	lsOutputChannel: OutputChannel = null;
 	serverProcess: cp.ChildProcess;
 	context: ExtensionContext;
 	pythonPath: string;
@@ -234,10 +233,15 @@ export class LanguageServer {
 			compilerVenv = multiRootConfigForResource.get('compilerVenv');
 			repos = multiRootConfigForResource.get('repos');
 		}
+		
+		if (this.lsOutputChannel === null) {
+			this.lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
+
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
 			errorHandler: this.errorHandler,
+			outputChannel:this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
@@ -299,14 +303,11 @@ export class LanguageServer {
 		this.serverProcess = cp.spawn(this.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
 		let started = false;
 
-		if (lsOutputChannel === null) {
-			lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
-		}
 		this.serverProcess.stderr.on('data', (data) => {
-			lsOutputChannel.appendLine(`stderr: ${data}`);
+			this.lsOutputChannel.appendLine(`stderr: ${data}`);
 		});
 		this.serverProcess.stdout.on('data', (data) => {
-			lsOutputChannel.appendLine(`stdout: ${data}`);
+			this.lsOutputChannel.appendLine(`stdout: ${data}`);
 			if (data.includes("starting")) {
 				started = true;
 			}
