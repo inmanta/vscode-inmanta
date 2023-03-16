@@ -169,9 +169,9 @@ class Folder:
             error_message: str = (
                 "The Inmanta extension only works on projects and modules. "
                 f"Please make sure the folder opened at {self.get_folder_path()} is a valid "
-                "[project](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/project_creation.html)"
+                "[project](https://docs.inmanta.com/community/latest/model_developers/project_creation.html)"
                 " or "
-                "[module](https://docs.inmanta.com/inmanta-service-orchestrator/latest/model_developers/module_creation.html)"
+                "[module](https://docs.inmanta.com/community/latest/model_developers/module_creation.html)"
             )
             self.cleanup()
             raise InvalidExtensionSetup(error_message)
@@ -195,7 +195,7 @@ class Folder:
 
         return self.inmanta_project_dir.name
 
-    def __repr__(self):
+    def __str__(self):
         project_dir = self.get_project_dir()
         if project_dir is None:
             project_dir = ""
