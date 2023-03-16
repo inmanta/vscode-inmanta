@@ -221,7 +221,6 @@ class InmantaLSHandler(JsonRpcHandler):
                     tree[start:end] = t
                 return tree
 
-
             self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
 
             def treeify_reverse(iterator):
@@ -360,13 +359,13 @@ class InmantaLSHandler(JsonRpcHandler):
         if range is None or len(range) == 0:
             return {}
         loc = list(range)[0].data
-
         return self.convert_location(loc)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
+
         if self.reverse_anchormap is None:
             return {}
 
