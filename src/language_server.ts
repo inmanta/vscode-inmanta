@@ -273,6 +273,7 @@ export class LanguageServer {
 		const host = "127.0.0.1";
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
+		console.log(serverPort)
 
 		const options: cp.SpawnOptionsWithoutStdio = {};
 		if (process.env.INMANTA_LS_LOG_PATH) {

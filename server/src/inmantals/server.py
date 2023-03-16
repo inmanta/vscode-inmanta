@@ -78,7 +78,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.compiler_venv_path: Optional[str] = None
 
     async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
-        logger.debug("Init: " + json.dumps(kwargs))
+        logger.info("Init: " + json.dumps(kwargs))
 
         if rootPath is None:
             raise InvalidExtensionSetup("A folder should be opened instead of a file in order to use the inmanta extension.")
@@ -122,6 +122,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     # the language server does not report work done progress for workspace symbol requests
                     "workDoneProgress": False,
                 },
+                "hoverProvider" : True,
             }
         }
 
@@ -219,6 +220,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     end = self.flatten(f.end_lnr - 1, f.end_char - 1)
                     tree[start:end] = t
                 return tree
+
 
             self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
 
@@ -358,13 +360,13 @@ class InmantaLSHandler(JsonRpcHandler):
         if range is None or len(range) == 0:
             return {}
         loc = list(range)[0].data
+
         return self.convert_location(loc)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
-
         if self.reverse_anchormap is None:
             return {}
 
@@ -379,6 +381,31 @@ class InmantaLSHandler(JsonRpcHandler):
             return {}
 
         return [self.convert_location(loc.data) for loc in range]
+
+    async def textDocument_hover(self, textDocument, position):
+        uri = textDocument["uri"]
+
+        url = os.path.realpath(uri.replace("file://", ""))
+
+        if self.anchormap is None:
+            return {}
+
+        if url not in self.anchormap:
+            return {}
+
+        tree = self.anchormap[url]
+
+        range = tree[self.flatten(position["line"], position["character"])]
+
+        if range is None or len(range) == 0:
+            return {}
+        docstring = list(range)[0].data.docstring
+        return {
+        "contents": {
+            "kind": "markdown",
+            "value": docstring
+        },
+        }
 
     async def workspace_symbol(self, query: str) -> List[Dict[str, object]]:
         if self.types is None:
