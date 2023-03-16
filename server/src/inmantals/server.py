@@ -96,7 +96,6 @@ class Folder:
         else:
             self.inmanta_project_dir = self.create_tmp_project()
 
-
     def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """
         Get an inmanta extension setting for this folder
@@ -116,17 +115,15 @@ class Folder:
         if self.inmanta_project_dir:
             self.inmanta_project_dir.cleanup()
 
-
     def install_v2_module_editable_mode(self):
         """
         Use the method from core when it's available
         """
         env.process_env.install_from_source([env.LocalPackagePath(path=self.folder_uri, editable=True)])
 
-
-        # TODO use this from https://github.com/inmanta/pytest-inmanta-lsm/blob/fffe3c9af9be030f525e3284aeaa277091f1ecc8/src/pytest_inmanta_lsm/resources/setup_project.py#L92
+        # TODO use this from https://github.com/inmanta/pytest-inmanta-lsm/blob/fffe3c9af9be030f525e3284aeaa277091f1ecc8/
+        #  src/pytest_inmanta_lsm/resources/setup_project.py#L92
         # And make sure the correct pip indexes are being used
-
 
         # # The project_path has to be provided in env var
         # project_path = self.get_project_dir()
@@ -305,9 +302,13 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("key=%s self.inmanta_settings=%s", key, self.inmanta_settings)
         return self.inmanta_settings.get(key, default)
 
-
     async def initialize(
-        self, workspaceFolders: Sequence[lsp_types.WorkspaceFolder], capabilities: Dict[str, object], rootPath=None, rootUri=None, **kwargs
+        self,
+        workspaceFolders: Sequence[lsp_types.WorkspaceFolder],
+        capabilities: Dict[str, object],
+        rootPath=None,
+        rootUri=None,
+        **kwargs,
     ):  # noqa: N803
         logger.debug("Init: %s", json.dumps(kwargs))
         logger.debug("workspaceFolders=%s", workspaceFolders)
@@ -510,7 +511,6 @@ class InmantaLSHandler(JsonRpcHandler):
         if self.tmp_project:
             self.tmp_project.cleanup()
         self.threadpool.shutdown(cancel_futures=True)
-
 
     def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory):
         self.tmp_project: tempfile.TemporaryDirectory = tmp_dir

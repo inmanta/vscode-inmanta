@@ -190,5 +190,6 @@ class WorkspaceFolder(LspModel):
     """
     Folder living inside a vscode workspace.
     """
+
     uri: str
     name: str
