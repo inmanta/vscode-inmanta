@@ -184,3 +184,11 @@ class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams):
     """
 
     query: str
+
+
+class WorkspaceFolder(LspModel):
+    """
+    Folder living inside a vscode workspace.
+    """
+    uri: str
+    name: str
