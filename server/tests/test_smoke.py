@@ -192,7 +192,7 @@ async def test_connection(client, caplog):
             "definitionProvider": True,
             "referencesProvider": True,
             "workspaceSymbolProvider": {"workDoneProgress": False},
-            "hoverProvider" : True,
+            "hoverProvider": True,
         }
     }
 

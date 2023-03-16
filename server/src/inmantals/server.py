@@ -16,14 +16,12 @@
     Contact: code@inmanta.com
 """
 import asyncio
-from ctypes import Union
 import json
 import logging
 import os
 import tempfile
-import typing
 import textwrap
-
+import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Set, Tuple
@@ -125,7 +123,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     # the language server does not report work done progress for workspace symbol requests
                     "workDoneProgress": False,
                 },
-                "hoverProvider" : True,
+                "hoverProvider": True,
             }
         }
 
@@ -345,8 +343,8 @@ class InmantaLSHandler(JsonRpcHandler):
             }
 
     def get_definition(self, loc) -> str:
-        #currently only support definitions that are on one line. this is not super nice but except using regexes" I'm not sure how to get the full definition.
-        #maybe it could be passed to the anchormap too but no idea if it is easy to create.
+        # currently only support definitions that are on one line. this is not super nice but except using regexes" I'm not sure how to get the full definition.
+        # maybe it could be passed to the anchormap too but no idea if it is easy to create.
         file_path = loc.file
         start_line = loc.lnr - 1
         with open(file_path, "r") as f:
@@ -436,7 +434,7 @@ class InmantaLSHandler(JsonRpcHandler):
         return {
             "contents": {
                 "kind": "markdown",
-                "value": docstring +"\n"+textwrap.dedent(definition_md),
+                "value": docstring + "\n" + textwrap.dedent(definition_md),
             },
         }
 
