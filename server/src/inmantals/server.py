@@ -345,8 +345,8 @@ class InmantaLSHandler(JsonRpcHandler):
             }
 
     def get_definition(self, loc) -> str:
-        #currently only support definitions that are on one line. this is not super nice but except using regexes I'm not sure how to get the full definition.
-        #maybe it could be passed to the anchormap to but no idea if it is to create.
+        #currently only support definitions that are on one line. this is not super nice but except using regexes" I'm not sure how to get the full definition.
+        #maybe it could be passed to the anchormap too but no idea if it is easy to create.
         file_path = loc.file
         start_line = loc.lnr - 1
         with open(file_path, "r") as f:
