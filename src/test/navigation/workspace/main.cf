@@ -1,4 +1,5 @@
 import testmodule
+
 entity Person:
     """
     the entity for a Person
@@ -27,3 +28,17 @@ mike.friends += john
 
 jane.friends += john
 jane.friends += mike
+
+
+entity A:
+    """
+    This is:
+
+        my docstring with some keywords like if for entity end 0 1 2
+    """
+    int a = 0
+end
+
+implement A using std::none
+
+hoho = A()

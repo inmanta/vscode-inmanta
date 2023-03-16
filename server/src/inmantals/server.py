@@ -16,14 +16,17 @@
     Contact: code@inmanta.com
 """
 import asyncio
+from ctypes import Union
 import json
 import logging
 import os
 import tempfile
 import typing
+import textwrap
+
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Literal, Optional, Set, Tuple
 
 from tornado.iostream import BaseIOStream
 
@@ -341,6 +344,24 @@ class InmantaLSHandler(JsonRpcHandler):
                 },
             }
 
+    def get_definition(self, loc) -> str:
+        #currently only support definitions that are on one line. this is not super nice but except using regexes I'm not sure how to get the full definition.
+        #maybe it could be passed to the anchormap to but no idea if it is to create.
+        file_path = loc.file
+        start_line = loc.lnr - 1
+        with open(file_path, "r") as f:
+            line = f.readlines()[start_line]
+        return line
+
+    def get_file_type(self, filepath) -> str:
+        file_extension = os.path.splitext(filepath)[1].lower()
+        if file_extension == ".py":
+            return "python"
+        elif file_extension == ".cf":
+            return "inmanta"
+        else:
+            return ""
+
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
         uri = textDocument["uri"]
 
@@ -398,12 +419,25 @@ class InmantaLSHandler(JsonRpcHandler):
 
         if range is None or len(range) == 0:
             return {}
-        docstring = list(range)[0].data.docstring
+
+        data = list(range)[0].data
+        docstring = textwrap.dedent(data.docstring.strip("\n"))
+        docstring = docstring.replace(" ", "&nbsp;")
+        definition = self.get_definition(data)
+        language = self.get_file_type(data.file)
+
+        definition_md = f"""
+        ___
+
+        ```{language}
+
+        {definition}
+        """
         return {
-        "contents": {
-            "kind": "markdown",
-            "value": docstring
-        },
+            "contents": {
+                "kind": "markdown",
+                "value": docstring +"\n"+textwrap.dedent(definition_md),
+            },
         }
 
     async def workspace_symbol(self, query: str) -> List[Dict[str, object]]:
