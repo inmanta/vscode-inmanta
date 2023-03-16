@@ -58,7 +58,8 @@ logger = logging.getLogger(__name__)
 
 
 class InvalidExtensionSetup(Exception):
-    """The extension can only run on a valid project or module, and not on a single file."""
+    """An instance of InmantaLSHandler can only handle one folder (i.e. not a single file) which contains a valid inmanta
+    project or module."""
 
     def __init__(self, message: str) -> None:
         Exception.__init__(self, message)
@@ -81,13 +82,13 @@ class Folder:
     inmanta_project_dir: Union[Optional[tempfile.TemporaryDirectory], str]
     handler: "InmantaLSHandler"
 
-    def __init__(self, folder_uri: URI, name: str, handler: "InmantaLSHandler"):
-        self.folder_uri = folder_uri
-        self.name = name
+    def __init__(self, workspace_folder: object, handler: "InmantaLSHandler"):
+        self.folder_uri = URI(workspace_folder["uri"])
+        self.name = workspace_folder["name"]
         self.handler = handler  # Keep a reference to the handler for cleanup
 
         # Check that we are working inside an existing project:
-        project_file: str = os.path.join(folder_uri.path, module.Project.PROJECT_FILE)
+        project_file: str = os.path.join(self.folder_uri.path, module.Project.PROJECT_FILE)
         if os.path.exists(project_file):
             self.inmanta_project_dir = os.path.dirname(project_file)
         else:
@@ -120,29 +121,33 @@ class Folder:
         except FileNotFoundError:
             return default
 
-    @classmethod
-    def unpack_workspaces(cls, workspace_folders: Sequence[object], ls_handler: "InmantaLSHandler") -> Dict[str, "Folder"]:
-        return {folder["uri"]: Folder(URI(folder["uri"]), folder["name"], ls_handler) for folder in workspace_folders}
-
     def cleanup(self) -> None:
-        logger.info(f"calling cleanup for {self}")
+        logger.info("Cleaning up %s...", self)
         if self.inmanta_project_dir:
             self.handler.remove_folder(str(self.folder_uri))
             self.inmanta_project_dir.cleanup()
 
     def get_folder_path(self) -> str:
         """
-        Convert the folders's uri into a regular path
+        Convert the folder's uri into a regular path
         (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#uri)
         """
         return self.folder_uri.path
 
+    def install_v2_module_editable_mode(self):
+        """
+        Use the method from core when it's available
+        """
+        env.process_env.install_from_source([env.LocalPackagePath(path=self.get_folder_path(), editable=True)])
+
     def create_tmp_project(self) -> str:
         """
         When working on a module, an inmanta project is created in a temporary directory.
+        The caller of this method is responsible for calling this object's cleanup method once the temporary directory is no
+        longer used.
         """
         self.inmanta_project_dir = tempfile.TemporaryDirectory()
-        logger.debug(f"Temporary project created at {self.inmanta_project_dir.name}.")
+        logger.debug("Temporary project created at %s.", self.inmanta_project_dir.name)
 
         os.mkdir(os.path.join(self.inmanta_project_dir.name, "libs"))
 
@@ -163,7 +168,7 @@ class Folder:
             mv2 = module.ModuleV2(project=None, path=self.get_folder_path(), is_editable_install=True)
             module_name = mv2.name
             # Install this v2 module in editable mode in the active venv.
-            env.process_env.install_from_source([env.LocalPackagePath(path=self.get_folder_path(), editable=True)])
+            self.install_v2_module_editable_mode()
 
         if not module_name:
             error_message: str = (
@@ -178,7 +183,7 @@ class Folder:
 
         repos = self.handler.get_setting("inmanta.repos", self, "")
 
-        logger.debug(f"project.yaml created at {os.path.join(self.inmanta_project_dir.name, 'project.yml')} repos={repos}.")
+        logger.debug("project.yaml created at %s, repos=%s", os.path.join(self.inmanta_project_dir.name, "project.yml"), repos)
         with open(os.path.join(self.inmanta_project_dir.name, "project.yml"), "w+") as fd:
             metadata: typing.Mapping[str, object] = {
                 "name": "Temporary project",
@@ -207,7 +212,7 @@ class Folder:
 class InmantaLSHandler(JsonRpcHandler):
     def __init__(self, instream: BaseIOStream, outstream: BaseIOStream, address):
         super(InmantaLSHandler, self).__init__(instream, outstream, address)
-        self._workspace_folders = None
+        self.root_folder = None
         self.threadpool = ThreadPoolExecutor(1)
         self.anchormap = None
         self.reverse_anchormap = None
@@ -235,18 +240,18 @@ class InmantaLSHandler(JsonRpcHandler):
 
     def get_default_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """Reads the default value for a setting set by the initializationOptions argument in the initialize method."""
-        logger.info(f"key={key} self.inmanta_settings={self.inmanta_settings}")
+        logger.debug("key=%s self.inmanta_settings=%s", key, self.inmanta_settings)
         return self.inmanta_settings.get(key, default)
 
     def remove_folder(self, folder_uri: str) -> None:
-        logger.info(self._workspace_folders)
-        del self._workspace_folders[folder_uri]
+        logger.info(self.root_folder)
+        del self.root_folder[folder_uri]
 
     async def initialize(
         self, workspaceFolders: Sequence[object], capabilities: Dict[str, object], rootPath=None, rootUri=None, **kwargs
     ):  # noqa: N803
-        logger.debug("Init: " + json.dumps(kwargs))
-        logger.info(f"workspaceFolders={workspaceFolders}")
+        logger.debug("Init: %s", json.dumps(kwargs))
+        logger.debug("workspaceFolders=%s", workspaceFolders)
 
         if rootPath:
             logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
@@ -255,11 +260,15 @@ class InmantaLSHandler(JsonRpcHandler):
 
         if workspaceFolders is None:
             raise InvalidExtensionSetup("No workspace folder specified.")
+        if len(workspaceFolders) > 1:
+            raise InvalidExtensionSetup(
+                "InmantaLSHandler can only handle a single folder. Instantiate one InmantaLSHandler per folder instead."
+            )
 
         # Keep track of the folders opened in this workspace
-        self._workspace_folders: Dict[str, Folder] = Folder.unpack_workspaces(workspaceFolders, self)
+        self.root_folder: Folder = Folder(workspaceFolders[0], self)
 
-        if len(self._workspace_folders) > 1:
+        if len(self.root_folder) > 1:
             raise NotImplementedError("Working on multiple folders inside a workspace is not supported yet.")
 
         init_options = kwargs.get("initializationOptions", None)
@@ -318,22 +327,22 @@ class InmantaLSHandler(JsonRpcHandler):
         """
 
         def sync_compile_and_anchor_folder(folder: Folder):
-            logger.info(f"compile and anchor for folder {folder}")
+            logger.info("Compile and anchor for folder %s.", folder)
 
             def setup_project(folder: Folder):
                 # Check that we are working inside an existing project:
                 if folder.inmanta_project_dir:
                     project_dir: str = folder.get_project_dir()
-                    logger.info(f"using  existing project {project_dir}")
+                    logger.info("Using  existing project %s", project_dir)
                 else:
                     # Create a temporary project
                     project_dir = folder.create_tmp_project()
-                    logger.info(f"New project created: TMP dir {project_dir}")
+                    logger.info("New project created: TMP dir %s", project_dir)
 
                 if LEGACY_MODE_COMPILER_VENV:
                     compiler_venv_path: Optional[str] = self.get_setting("inmanta.compiler_venv", folder, None)
                     if compiler_venv_path:
-                        logger.debug("Using venv path " + str(compiler_venv_path))
+                        logger.debug("Using venv path %s.", str(compiler_venv_path))
                         module.Project.set(module.Project(project_dir, venv_path=compiler_venv_path))
                     else:
                         module.Project.set(module.Project(project_dir))
@@ -380,11 +389,11 @@ class InmantaLSHandler(JsonRpcHandler):
             }
 
         async def sync_compile_and_anchor_folders() -> None:
-            for folder in self._workspace_folders.values():
+            for folder in self.root_folder.values():
                 # run synchronous part in executor to allow context switching while awaiting
                 await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor_folder, folder)
                 await self.publish_diagnostics(None)
-                logger.info(f"Compilation succeeded for folder {folder}")
+                logger.info("Compilation succeeded for folder %s", folder)
 
         try:
             if self.shutdown_requested:
@@ -454,7 +463,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
 
     def _cleanup_tmp_projects(self):
-        for folder in self._workspace_folders.values():
+        for folder in self.root_folder.values():
             folder.cleanup()
 
     async def exit(self, **kwargs):
@@ -561,7 +570,7 @@ class InmantaLSHandler(JsonRpcHandler):
             if isinstance(tp, Implementation):
                 return lsp_types.SymbolKind.Constructor
 
-            logger.warning("Unknown type %s, using default symbol kind" % tp)
+            logger.warning("Unknown type %s, using default symbol kind", tp)
             return if_supported(lsp_types.SymbolKind.Object, lsp_types.SymbolKind.Variable)
 
         type_symbols: Iterator[lsp_types.SymbolInformation] = (
