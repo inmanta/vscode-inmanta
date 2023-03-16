@@ -1,6 +1,5 @@
 import testmodule
 entity Person:
-
     string name
     number age
     testmodule::pet pet
