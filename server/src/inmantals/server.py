@@ -26,7 +26,7 @@ import textwrap
 
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
-from typing import Dict, Iterator, List, Literal, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 from tornado.iostream import BaseIOStream
 
