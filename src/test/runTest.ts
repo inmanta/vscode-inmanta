@@ -65,6 +65,14 @@ async function main() {
 			launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
 			reuseMachineInstall: true,
 		});
+
+		await runTests({
+			vscodeExecutablePath,
+			extensionDevelopmentPath: extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './docstrings/index'),
+			launchArgs: [path.resolve(__dirname, '../../src/test/docstrings/workspace'), "--disable-gpu"],
+			reuseMachineInstall: true,
+		});
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
 		process.exit(1);
