@@ -233,15 +233,15 @@ export class LanguageServer {
 			compilerVenv = multiRootConfigForResource.get('compilerVenv');
 			repos = multiRootConfigForResource.get('repos');
 		}
-		
+
 		if (this.lsOutputChannel === null) {
 			this.lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
-
+		}
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
 			errorHandler: this.errorHandler,
-			outputChannel:this.lsOutputChannel,
+			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
@@ -378,7 +378,7 @@ export class LanguageServer {
 	/**
 	 * Starts or restarts the language server.
 	 * @param {boolean} start Whether to start the server or restart it.
-	 * @returns {Promise<void>}
+	 * @returns {Promise<void>}.
 	 */
 	async startOrRestartLS(start: boolean = false): Promise<void>{
 		this.diagnoseId = uuidv4();
