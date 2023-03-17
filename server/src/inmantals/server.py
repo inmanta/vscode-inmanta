@@ -16,11 +16,13 @@
     Contact: code@inmanta.com
 """
 import asyncio
+import contextlib
 import json
 import logging
 import os
 import tempfile
 import typing
+from collections import abc
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Union
@@ -88,11 +90,13 @@ class Folder:
         self.folder_uri = os.path.abspath(folder_uri.path)
         self.name = workspace_folder["name"]
         self.handler = handler  # Keep a reference to the handler for cleanup
+        self.kind: object
 
         # Check that we are working inside an existing project:
         project_file: str = os.path.join(self.folder_uri, module.Project.PROJECT_FILE)
         if os.path.exists(project_file):
             self.inmanta_project_dir = os.path.dirname(project_file)
+            self.kind = module.Project
         else:
             self.inmanta_project_dir = self.create_tmp_project()
 
@@ -116,87 +120,60 @@ class Folder:
             self.inmanta_project_dir.cleanup()
 
     def install_v2_module_editable_mode(self):
-        """
-        Use the method from core when it's available
-        """
-        env.process_env.install_from_source([env.LocalPackagePath(path=self.folder_uri, editable=True)])
+        # TODO: this method is heavily inspired by https://github.com/inmanta/pytest-inmanta-lsm/blob/fffe3c9af9be030f525e3284aeaa277091f1ecc8/src/pytest_inmanta_lsm/resources/setup_project.py#L92  # NOQA E501
+        # To avoid code duplication, this should be made into a method into core and we should call this method here and in
+        # pytest-inmanta-lsm
+        # TODO: add ticket reference once its created ?
 
-        # TODO use this from https://github.com/inmanta/pytest-inmanta-lsm/blob/fffe3c9af9be030f525e3284aeaa277091f1ecc8/
-        #  src/pytest_inmanta_lsm/resources/setup_project.py#L92
-        # And make sure the correct pip indexes are being used
+        project_path = self.inmanta_project_dir
 
-        # # The project_path has to be provided in env var
-        # project_path = self.get_project_dir()
-        #
-        # @contextlib.contextmanager
-        # def env_vars(var: abc.Mapping[str, str]) -> abc.Iterator[None]:
-        #     """
-        #     Context manager to extend the current environment with one or more environment variables.
-        #     """
-        #
-        #     def set_env(set_var: abc.Mapping[str, Optional[str]]) -> None:
-        #         for name, value in set_var.items():
-        #             if value is not None:
-        #                 os.environ[name] = value
-        #             elif name in os.environ:
-        #                 del os.environ[name]
-        #
-        #     old_env: abc.Mapping = {name: os.environ.get(name, None) for name in var}
-        #     set_env(var)
-        #     yield
-        #     set_env(old_env)
-        #
-        # # Create the project object, this is the folder we sent to the orchestrator
-        # project = module.Project(str(project_path), venv_path=str(project_path / ".env"))
-        #
-        # # Make sure the virtual environment is ready
-        # if not project.is_using_virtual_env():
-        #     project.use_virtual_env()
-        #
-        # v2_modules: List[module.ModuleV2] = []
-        # # Discover all modules in the libs folder and install the v2 ones
-        # for dir in (project_path / "libs").iterdir():
-        #     if not dir.is_dir():
-        #         # Not a directory, we don't care about this
-        #         continue
-        #
-        #     # Load the module
-        #     LOGGER.info(f"Trying to load module at {dir}")
-        #     mod = module.Module.from_path(str(dir))
-        #
-        #     if mod is None:
-        #         # This is not a module
-        #         LOGGER.warning(f"Directory at {dir} is not a module")
-        #         continue
-        #
-        #     if not mod.GENERATION == module.ModuleGeneration.V2:
-        #         # No need for extra installation step for v1 modules
-        #         LOGGER.info(f"Directory at {dir} is a v1 module")
-        #         continue
-        #
-        #     assert isinstance(mod, module.ModuleV2), type(mod)
-        #     v2_modules.append(mod)
-        #     LOGGER.info(f"Module {mod.name} is v2, we will attempt to install it")
-        #
-        # # Install all v2 modules in editable mode using the project's configured package sources
-        # if v2_modules:
-        #     urls: abc.Sequence[str] = project.module_source.urls
-        #     if not urls:
-        #         raise Exception("No package repos configured for project")
-        #     # plain Python install so core does not apply project's sources -> we need to configure pip index ourselves
-        #     with env_vars(
-        #         {
-        #             "PIP_INDEX_URL": urls[0],
-        #             "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
-        #             "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
-        #         }
-        #     ):
-        #         LOGGER.info(f"Installing modules from source: {[mod.name for mod in v2_modules]}")
-        #         project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True) for mod in v2_modules])
-        #
-        # # Install all other dependencies
-        # LOGGER.info("Installing other project dependencies")
-        # project.install_modules()
+        @contextlib.contextmanager
+        def env_vars(var: abc.Mapping[str, str]) -> abc.Iterator[None]:
+            """
+            Context manager to extend the current environment with one or more environment variables.
+            """
+
+            def set_env(set_var: abc.Mapping[str, Optional[str]]) -> None:
+                for name, value in set_var.items():
+                    if value is not None:
+                        os.environ[name] = value
+                    elif name in os.environ:
+                        del os.environ[name]
+
+            old_env: abc.Mapping = {name: os.environ.get(name, None) for name in var}
+            set_env(var)
+            yield
+            set_env(old_env)
+
+        project = module.Project(str(project_path), venv_path=os.path.join(project_path, ".env"))
+
+        # Make sure the virtual environment is ready
+        if not project.is_using_virtual_env():
+            project.use_virtual_env()
+
+        # Load the module
+        logger.info(f"Trying to load module at {self.folder_uri}")
+        mod = module.Module.from_path(str(self.folder_uri))
+
+        assert isinstance(mod, module.ModuleV2), type(mod)
+        logger.info(f"Module {mod.name} is v2, we will attempt to install it")
+
+        # Install all v2 modules in editable mode using the project's configured package sources
+        urls: abc.Sequence[str] = project.module_source.urls
+        if not urls:
+            raise Exception("No package repos configured for project")
+        # plain Python install so core does not apply project's sources -> we need to configure pip index ourselves
+        with env_vars(
+            {
+                "PIP_INDEX_URL": urls[0],
+                "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
+                "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
+            }
+        ):
+            logger.info("Installing modules from source: %s", mod.name)
+            project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True)])
+
+        project.install_modules()
 
     def create_tmp_project(self) -> str:
         """
@@ -222,12 +199,12 @@ class Folder:
             mv1 = module.ModuleV1(project=None, path=self.folder_uri)
             module_name = mv1.name
             os.symlink(self.folder_uri, os.path.join(libs_folder, module_name), target_is_directory=True)
+            self.kind = module.ModuleV1
 
         elif os.path.exists(v2_metadata_file):
             mv2 = module.ModuleV2(project=None, path=self.folder_uri, is_editable_install=True)
             module_name = mv2.name
-            # Install this v2 module in editable mode in the active venv.
-            self.install_v2_module_editable_mode()
+            self.kind = module.ModuleV2
 
         if not module_name:
             error_message: str = (
@@ -241,7 +218,7 @@ class Folder:
 
             raise InvalidExtensionSetup(error_message)
 
-        repos = self.handler.get_setting("inmanta.repos", self, "")
+        repos: str = self.handler.repos if self.handler.repos else ""
 
         logger.debug("project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), repos)
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
@@ -258,9 +235,24 @@ class Folder:
         with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
             fd.write(f"import {module_name}\n")
 
+
+
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
         self.handler.register_tmp_project(tmp_dir)
         return inmanta_project_dir
+
+    def install_project(self):
+        logger.debug("Installing project at %s", self.inmanta_project_dir)
+
+        if self.kind == module.ModuleV2:
+            # If the open folder is a v2 module we must install it in editable mode in the temporary project and provide
+            # the correct pip indexes for its dependencies. These indexes are set in the "repos" extension setting.
+            self.install_v2_module_editable_mode()
+            module.Project.set(module.Project(self.inmanta_project_dir))
+
+        else:
+            module.Project.set(module.Project(self.inmanta_project_dir))
+            module.Project.get().install_modules()
 
     def __str__(self):
         return f"Folder {self.name} opened at {self.folder_uri}" + " with a project at " + self.inmanta_project_dir + "."
@@ -279,28 +271,9 @@ class InmantaLSHandler(JsonRpcHandler):
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
         self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = None
+        self.compiler_venv_path: Optional[str] = None
+        self.repos: Optional[str] = None
         # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
-        self.inmanta_settings: Dict[str, str] = {}
-
-    def add_setting(self, key: str, value: str) -> None:
-        """Register a default value for a setting."""
-        if value is not None:
-            self.inmanta_settings[key] = value
-
-    def get_setting(self, key, folder: Optional[Folder] = None, default: Optional[str] = None) -> Optional[str]:
-        """
-        Fetch a given setting in the provided folder. If the setting isn't found or no folder is provided, this will look
-        for the default value for this setting.
-        """
-        if folder:
-            folder_setting = folder.get_setting(key, default)
-            return folder_setting if folder_setting else self.get_default_setting(key, default)
-        return self.get_default_setting(key, default)
-
-    def get_default_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        """Reads the default value for a setting set by the initializationOptions argument in the initialize method."""
-        logger.debug("key=%s self.inmanta_settings=%s", key, self.inmanta_settings)
-        return self.inmanta_settings.get(key, default)
 
     async def initialize(
         self,
@@ -321,20 +294,24 @@ class InmantaLSHandler(JsonRpcHandler):
             logger.warning("The rootUri parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
 
         if workspaceFolders is None:
-            raise InvalidExtensionSetup("No workspace folder specified.")
+            if rootUri is None:
+                raise InvalidExtensionSetup("No workspace folder or rootUri specified.")
+            workspaceFolders = [rootUri]
         if len(workspaceFolders) > 1:
             raise InvalidExtensionSetup(
                 "InmantaLSHandler can only handle a single folder. Instantiate one InmantaLSHandler per folder instead."
             )
 
+        init_options = kwargs.get("initializationOptions", None)
+
         # Keep track of the root folder opened in this workspace
         self.root_folder: Folder = Folder(workspaceFolders[0], self)
 
-        init_options = kwargs.get("initializationOptions", None)
-
         if init_options:
-            self.add_setting("inmanta.compiler_venv", init_options.get("compilerVenv", None))
-            self.add_setting("inmanta.repos", init_options.get("repos", None))
+            self.compiler_venv_path = init_options.get(
+                "compilerVenv", os.path.join(self.root_folder.folder_uri, ".env-ls-compiler")
+            )
+            self.repos = init_options.get("repos", None)
 
         value_set: List[int]
         try:
@@ -394,15 +371,12 @@ class InmantaLSHandler(JsonRpcHandler):
                     raise InvalidExtensionSetup("No inmanta project found.")
 
                 if LEGACY_MODE_COMPILER_VENV:
-                    compiler_venv_path: Optional[str] = self.get_setting("inmanta.compiler_venv", folder, None)
-                    if compiler_venv_path:
-                        logger.debug("Using venv path %s.", str(compiler_venv_path))
-                        module.Project.set(module.Project(folder.inmanta_project_dir, venv_path=compiler_venv_path))
+                    if self.compiler_venv_path:
+                        module.Project.set(module.Project(folder.inmanta_project_dir, venv_path=self.compiler_venv_path))
                     else:
                         module.Project.set(module.Project(folder.inmanta_project_dir))
                 else:
-                    module.Project.set(module.Project(folder.inmanta_project_dir))
-                    module.Project.get().install_modules()
+                    folder.install_project()
 
             # reset all
             resources.resource.reset()
