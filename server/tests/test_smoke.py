@@ -30,7 +30,10 @@ from inmanta import env
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import InmantaLSHandler
-from pkg_resources import Requirement, parse_requirements
+from packaging import version
+from pkg_resources import Requirement, get_distribution, parse_requirements
+
+INMANTA_CORE_VERSION = version.Version(get_distribution("inmanta-core").version)
 
 
 class JsonRPC(object):
@@ -228,6 +231,9 @@ async def test_working_on_v1_modules(client, caplog):
     Simulate opening a v1 module in vscode. This test makes sure the module's requirements are correctly installed from the
     specified index.
     """
+    if INMANTA_CORE_VERSION < version.Version("5"):
+        pytest.skip("Feature not supported below iso5")
+
     caplog.set_level(logging.DEBUG)
 
     module_name = "module_v1"
@@ -290,6 +296,9 @@ async def test_working_on_v2_modules(client, caplog):
     """
     Simulate opening a v2 module in vscode. This test makes sure the module is installed in editable mode.
     """
+    if INMANTA_CORE_VERSION < version.Version("5"):
+        pytest.skip("Feature not supported below iso5")
+
     caplog.set_level(logging.DEBUG)
 
     module_name = "module-v2"
