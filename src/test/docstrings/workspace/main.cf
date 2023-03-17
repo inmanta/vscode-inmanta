@@ -30,7 +30,7 @@ jane.friends += john
 jane.friends += mike
 
 
-entity A:
+entity EntityWeirdDoc:
     """
     This is:
 
@@ -39,6 +39,6 @@ entity A:
     int a = 0
 end
 
-implement A using std::none
+implement EntityWeirdDoc using std::none
 
-hoho = A()
+hoho = EntityWeirdDoc()

@@ -3,7 +3,6 @@ import * as cp from 'child_process';
 import { downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
 import * as fs from 'fs-extra';
 import * as rimraf from 'rimraf';
-import { workspace } from 'vscode';
 
 
 async function main() {
@@ -44,22 +43,22 @@ async function main() {
 		stdio: 'inherit'
 		});
 
-		// await runTests({
-		// 	vscodeExecutablePath,
-		// 	extensionDevelopmentPath: extensionDevelopmentPath,
-		// 	extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
-		// 	launchArgs: ["--disable-gpu"],
-		// 	extensionTestsEnv,
-		// 	reuseMachineInstall: true,
-		// });
+		await runTests({
+			vscodeExecutablePath,
+			extensionDevelopmentPath: extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
+			launchArgs: ["--disable-gpu"],
+			extensionTestsEnv,
+			reuseMachineInstall: true,
+		});
 
-		// await runTests({
-		// 	vscodeExecutablePath,
-		// 	launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
-		// 	extensionDevelopmentPath,
-		// 	extensionTestsPath: path.resolve(__dirname, './compile/index'),
-		// 	reuseMachineInstall: true,
-		// });
+		await runTests({
+			vscodeExecutablePath,
+			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
+			extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './compile/index'),
+			reuseMachineInstall: true,
+		});
 
 		await runTests({
 			vscodeExecutablePath,
