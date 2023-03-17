@@ -427,16 +427,18 @@ class InmantaLSHandler(JsonRpcHandler):
         language = self.get_file_type(data.file)
 
         definition_md = f"""
-        ___
-
         ```{language}
-
         {definition}
+        ```
         """
+
+        value = textwrap.dedent(definition_md).strip()+"\n___\n"+ docstring
+        logger.warn(value)
+
         return {
             "contents": {
                 "kind": "markdown",
-                "value": docstring + "\n" + textwrap.dedent(definition_md),
+                "value": value,
             },
         }
 
