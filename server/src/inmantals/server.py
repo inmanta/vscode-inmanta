@@ -88,7 +88,6 @@ class Folder:
         folder_uri = urlparse(workspace_folder["uri"])
 
         self.folder_uri = os.path.abspath(folder_uri.path)
-        self.name = workspace_folder["name"]
         self.handler = handler  # Keep a reference to the handler for cleanup
         self.kind: object
 
@@ -125,7 +124,6 @@ class Folder:
         # pytest-inmanta-lsm
         # TODO: add ticket reference once its created ?
 
-        project_path = self.inmanta_project_dir
 
         @contextlib.contextmanager
         def env_vars(var: abc.Mapping[str, str]) -> abc.Iterator[None]:
@@ -145,8 +143,7 @@ class Folder:
             yield
             set_env(old_env)
 
-        project = module.Project(str(project_path), venv_path=os.path.join(project_path, ".env"))
-
+        project = module.Project.get()
         # Make sure the virtual environment is ready
         if not project.is_using_virtual_env():
             project.use_virtual_env()
@@ -244,18 +241,17 @@ class Folder:
     def install_project(self):
         logger.debug("Installing project at %s", self.inmanta_project_dir)
 
+        module.Project.set(module.Project(self.inmanta_project_dir))
         if self.kind == module.ModuleV2:
             # If the open folder is a v2 module we must install it in editable mode in the temporary project and provide
             # the correct pip indexes for its dependencies. These indexes are set in the "repos" extension setting.
             self.install_v2_module_editable_mode()
-            module.Project.set(module.Project(self.inmanta_project_dir))
 
         else:
-            module.Project.set(module.Project(self.inmanta_project_dir))
             module.Project.get().install_modules()
 
     def __str__(self):
-        return f"Folder {self.name} opened at {self.folder_uri}" + " with a project at " + self.inmanta_project_dir + "."
+        return f"Folder opened at {self.folder_uri}" + " with a project at " + self.inmanta_project_dir + "."
 
 
 class InmantaLSHandler(JsonRpcHandler):
@@ -263,7 +259,7 @@ class InmantaLSHandler(JsonRpcHandler):
         super(InmantaLSHandler, self).__init__(instream, outstream, address)
         # If the currently open folder is a module, a temporary project will be created.
         self.tmp_project: Optional[tempfile.TemporaryDirectory] = None
-        self.root_folder = None
+        self.root_folder: Optional[Folder] = None
         self.threadpool = ThreadPoolExecutor(1)
         self.anchormap = None
         self.reverse_anchormap = None
@@ -304,15 +300,16 @@ class InmantaLSHandler(JsonRpcHandler):
 
         init_options = kwargs.get("initializationOptions", None)
 
-        # Keep track of the root folder opened in this workspace
-        self.root_folder: Folder = Folder(workspaceFolders[0], self)
 
         if init_options:
             self.compiler_venv_path = init_options.get(
-                "compilerVenv", os.path.join(self.root_folder.folder_uri, ".env-ls-compiler")
-            )
+                "compilerVenv", os.path.join(os.path.abspath(urlparse(workspaceFolders[0]["uri"]).path), ".env-ls-compiler")
+)
             self.repos = init_options.get("repos", None)
+            logger.debug("self.repos= %s", self.repos)
 
+        # Keep track of the root folder opened in this workspace
+        self.root_folder: Folder = Folder(workspaceFolders[0], self)
         value_set: List[int]
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
