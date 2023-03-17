@@ -27,12 +27,10 @@ from tornado.iostream import IOStream
 from tornado.tcpclient import TCPClient
 
 from inmanta import env
-from inmanta.env import PythonWorkingSet
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import InmantaLSHandler
 from pkg_resources import Requirement, parse_requirements
-from uri import URI
 
 
 class JsonRPC(object):
@@ -131,7 +129,7 @@ async def initialize(
     if client_capabilities is None:
         client_capabilities = {}
     path = os.path.join(os.path.dirname(__file__), project)
-    folder = {"uri": str(URI(path)), "name": project}
+    folder = {"uri": f"file://{path}", "name": project}
     ret = await client.call(
         "initialize",
         workspaceFolders=[folder],
@@ -305,7 +303,7 @@ async def test_working_on_v2_modules(client, caplog):
     venv = env.VirtualEnv(env_path)
     venv.use_virtual_env()
 
-    assert "inmanta-module-module-v2" not in PythonWorkingSet.get_packages_in_working_set()
+    assert "inmanta-module-module-v2" not in env.PythonWorkingSet.get_packages_in_working_set()
 
     options = {"repos": ("[" '{"url": "https://pypi.org/simple", "type": "package"},' "]")}
 
@@ -330,7 +328,7 @@ async def test_working_on_v2_modules(client, caplog):
 
     ret = await client.call("initialized")
     result = await client.assert_one(ret)
-    assert "inmanta-module-module-v2" in PythonWorkingSet.get_packages_in_working_set()
+    assert "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
 
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
     assert "Anchormap took" in caplog.text
