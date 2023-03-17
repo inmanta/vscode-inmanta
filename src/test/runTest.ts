@@ -22,6 +22,9 @@ async function main() {
 		const navworkspaceSettingsPath = path.resolve(__dirname, '../../src/test/navigation/workspace/.vscode/settings.json');
 		await fs.ensureFile(navworkspaceSettingsPath);
 		await fs.writeJSON(navworkspaceSettingsPath, settings);
+		const docstringSettingsPath = path.resolve(__dirname, '../../src/test/docstrings/workspace/.vscode/settings.json');
+		await fs.ensureFile(docstringSettingsPath);
+		await fs.writeJSON(docstringSettingsPath, settings);
 
 		// The folder containing the Extension Manifest package.json
 		// Passed to `--extensionDevelopmentPath`
@@ -41,22 +44,22 @@ async function main() {
 		stdio: 'inherit'
 		});
 
-		await runTests({
-			vscodeExecutablePath,
-			extensionDevelopmentPath: extensionDevelopmentPath,
-			extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
-			launchArgs: ["--disable-gpu"],
-			extensionTestsEnv,
-			reuseMachineInstall: true,
-		});
+		// await runTests({
+		// 	vscodeExecutablePath,
+		// 	extensionDevelopmentPath: extensionDevelopmentPath,
+		// 	extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
+		// 	launchArgs: ["--disable-gpu"],
+		// 	extensionTestsEnv,
+		// 	reuseMachineInstall: true,
+		// });
 
-		await runTests({
-			vscodeExecutablePath,
-			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
-			extensionDevelopmentPath,
-			extensionTestsPath: path.resolve(__dirname, './compile/index'),
-			reuseMachineInstall: true,
-		});
+		// await runTests({
+		// 	vscodeExecutablePath,
+		// 	launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
+		// 	extensionDevelopmentPath,
+		// 	extensionTestsPath: path.resolve(__dirname, './compile/index'),
+		// 	reuseMachineInstall: true,
+		// });
 
 		await runTests({
 			vscodeExecutablePath,

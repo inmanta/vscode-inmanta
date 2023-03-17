@@ -3,7 +3,7 @@ import { after, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-import { Uri, window, commands, workspace, TextDocument, Position, Range, Location, TextEditor, SnippetString } from 'vscode';
+import { Uri, window, commands, workspace, TextDocument, Position, Range, Location } from 'vscode';
 import { waitForCompile } from '../helpers';
 
 const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
@@ -25,7 +25,8 @@ describe('Language Server Code navigation', () => {
 			await window.showTextDocument(doc);
 			const succeeded = await waitForCompile(logPath, 25000);
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
-			const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(13, 16));
+
+			const attributeInSameFile = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(13, 16));
 			let expectedAttributeLocation = new Range(new Position(2, 11), new Position(2, 15));
 			assert.strictEqual((attributeInSameFile as Location[]).length, 1);
 			assert.strictEqual(attributeInSameFile[0].uri.fsPath, modelUri.fsPath);

@@ -1,5 +1,5 @@
 import { innerRun } from "../index";
 
 export function run(): Promise<void> {
-    return innerRun("./navigation/navigation.test.js");
+    return innerRun("./docstrings/docstrings.test.js");
 }

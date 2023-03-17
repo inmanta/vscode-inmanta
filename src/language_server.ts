@@ -58,6 +58,7 @@ export class LanguageServer {
 	 * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
 	 */
 	async canServerStart():Promise<LanguageServerDiagnoseResult>{
+		console.log(this.pythonPath);
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
@@ -99,17 +100,21 @@ export class LanguageServer {
 		let response;
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
+				console.log("3;1");
 				return this.selectInterpreter(diagnoseId);
 			case LanguageServerDiagnoseResult.wrongPythonVersion:
+				console.log("3;2");
 				response = await window.showErrorMessage(`The Inmanta Language Server requires at least Python 3.6, but the provided interpreter (${this.pythonPath}) is an older version.`,  "Setup assistant");
 				if(response === "Setup assistant"){
 					commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 				};
 				break;
 			case LanguageServerDiagnoseResult.languageServerNotInstalled:
+				console.log("3;3");
 				this.proposeInstallLS(diagnoseId);
 				break;
 			case LanguageServerDiagnoseResult.unknown:
+				console.log("3;4");
 				response = await window.showErrorMessage(`The Inmanta Language Server failed to start`, "Setup assistant");
 				if(response === "Setup assistant"){
 					commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
@@ -364,12 +369,15 @@ export class LanguageServer {
 	 * @returns {Promise<void>}
 	 */
 	async startOrRestartLS(start: boolean = false): Promise<void>{
+		console.log("1");
 		this.diagnoseId = uuidv4();
+		console.log("2");
 		const canStart = await this.canServerStart();
+		console.log("3");
 		if (canStart !== LanguageServerDiagnoseResult.ok){
 			return this.proposeSolution(canStart, this.diagnoseId);
 		}
-
+		console.log("4");
 		if(start){
 			log("starting Language Server");
 		} else {
