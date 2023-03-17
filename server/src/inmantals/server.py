@@ -124,7 +124,6 @@ class Folder:
         # pytest-inmanta-lsm
         # TODO: add ticket reference once its created ?
 
-
         @contextlib.contextmanager
         def env_vars(var: abc.Mapping[str, str]) -> abc.Iterator[None]:
             """
@@ -232,8 +231,6 @@ class Folder:
         with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
             fd.write(f"import {module_name}\n")
 
-
-
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
         self.handler.register_tmp_project(tmp_dir)
         return inmanta_project_dir
@@ -300,11 +297,10 @@ class InmantaLSHandler(JsonRpcHandler):
 
         init_options = kwargs.get("initializationOptions", None)
 
-
         if init_options:
             self.compiler_venv_path = init_options.get(
                 "compilerVenv", os.path.join(os.path.abspath(urlparse(workspaceFolders[0]["uri"]).path), ".env-ls-compiler")
-)
+            )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
 

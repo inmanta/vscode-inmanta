@@ -227,7 +227,8 @@ async def test_connection(client, caplog):
 @pytest.mark.asyncio
 async def test_working_on_v1_modules(client, caplog):
     """
-    Simulate opening a v1 module in vscode. This test makes sure the module's requirements are correctly installed.
+    Simulate opening a v1 module in vscode. This test makes sure the module's requirements are correctly installed from the
+    specified index.
     """
     caplog.set_level(logging.DEBUG)
 
@@ -247,15 +248,10 @@ async def test_working_on_v1_modules(client, caplog):
     venv.use_virtual_env()
 
     assert Requirement.parse("inmanta-module-dummy>=3.0.8") in reqs
+    # This dummy module is used because it is only present in the dev artifacts and not in pypi index.
     assert not venv.are_installed(reqs)
 
-    options = {
-        "inmanta.repos": [
-            {"url": "https://github.com/inmanta", "type": "git"},
-            {"url": "https://pypi.org/simple", "type": "package"},
-            {"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},
-        ]
-    }
+    options = {"repos": ("[" '{"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},' "]")}
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
     ret = await client.call("initialize", workspaceFolders=[path_uri], capabilities={}, initializationOptions=options)
@@ -290,7 +286,7 @@ async def test_working_on_v1_modules(client, caplog):
     caplog.clear()
 
 
-@pytest.mark.timeout(5)
+@pytest.mark.timeout(10)
 @pytest.mark.asyncio
 async def test_working_on_v2_modules(client, caplog):
     """
@@ -311,12 +307,7 @@ async def test_working_on_v2_modules(client, caplog):
 
     assert "inmanta-module-module-v2" not in PythonWorkingSet.get_packages_in_working_set()
 
-    options = {
-        "inmanta.repos": [
-            {"url": "https://github.com/inmanta", "type": "git"},
-            {"url": "https://pypi.org/simple", "type": "package"},
-        ]
-    }
+    options = {"repos": ("[" '{"url": "https://pypi.org/simple", "type": "package"},' "]")}
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
     ret = await client.call("initialize", workspaceFolders=[path_uri], capabilities={}, initializationOptions=options)
@@ -491,4 +482,4 @@ async def test_unspecified_workspace_folder(client: JsonRPC) -> None:
     The language server should return an error when no workspace folder specified.
     """
     await client.call("initialize", workspaceFolders=None, capabilities={})
-    await client.assert_error(message="No workspace folder specified.")
+    await client.assert_error(message="No workspace folder or rootUri specified.")
