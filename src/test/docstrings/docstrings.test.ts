@@ -27,13 +27,9 @@ describe('Language Server Code docstrings', () => {
 			console.log("________test2");
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			console.log("________test3");
-			const docstringEntity1 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(18, 11));
-			const docstringEntity2 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(44, 16));
-			const docstringPlugin = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(22, 14));
+			const docstringEntity1 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(13, 16));
 
 			console.log("1: " + JSON.stringify(docstringEntity1));
-			console.log("2: " + JSON.stringify(docstringEntity2));
-			console.log("3: " + JSON.stringify(docstringPlugin));
 			console.log("________test4");
 			resolve();
 		});
