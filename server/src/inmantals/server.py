@@ -430,7 +430,7 @@ class InmantaLSHandler(JsonRpcHandler):
         {definition}
         ```
         """
-        value = textwrap.dedent(definition_md)+"\n___\n"+ docstring
+        value = textwrap.dedent(definition_md) + "\n___\n" + docstring
         return {
             "contents": {
                 "kind": "markdown",
