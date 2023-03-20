@@ -3,7 +3,7 @@
 # Run extension tests
 
 # Run in venv with inmantals installed in it
-export INMANTA_EXTENSION_TEST_ENV="/home/florent/.virtualenvs/demovscodetests"
+export INMANTA_EXTENSION_TEST_ENV="/home/florent/.virtualenvs/demovscode2"
 export INMANTA_LS_PATH="/home/florent/Desktop/vscode-inmanta/server"
 export INMANTA_LS_LOG_PATH="/home/florent/Desktop/vscode-inmanta/server.log"
 

@@ -21,6 +21,7 @@ describe('Language Server Code navigation', () => {
 	it(`Check that code navigation works`, () => {
 		return new Promise<void>(async resolve => {
 			console.log("---------------1");
+			console.log(logPath)
 			// Open model file
 			const doc: TextDocument = await workspace.openTextDocument(modelUri);
 			await window.showTextDocument(doc);

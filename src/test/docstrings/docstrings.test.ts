@@ -25,11 +25,18 @@ describe('Language Server Code docstrings', () => {
 			await window.showTextDocument(doc);
 			const succeeded = await waitForCompile(logPath, 25000);
 			console.log("________test2");
+
+			const buf = fs.readFileSync(modelUri.path);
+			console.log(buf.toString('utf8'));
+
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			console.log("________test3");
-			const docstringEntity1 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(13, 16));
-
+			const docstringEntity1 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(13, 11));
+			const docstringEntity2 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(14, 11));
+			const docstringEntity3 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(15, 11));
 			console.log("1: " + JSON.stringify(docstringEntity1));
+			console.log("1: " + JSON.stringify(docstringEntity2));
+			console.log("1: " + JSON.stringify(docstringEntity3));
 			console.log("________test4");
 			resolve();
 		});

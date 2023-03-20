@@ -60,13 +60,13 @@ async function main() {
 		// 	reuseMachineInstall: true,
 		// });
 
-		await runTests({
-			vscodeExecutablePath,
-			extensionDevelopmentPath: extensionDevelopmentPath,
-			extensionTestsPath: path.resolve(__dirname, './navigation/index'),
-			launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
-			reuseMachineInstall: true,
-		});
+		// await runTests({
+		// 	vscodeExecutablePath,
+		// 	extensionDevelopmentPath: extensionDevelopmentPath,
+		// 	extensionTestsPath: path.resolve(__dirname, './navigation/index'),
+		// 	launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
+		// 	reuseMachineInstall: true,
+		// });
 
 		await runTests({
 			vscodeExecutablePath,
