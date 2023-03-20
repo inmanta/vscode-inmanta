@@ -20,22 +20,30 @@ describe('Language Server Code navigation', () => {
 
 	it(`Check that code navigation works`, () => {
 		return new Promise<void>(async resolve => {
+			console.log("---------------1");
 			// Open model file
 			const doc: TextDocument = await workspace.openTextDocument(modelUri);
 			await window.showTextDocument(doc);
 			const succeeded = await waitForCompile(logPath, 25000);
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
+			console.log("---------------2");
+
+			const buf = fs.readFileSync(modelUri.path);
+			console.log(buf.toString('utf8'));
 
 			const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(13, 16));
+			console.log(attributeInSameFile);
 			let expectedAttributeLocation = new Range(new Position(2, 11), new Position(2, 15));
 			assert.strictEqual((attributeInSameFile as Location[]).length, 1);
 			assert.strictEqual(attributeInSameFile[0].uri.fsPath, modelUri.fsPath);
 			assert.deepStrictEqual(attributeInSameFile[0].range, expectedAttributeLocation, "Attribute location in the same file doesn't match");
+			console.log("---------------3");
 
 			const typeInDifferentFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(4, 18));
 			assert.strictEqual((typeInDifferentFile as Location[]).length, 1);
 			assert.strictEqual(typeInDifferentFile[0].uri.fsPath, path.resolve(libsPath, "testmodule", "model", "_init.cf"));
 			assert.deepStrictEqual(typeInDifferentFile[0].range, new Range(new Position(0, 8), new Position(0, 11)), "Attribute location in different file doesn't match");
+			console.log("---------------4");
 
 			const pluginLocation = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(17, 15));
 			assert.strictEqual((pluginLocation as Location[]).length, 1);

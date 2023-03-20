@@ -33,7 +33,7 @@ import pkg_resources
 import yaml
 from inmanta import compiler, module, resources
 from inmanta.agent import handler
-from inmanta.ast import CompilerException, Range
+from inmanta.ast import CompilerException,Range, AnchorTarget
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
 from inmanta.plugins import Plugin
@@ -227,15 +227,15 @@ class InmantaLSHandler(JsonRpcHandler):
             def treeify_reverse(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
-                    if isinstance(t, Range):
-                        start = self.flatten(t.lnr - 1, t.start_char - 1)
-                        end = self.flatten(t.end_lnr - 1, t.end_char - 1)
+                    if isinstance(t, AnchorTarget) and isinstance(t.location, Range):
+                        start = self.flatten(t.location.lnr - 1, t.location.start_char - 1)
+                        end = self.flatten(t.location.end_lnr - 1, t.location.end_char - 1)
                         if start <= end:
                             tree[start:end] = f
                 return tree
 
             self.reverse_anchormap = {
-                os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
+                os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].location.file)
             }
 
         try:
@@ -323,36 +323,33 @@ class InmantaLSHandler(JsonRpcHandler):
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass
 
-    def convert_location(self, loc):
+    def convert_location(self, target):
         prefix = "file:///" if os.name == "nt" else "file://"
-        if isinstance(loc, Range):
+        if isinstance(target, AnchorTarget) and isinstance(target.location, Range):
             return {
-                "uri": prefix + loc.file,
+                "uri": prefix + target.location.file,
                 "range": {
-                    "start": {"line": loc.lnr - 1, "character": loc.start_char - 1},
-                    "end": {"line": loc.end_lnr - 1, "character": loc.end_char - 1},
+                    "start": {"line": target.location.lnr - 1, "character": target.location.start_char - 1},
+                    "end": {"line": target.location.end_lnr - 1, "character": target.location.end_char - 1},
                 },
             }
         else:
             return {
-                "uri": prefix + loc.file,
+                "uri": prefix + target.location.file,
                 "range": {
-                    "start": {"line": loc.lnr - 1, "character": 0},
-                    "end": {"line": loc.lnr, "character": 0},
+                    "start": {"line": target.location.lnr - 1, "character": 0},
+                    "end": {"line": target.location.lnr, "character": 0},
                 },
             }
 
-    def get_definition(self, loc) -> str:
-        # currently only support definitions that are on one line. this is not super nice but except
-        # using regexes" I'm not sure how to get the full definition.
-        # maybe it could be passed to the anchormap too but no idea if it is easy to create.
-        file_path = loc.file
-        start_line = loc.lnr - 1
+    def get_definition(self, target: AnchorTarget) -> str:
+        file_path = target.location.file
+        start_line = target.location.lnr - 1
         with open(file_path, "r") as f:
             line = f.readlines()[start_line]
         return line
 
-    def get_file_type(self, filepath) -> str:
+    def get_file_type(self, filepath: str) -> str:
         file_extension = os.path.splitext(filepath)[1].lower()
         if file_extension == ".py":
             return "python"
@@ -424,7 +421,7 @@ class InmantaLSHandler(JsonRpcHandler):
         docstring = textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
         docstring = docstring.replace(" ", "&nbsp;")
         definition = self.get_definition(data).strip()
-        language = self.get_file_type(data.file)
+        language = self.get_file_type(data.location.file)
         definition_md = f"""
         ```{language}
         {definition}
