@@ -421,7 +421,6 @@ class InmantaLSHandler(JsonRpcHandler):
         return [self.convert_location(loc.data) for loc in range]
 
     async def textDocument_hover(self, textDocument, position):
-        logger.warn(position)
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
