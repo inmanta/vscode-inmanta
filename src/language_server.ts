@@ -368,6 +368,7 @@ export class LanguageServer {
 		if (canStart !== LanguageServerDiagnoseResult.ok){
 			return this.proposeSolution(canStart, this.diagnoseId);
 		}
+
 		if(start){
 			log("starting Language Server");
 		} else {
