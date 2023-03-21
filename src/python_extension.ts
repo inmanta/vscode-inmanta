@@ -1,6 +1,6 @@
 'use strict';
 import { exec } from 'child_process';
-import { StatusBarAlignment, ThemeColor, window, workspace } from 'vscode';
+import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument} from 'vscode';
 import { IExtensionApi, Resource } from './types';
 import { fileOrDirectoryExists, log } from './utils';
 
@@ -16,10 +16,14 @@ export class PythonExtension {
 	 * @param {IExtensionApi} pythonApi The Python extension API.
 	 * @param {Function} onChangeCallback The callback function to be called when the active interpreter is changed.
 	 */
-	constructor(pythonApi : IExtensionApi) {
-		this.executionDetails = pythonApi.settings.getExecutionDetails(workspace.workspaceFolders?.[0].uri);
+	constructor(pythonApi : IExtensionApi, resource: Resource) {
+		log("Instantiating new python extension");
+		log(`  resource: ${resource.toString()}`);
+		this.executionDetails = pythonApi.settings.getExecutionDetails(resource); //workspace.workspaceFolders?.[0].uri);
+		log(this.executionDetails[0]);
 		this.onChange(pythonApi);
 	}
+
 
 	/**
 	 * Gets the path to the Python interpreter being used by the extension.
@@ -40,6 +44,7 @@ export class PythonExtension {
 		// If no match is found, return the pythonpath
 		return this.pythonPath;
 	}
+
 
 	async updatePythonVersion(): Promise<string> {
 		return new Promise<string>((resolve, reject) => {

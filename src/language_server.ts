@@ -5,12 +5,11 @@ import * as cp from 'child_process';
 import * as os from 'os';
 import getPort from 'get-port';
 
-import { commands, ExtensionContext, OutputChannel, window, workspace} from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions} from 'vscode-languageclient';
+import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder} from 'vscode';
+import { RevealOutputChannelOn, LanguageClientOptions, integer, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction} from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
 import { fileOrDirectoryExists, log } from './utils';
-import { LsErrorHandler } from './extension';
 import { v4 as uuidv4 } from 'uuid';
 
 enum LanguageServerDiagnoseResult {
@@ -21,14 +20,42 @@ enum LanguageServerDiagnoseResult {
 	ok,
   }
 
+
+/**
+ * An implementation of the ErrorHandler interface for the language server client.
+ */
+export class LsErrorHandler implements ErrorHandler{
+	languageserver :LanguageServer;
+	constructor(languageserver: LanguageServer) {
+		this.languageserver = languageserver;
+	}
+	async error(error: Error, message: Message | undefined, count: number | undefined): Promise<ErrorHandlerResult> {
+		const languageServerDiagnose = await this.languageserver.canServerStart();
+		if (languageServerDiagnose === LanguageServerDiagnoseResult.unknown){
+			window.showErrorMessage(error.name+": "+error.message);
+		}
+		if (languageServerDiagnose !== LanguageServerDiagnoseResult.ok){
+			await this.languageserver.proposeSolution(languageServerDiagnose, uuidv4());
+		}
+		return {action: ErrorAction.Shutdown};
+	}
+
+	closed(): CloseHandlerResult{
+		return {action: CloseAction.DoNotRestart};
+	}
+
+}
+
 export class LanguageServer {
 	mutex = new Mutex();
 	client: LanguageClient;
 	lsOutputChannel: OutputChannel = null;
+	// traceOutputChannel: OutputChannel = null;
 	serverProcess: cp.ChildProcess;
 	context: ExtensionContext;
 	pythonPath: string;
-	errorHandler = new LsErrorHandler();
+	rootFolder: WorkspaceFolder;
+	errorHandler: LsErrorHandler = null;
 	diagnoseId: string;
 	/**
 	 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
@@ -36,9 +63,20 @@ export class LanguageServer {
 	 * @param {ExtensionContext} context the extension context.
 	 * @param {Extension<any>} pythonExtension the Python extension.
 	 */
-	constructor(context: ExtensionContext, pythonPath: string, errorHandler: LsErrorHandler) {
+	constructor(context: ExtensionContext, pythonPath: string, rootFolder: WorkspaceFolder) {
+		log("Creating language server");
+		log(String(context));
+		log(String(pythonPath));
+		log(rootFolder.toString());
+
+
+
 		this.context = context;
 		this.pythonPath = pythonPath;
+		this.rootFolder = rootFolder;
+	}
+
+	addErrorHandler(errorHandler: LsErrorHandler): void {
 		this.errorHandler = errorHandler;
 	}
 
@@ -175,7 +213,7 @@ export class LanguageServer {
 
 	/**
 	 * Install the Inmanta Language Server and start it if specified.
-	 * @returns {Promise<void>}
+	 * @returns {Promise<void>}.
 	 */
 	async installLanguageServer(): Promise<void> {
 		this.diagnoseId = uuidv4();
@@ -211,13 +249,22 @@ export class LanguageServer {
 	 * @throws {Error} Throws an error if a file is opened instead of a folder.
 	 */
 	private	async getClientOptions(): Promise<LanguageClientOptions> {
+		log("Geting client options...");
 		if (this.context.storageUri === undefined) {
 			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 		}
 		const editor = window.activeTextEditor;
+		log("Editor:");
+		log(`${JSON.stringify(editor)}`);
 		const resource = editor.document.uri;
+		log("Resource:");
+
+		log(`${JSON.stringify(resource)}`);
 		const folder = workspace.getWorkspaceFolder(resource);
+
+		log(`resource= ${resource.toString()}`);
+		log(`folder URI = ${this.rootFolder.toString()}`);
 
 
 		let compilerVenv: string | undefined;
@@ -235,18 +282,19 @@ export class LanguageServer {
 		}
 
 		if (this.lsOutputChannel === null) {
-			this.lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
+			this.lsOutputChannel = window.createOutputChannel(`Inmanta Language Server[${this.rootFolder.uri.toString()}]`);
 		}
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
-			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
+			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.toString()}/**/*`}],
 			errorHandler: this.errorHandler,
 			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
 				repos: repos,
-			}
+			},
+			workspaceFolder: this.rootFolder,
 		};
 		return clientOptions;
 
@@ -263,7 +311,11 @@ export class LanguageServer {
 		try {
 			clientOptions = await this.getClientOptions();
 			log("Retrieved client options");
+			log(`${JSON.stringify(clientOptions.initializationOptions)}`);
+			// log(`${JSON.stringify(clientOptions)}`);
 		} catch (err) {
+			log("ERROR ERROR ERROR ERROR");
+			log(err);
 			return;
 		}
 		try{
@@ -367,11 +419,14 @@ export class LanguageServer {
 		}
 
 		// Create the language client and start the client.
+		log(`serv options ${JSON.stringify(serverOptions)}`);
+		logAllClientOptions(clientOptions);
 		this.client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
-		log(`Starting Language Client with options: ${JSON.stringify({
-			serverOptions: serverOptions,
-			clientOptions: clientOptions
-		}, null, 2)}`);
+		log("Waiting for language Client to start");
+		// log(`Starting Language Client with options: ${JSON.stringify({
+		// 	// serverOptions: serverOptions,
+		// 	clientOptions: clientOptions
+		// }, null, 2)}`);
 		await this.client.start();
 	}
 
@@ -393,6 +448,7 @@ export class LanguageServer {
 			log("restarting Language Server");
 		}
 		const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
+		log(`Enabled ? ${enable}`);
 		await this.stopServerAndClient();
 		if (enable) {
 			await this.startServerAndClient();
@@ -403,7 +459,8 @@ export class LanguageServer {
 	/**
 	 * Stops the language server and its client.
 	 */
-	private async stopServerAndClient() {
+	async stopServerAndClient() {
+		log("stopping serv and  client");
 		await this.mutex.runExclusive(async () => {
 			if (this.client) {
 				if(this.client.needsStop()){
@@ -420,3 +477,10 @@ export class LanguageServer {
 		});
 	}
 }
+
+function logAllClientOptions(clientOptions){
+	let opts = ["documentSelector"];
+	log(JSON.stringify(clientOptions.documentSelector));
+}
+
+

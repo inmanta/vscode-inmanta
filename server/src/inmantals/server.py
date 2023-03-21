@@ -84,8 +84,8 @@ class Folder:
     inmanta_project_dir: Union[Optional[tempfile.TemporaryDirectory], str]
     handler: "InmantaLSHandler"
 
-    def __init__(self, workspace_folder: lsp_types.WorkspaceFolder, handler: "InmantaLSHandler"):
-        folder_uri = urlparse(workspace_folder["uri"])
+    def __init__(self, root_uri: str, handler: "InmantaLSHandler"):
+        folder_uri = urlparse(root_uri)
 
         self.folder_uri = os.path.abspath(folder_uri.path)
         self.handler = handler  # Keep a reference to the handler for cleanup
@@ -276,10 +276,11 @@ class InmantaLSHandler(JsonRpcHandler):
         rootUri=None,
         **kwargs,
     ):  # noqa: N803
-        logger.debug("Init: %s", json.dumps(kwargs))
+        logger.debug("Init INIT: %s", json.dumps(kwargs))
         logger.debug("workspaceFolders=%s", workspaceFolders)
         logger.debug("rootPath=%s", rootPath)
         logger.debug("rootUri=%s", rootUri)
+        logger.debug("kwargs=%s", kwargs)
 
         if rootPath:
             logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
@@ -291,21 +292,22 @@ class InmantaLSHandler(JsonRpcHandler):
                 raise InvalidExtensionSetup("No workspace folder or rootUri specified.")
             workspaceFolders = [rootUri]
         if len(workspaceFolders) > 1:
-            raise InvalidExtensionSetup(
-                "InmantaLSHandler can only handle a single folder. Instantiate one InmantaLSHandler per folder instead."
-            )
+            logger.debug("Working inside a workspace with multiple folders")
+            # raise InvalidExtensionSetup(
+            #     "InmantaLSHandler can only handle a single folder. Instantiate one InmantaLSHandler per folder instead."
+            # )
 
         init_options = kwargs.get("initializationOptions", None)
 
         if init_options:
             self.compiler_venv_path = init_options.get(
-                "compilerVenv", os.path.join(os.path.abspath(urlparse(workspaceFolders[0]["uri"]).path), ".env-ls-compiler")
+                "compilerVenv", os.path.join(os.path.abspath(urlparse(rootUri).path), ".env-ls-compiler")
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
 
         # Keep track of the root folder opened in this workspace
-        self.root_folder: Folder = Folder(workspaceFolders[0], self)
+        self.root_folder: Folder = Folder(rootUri, self)
         value_set: List[int]
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
@@ -474,6 +476,7 @@ class InmantaLSHandler(JsonRpcHandler):
         await self.compile_and_anchor()
 
     async def shutdown(self, **kwargs):
+        logger.debug("shutdown requested")
         self.shutdown_requested = True
         if self.tmp_project:
             self.tmp_project.cleanup()
@@ -489,9 +492,11 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     async def textDocument_didChange(self, **kwargs):  # noqa: N802
+        logger.info("Doc changed %s", str(**kwargs))
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
+        logger.info("Doc got saved %s", str(**kwargs))
         await self.compile_and_anchor()
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
