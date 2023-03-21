@@ -55,16 +55,14 @@ Older versions of inmanta-core work with a separate compiler venv and install mo
 Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
 """
 
-BEFORE_ANCHOR_TARGET: bool = CORE_VERSION <= version.Version("8.3.dev")
-"""
-Before version 8.3.0.dev on core the AnchorTarget class does not exist so we will create it ourself here and transform all
-locations and ranges to AnchorTarget's where needed.
-Otherwise no transformation is needed as core will return AnchorTargets where needed and the AnchorTarget class of core will be used.
-"""
-
-if not BEFORE_ANCHOR_TARGET:
+try:
     from inmanta.ast import AnchorTarget
-else :
+except ImportError:
+    """
+    Before version 8.3.0.dev on core the AnchorTarget class does not exist so we will create it ourself here and transform all
+    locations and ranges to AnchorTarget's where needed.
+    Otherwise will return AnchorTargets where needed and the AnchorTarget class of core will be used.
+    """
     class AnchorTarget(object):
         def __init__(
             self,
@@ -77,6 +75,7 @@ else :
             """
             self.location = location
             self.docstring = docstring
+
 
 logger = logging.getLogger(__name__)
 
