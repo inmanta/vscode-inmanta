@@ -41,6 +41,7 @@ from inmanta.util import groupby
 from inmantals import lsp_types
 from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
 from intervaltree.intervaltree import IntervalTree
+from intervaltree.interval import Interval
 from packaging import version
 
 CORE_VERSION: version.Version = version.Version(pkg_resources.get_distribution("inmanta-core").version)
@@ -381,65 +382,45 @@ class InmantaLSHandler(JsonRpcHandler):
         else:
             return ""
 
-    async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
+    def get_range_from_position(self, textDocument, position)-> Optional[Interval]:
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
 
         if self.anchormap is None:
-            return {}
+            return None
 
         if url not in self.anchormap:
-            return {}
+            return None
 
         tree = self.anchormap[url]
 
         range = tree[self.flatten(position["line"], position["character"])]
-
         if range is None or len(range) == 0:
+            return None
+        return range
+
+    async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
+        range = self.get_range_from_position(textDocument,position)
+        if not range:
             return {}
         loc = list(range)[0].data
         return self.convert_location(loc)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
-        uri = textDocument["uri"]
-
-        url = os.path.realpath(uri.replace("file://", ""))
-
-        if self.reverse_anchormap is None:
-            return {}
-
-        if url not in self.reverse_anchormap:
-            return {}
-
-        tree = self.reverse_anchormap[url]
-
-        range = tree[self.flatten(position["line"], position["character"])]
-
-        if range is None or len(range) == 0:
+        range = self.get_range_from_position(textDocument,position)
+        if not range:
             return {}
 
         return [self.convert_location(loc.data) for loc in range]
 
     async def textDocument_hover(self, textDocument, position):
-        uri = textDocument["uri"]
-
-        url = os.path.realpath(uri.replace("file://", ""))
-
-        if self.anchormap is None:
-            return {}
-
-        if url not in self.anchormap:
-            return {}
-
-        tree = self.anchormap[url]
-
-        range = tree[self.flatten(position["line"], position["character"])]
-
-        if range is None or len(range) == 0:
+        range = self.get_range_from_position(textDocument,position)
+        if not range:
             return {}
 
         data = list(range)[0].data
+        logger.warn(list(range)[0])
         docstring = textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
         docstring = docstring.replace(" ", "&nbsp;")
         definition = self.get_definition(data).strip()
