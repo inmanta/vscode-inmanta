@@ -235,7 +235,7 @@ class InmantaLSHandler(JsonRpcHandler):
             scheduler_instance = scheduler.Scheduler()
             anchormap = scheduler_instance.anchormap(compiler_instance, statements, blocks)
             # Make sure everything is an AnchorTarget, this is for backward compatibility
-            anchermap_with_anchorTarget = [(s, AnchorTarget(t)) if isinstance(t, Range) or isinstance(t, Location) else (s,t)  for s, t in anchormap]
+            anchormap_with_anchor_target = [(s, AnchorTarget(t)) isinstance(t, Location) else (s,t) for s, t in anchormap]
             self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
