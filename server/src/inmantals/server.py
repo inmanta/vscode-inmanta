@@ -33,7 +33,7 @@ import pkg_resources
 import yaml
 from inmanta import compiler, module, resources
 from inmanta.agent import handler
-from inmanta.ast import CompilerException,Range, AnchorTarget
+from inmanta.ast import CompilerException,Range, Location
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
 from inmanta.plugins import Plugin
@@ -54,8 +54,29 @@ Older versions of inmanta-core work with a separate compiler venv and install mo
 Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
 """
 
-logger = logging.getLogger(__name__)
+BEFORE_ANCHOR_TARGET: bool = CORE_VERSION <= version.Version("8.3.dev")
+"""
+Older versions of inmanta-core work with a separate compiler venv and install modules and their dependencies on the fly.
+Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
+"""
 
+if not BEFORE_ANCHOR_TARGET:
+    from inmanta.ast import AnchorTarget
+else :
+    class AnchorTarget(object):
+        def __init__(
+            self,
+            location: Location,
+            docstring: Optional[str] = None,
+        ) -> None:
+            """
+            :param location: the location of the target of the anchor
+            :param docstring: the docstring attached to the target
+            """
+            self.location = location
+            self.docstring = docstring
+
+logger = logging.getLogger(__name__)
 
 class InvalidExtensionSetup(Exception):
     """The extension can only run on a valid project or module, and not on a single file."""
@@ -212,6 +233,7 @@ class InmantaLSHandler(JsonRpcHandler):
             (statements, blocks) = compiler_instance.compile()
             scheduler_instance = scheduler.Scheduler()
             anchormap = scheduler_instance.anchormap(compiler_instance, statements, blocks)
+            anchermap_with_anchorTarget = [(s, AnchorTarget(t)) if isinstance(t, Range) or isinstance(t, Location) else (s,t)  for s, t in anchormap]
             self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
@@ -222,8 +244,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     tree[start:end] = t
                 return tree
 
-            self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
-
+            self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchermap_with_anchorTarget, lambda x: x[0].file)}
             def treeify_reverse(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
@@ -235,7 +256,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 return tree
 
             self.reverse_anchormap = {
-                os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].location.file)
+                os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchermap_with_anchorTarget, lambda x: x[1].location.file)
             }
 
         try:

@@ -17,27 +17,36 @@ describe('Language Server Code docstrings', () => {
 		await commands.executeCommand('workbench.action.closeActiveEditor');
 	});
 
-	it(`Check that docstings work`, () => {
+	it(`Check that docstrings work`, () => {
 		return new Promise<void>(async resolve => {
 			// Open model file
-			console.log("________test1");
 			const doc: TextDocument = await workspace.openTextDocument(modelUri);
 			await window.showTextDocument(doc);
 			const succeeded = await waitForCompile(logPath, 25000);
-			console.log("________test2");
-
-			const buf = fs.readFileSync(modelUri.path);
-			console.log(buf.toString('utf8'));
-
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
-			console.log("________test3");
-			const docstringEntity1 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(13, 11));
-			const docstringEntity2 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(14, 11));
-			const docstringEntity3 = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(15, 11));
-			console.log("1: " + JSON.stringify(docstringEntity1));
-			console.log("1: " + JSON.stringify(docstringEntity2));
-			console.log("1: " + JSON.stringify(docstringEntity3));
-			console.log("________test4");
+			const docstringEntity = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(13, 11));
+			const expectedDocstringEntity = `
+\`\`\`inmanta
+entity Person:
+\`\`\`
+
+___
+the&nbsp;entity&nbsp;for&nbsp;a&nbsp;Person
+`;
+			assert.strictEqual(docstringEntity[0].contents[0].value, expectedDocstringEntity, "wrong docstring Entity");
+
+			const docstringPlugin = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(21, 14));
+			const expectedDocstringPlugin = `
+\`\`\`python
+def noop(message: "any"):
+\`\`\`
+
+___
+returns&nbsp;the&nbsp;input
+
+:param&nbsp;message:&nbsp;a&nbsp;message&nbsp;as&nbsp;input
+`;
+			assert.strictEqual(docstringPlugin[0].contents[0].value, expectedDocstringPlugin, "wrong docstring Entity");
 			resolve();
 		});
 	}).timeout(0);
@@ -45,7 +54,7 @@ describe('Language Server Code docstrings', () => {
 
 	after(async () => {
 		await Promise.all([
-			fs.writeFile(logPath, ""),
+			fs.writeFile(logPath, "done"),
 		]);
 	});
 });
