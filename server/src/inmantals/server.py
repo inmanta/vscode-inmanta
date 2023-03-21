@@ -33,7 +33,7 @@ import pkg_resources
 import yaml
 from inmanta import compiler, module, resources
 from inmanta.agent import handler
-from inmanta.ast import CompilerException,Range, Location
+from inmanta.ast import CompilerException, Range, Location
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
 from inmanta.plugins import Plugin
@@ -54,11 +54,11 @@ Older versions of inmanta-core work with a separate compiler venv and install mo
 Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
 """
 
-logger = logging.getLogger(__name__)
 BEFORE_ANCHOR_TARGET: bool = CORE_VERSION <= version.Version("8.3.dev")
 """
-Older versions of inmanta-core work with a separate compiler venv and install modules and their dependencies on the fly.
-Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
+Before version 8.3.0.dev on core the AnchorTarget class does not exist so we will create it ourself here and transform all
+locations and ranges to AnchorTarget's where needed.
+Otherwise no transformation is needed as core will return AnchorTargets where needed and the AnchorTarget class of core will be used.
 """
 
 if not BEFORE_ANCHOR_TARGET:
