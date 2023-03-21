@@ -250,7 +250,7 @@ class InmantaLSHandler(JsonRpcHandler):
             def treeify_reverse(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
-                    if isinstance(t, AnchorTarget) and isinstance(t.location, Range):
+                    if isinstance(t.location, Range):
                         start = self.flatten(t.location.lnr - 1, t.location.start_char - 1)
                         end = self.flatten(t.location.end_lnr - 1, t.location.end_char - 1)
                         if start <= end:
