@@ -369,15 +369,11 @@ export class LanguageServer {
 	 * @returns {Promise<void>}
 	 */
 	async startOrRestartLS(start: boolean = false): Promise<void>{
-		console.log("1");
 		this.diagnoseId = uuidv4();
-		console.log("2");
 		const canStart = await this.canServerStart();
-		console.log("3");
 		if (canStart !== LanguageServerDiagnoseResult.ok){
 			return this.proposeSolution(canStart, this.diagnoseId);
 		}
-		console.log("4");
 		if(start){
 			log("starting Language Server");
 		} else {
