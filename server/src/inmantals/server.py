@@ -347,7 +347,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
     def convert_location(self, target):
         prefix = "file:///" if os.name == "nt" else "file://"
-        if isinstance(target, AnchorTarget) and isinstance(target.location, Range):
+        if isinstance(target.location, Range):
             return {
                 "uri": prefix + target.location.file,
                 "range": {
