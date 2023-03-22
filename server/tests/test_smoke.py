@@ -245,6 +245,7 @@ async def test_diagnostics(client: JsonRPC) -> None:
     await client.call("initialized")
 
     notification: Dict = json.loads(await client.read_one())
+    print(notification)
     assert notification["method"] == "textDocument/publishDiagnostics"
     diagnostics: lsp_types.PublishDiagnosticsParams = lsp_types.PublishDiagnosticsParams(**notification["params"])
 
