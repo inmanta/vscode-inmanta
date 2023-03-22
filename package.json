@@ -70,7 +70,7 @@
                     "markdownDescription": "Optional yaml list of repositories to indicate the Inmanta extension where to look for modules when working on an individual module.\nWhen working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories defined in the repo section of the [project.yaml](https://docs.inmanta.com/community/latest/reference/projectyml.html#project-yml) file.",
                     "scope": "resource"
                 },
-                "inmanta.trace.server": {
+                "inmanta-ls.trace.server": {
 					"scope": "window",
 					"type": "string",
 					"enum": [
@@ -78,8 +78,8 @@
 						"messages",
 						"verbose"
 					],
-					"default": "on",
-					"description": "Traces the communication between VSCode and the language server."
+					"default": "verbose",
+					"description": "Traces the communication between VS Code and the language server."
 				}
             }
         },
