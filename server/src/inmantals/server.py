@@ -26,23 +26,22 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Set, Tuple
 
-from tornado.iostream import BaseIOStream
-
 import inmanta.ast.type as inmanta_type
 import pkg_resources
 import yaml
 from inmanta import compiler, module, resources
 from inmanta.agent import handler
-from inmanta.ast import CompilerException, Range, Location
+from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.execute import scheduler
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
 from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
-from intervaltree.intervaltree import IntervalTree
 from intervaltree.interval import Interval
+from intervaltree.intervaltree import IntervalTree
 from packaging import version
+from tornado.iostream import BaseIOStream
 
 CORE_VERSION: version.Version = version.Version(pkg_resources.get_distribution("inmanta-core").version)
 """
@@ -63,6 +62,7 @@ except ImportError:
     locations and ranges to AnchorTarget's where needed.
     Otherwise will return AnchorTargets where needed and the AnchorTarget class of core will be used.
     """
+
     class AnchorTarget(object):
         def __init__(
             self,
@@ -78,6 +78,7 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+
 
 class InvalidExtensionSetup(Exception):
     """The extension can only run on a valid project or module, and not on a single file."""
@@ -235,7 +236,7 @@ class InmantaLSHandler(JsonRpcHandler):
             scheduler_instance = scheduler.Scheduler()
             anchormap = scheduler_instance.anchormap(compiler_instance, statements, blocks)
             # Make sure everything is an AnchorTarget, this is for backward compatibility
-            anchormap_with_anchor_target = [(s, AnchorTarget(t)) isinstance(t, Location) else (s,t) for s, t in anchormap]
+            anchormap_with_anchor_target = [(s, AnchorTarget(t)) if isinstance(t, Location) else (s, t) for s, t in anchormap]
             self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
@@ -246,7 +247,10 @@ class InmantaLSHandler(JsonRpcHandler):
                     tree[start:end] = t
                 return tree
 
-            self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchermap_with_anchorTarget, lambda x: x[0].file)}
+            self.anchormap = {
+                os.path.realpath(k): treeify(v) for k, v in groupby(anchormap_with_anchor_target, lambda x: x[0].file)
+            }
+
             def treeify_reverse(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
@@ -258,7 +262,8 @@ class InmantaLSHandler(JsonRpcHandler):
                 return tree
 
             self.reverse_anchormap = {
-                os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchermap_with_anchorTarget, lambda x: x[1].location.file)
+                os.path.realpath(k): treeify_reverse(v)
+                for k, v in groupby(anchormap_with_anchor_target, lambda x: x[1].location.file)
             }
 
         try:
@@ -346,22 +351,22 @@ class InmantaLSHandler(JsonRpcHandler):
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass
 
-    def convert_location(self, target: Location) -> dict[str, object]:
+    def convert_location(self, location: Location) -> dict[str, object]:
         prefix = "file:///" if os.name == "nt" else "file://"
-        if isinstance(target.location, Range):
+        if isinstance(location, Range):
             return {
-                "uri": prefix + target.location.file,
+                "uri": prefix + location.file,
                 "range": {
-                    "start": {"line": target.location.lnr - 1, "character": target.location.start_char - 1},
-                    "end": {"line": target.location.end_lnr - 1, "character": target.location.end_char - 1},
+                    "start": {"line": location.lnr - 1, "character": location.start_char - 1},
+                    "end": {"line": location.end_lnr - 1, "character": location.end_char - 1},
                 },
             }
         else:
             return {
-                "uri": prefix + target.location.file,
+                "uri": prefix + location.file,
                 "range": {
-                    "start": {"line": target.location.lnr - 1, "character": 0},
-                    "end": {"line": target.location.lnr, "character": 0},
+                    "start": {"line": location.lnr - 1, "character": 0},
+                    "end": {"line": location.lnr, "character": 0},
                 },
             }
 
@@ -381,7 +386,7 @@ class InmantaLSHandler(JsonRpcHandler):
         else:
             return ""
 
-    def get_range_from_position(self, textDocument, position)-> Optional[Interval]:
+    def get_range_from_position(self, textDocument, position) -> Optional[Interval]:
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
@@ -400,26 +405,25 @@ class InmantaLSHandler(JsonRpcHandler):
         return range
 
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
-        range = self.get_range_from_position(textDocument,position)
+        range = self.get_range_from_position(textDocument, position)
         if not range:
             return {}
-        loc = list(range)[0].data
-        return self.convert_location(loc)
+        target = list(range)[0].data
+        return self.convert_location(target.location)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
-        range = self.get_range_from_position(textDocument,position)
+        range = self.get_range_from_position(textDocument, position)
         if not range:
             return {}
 
-        return [self.convert_location(loc.data) for loc in range]
+        return [self.convert_location(target.data.location) for target in range]
 
     async def textDocument_hover(self, textDocument, position):
-        range = self.get_range_from_position(textDocument,position)
+        range = self.get_range_from_position(textDocument, position)
         if not range:
             return {}
 
         data = list(range)[0].data
-        logger.warn(list(range)[0])
         docstring = textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
         docstring = docstring.replace(" ", "&nbsp;")
         definition = self.get_definition(data).strip()
