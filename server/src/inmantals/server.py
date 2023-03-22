@@ -81,8 +81,8 @@ class Folder:
 
     def __init__(self, workspace_folder: lsp_types.WorkspaceFolder, handler: "InmantaLSHandler"):
         """
-            :param workspace_folder: path of the folder that is assumed to live in a workspace
-            :param handler: reference to the InmantaLSHandler responsible for this folder
+        :param workspace_folder: path of the folder that is assumed to live in a workspace
+        :param handler: reference to the InmantaLSHandler responsible for this folder
         """
         folder_uri = urlparse(workspace_folder.uri)
 
@@ -107,7 +107,6 @@ class Folder:
         # TODO: this method is heavily inspired by https://github.com/inmanta/pytest-inmanta-lsm/blob/fffe3c9af9be030f525e3284aeaa277091f1ecc8/src/pytest_inmanta_lsm/resources/setup_project.py#L92  # NOQA E501
         # To avoid code duplication, this should be made into a method into core and we should call this method here and in
         # pytest-inmanta-lsm. Full ticket here: https://github.com/inmanta/inmanta-lsm/issues/1240
-
 
         @contextlib.contextmanager
         def env_vars(var: abc.Mapping[str, str]) -> abc.Iterator[None]:
