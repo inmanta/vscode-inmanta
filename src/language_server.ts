@@ -55,7 +55,6 @@ export class LanguageServer {
 	context: ExtensionContext;
 	pythonPath: string;
 	rootFolder: WorkspaceFolder;
-	errorHandler: LsErrorHandler = null;
 	diagnoseId: string;
 	/**
 	 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
@@ -76,9 +75,6 @@ export class LanguageServer {
 		this.rootFolder = rootFolder;
 	}
 
-	addErrorHandler(errorHandler: LsErrorHandler): void {
-		this.errorHandler = errorHandler;
-	}
 
 	/**
 	 * updates the python path used by the LS.
@@ -254,17 +250,10 @@ export class LanguageServer {
 			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 		}
-		const editor = window.activeTextEditor;
-		log("Editor:");
-		log(`${JSON.stringify(editor)}`);
-		const resource = editor.document.uri;
-		log("Resource:");
 
-		log(`${JSON.stringify(resource)}`);
-		const folder = workspace.getWorkspaceFolder(resource);
+		const folder = workspace.getWorkspaceFolder(this.rootFolder.uri);
 
-		log(`resource= ${resource.toString()}`);
-		log(`folder URI = ${this.rootFolder.toString()}`);
+		log(`  folder ${folder.uri.toString()}`);
 
 
 		let compilerVenv: string | undefined;
@@ -276,7 +265,7 @@ export class LanguageServer {
 
 		} else {
 			// In a workspace
-			const multiRootConfigForResource = workspace.getConfiguration('inmanta', resource);
+			const multiRootConfigForResource = workspace.getConfiguration('inmanta', folder);
 			compilerVenv = multiRootConfigForResource.get('compilerVenv');
 			repos = multiRootConfigForResource.get('repos');
 		}
@@ -286,8 +275,7 @@ export class LanguageServer {
 		}
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
-			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.toString()}/**/*`}],
-			errorHandler: this.errorHandler,
+			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.toString()}/**/*`}],
 			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
@@ -301,7 +289,7 @@ export class LanguageServer {
 	}
 
 	/**
-	 * Starts the Inmanta Language Server and client.
+	 * Starts an Inmanta Language Server and client.
 	 * This function should always run under the `mutex` lock.
 	 * @returns {Promise<void>} A Promise that resolves when the server and client are started successfully.
 	 */
@@ -480,7 +468,8 @@ export class LanguageServer {
 
 function logAllClientOptions(clientOptions){
 	let opts = ["documentSelector"];
-	log(JSON.stringify(clientOptions.documentSelector));
+	log('client options:');
+	log(JSON.stringify(clientOptions));
 }
 
 

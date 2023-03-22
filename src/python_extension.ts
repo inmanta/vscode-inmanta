@@ -1,6 +1,6 @@
 'use strict';
 import { exec } from 'child_process';
-import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument} from 'vscode';
+import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, WorkspaceFolder} from 'vscode';
 import { IExtensionApi, Resource } from './types';
 import { fileOrDirectoryExists, log } from './utils';
 
@@ -16,11 +16,15 @@ export class PythonExtension {
 	 * @param {IExtensionApi} pythonApi The Python extension API.
 	 * @param {Function} onChangeCallback The callback function to be called when the active interpreter is changed.
 	 */
-	constructor(pythonApi : IExtensionApi, resource: Resource) {
+	constructor(pythonApi : IExtensionApi, resource: WorkspaceFolder) {
 		log("Instantiating new python extension");
-		log(`  resource: ${resource.toString()}`);
-		this.executionDetails = pythonApi.settings.getExecutionDetails(resource); //workspace.workspaceFolders?.[0].uri);
-		log(this.executionDetails[0]);
+		log(`  resource: ${JSON.stringify(resource)}`);
+		log(`  resource: ${JSON.stringify(resource.index)}`);
+		log(`  resourcename: ${JSON.stringify(resource.name)}`);
+		log(`  resourceuri: ${JSON.stringify(resource.uri["path"])}`);
+
+		this.executionDetails = pythonApi.settings.getExecutionDetails(resource.uri); //workspace.workspaceFolders?.[0].uri);
+		log(`  execdeets ${this.executionDetails}`);
 		this.onChange(pythonApi);
 	}
 

@@ -86,16 +86,15 @@ export async function activate(context: ExtensionContext) {
 		// If we have nested workspace folders we only start a server on the outer most workspace folder.
 		folder = getOuterMostWorkspaceFolder(folder);
 
+		
 		let folderURI = folder.uri.toString();
+		log(`OPened folder ${folderURI}`);
 		if (!languageServers.has(folderURI)) {
 
 		
-
-
-
 			// let path = pythonExtension.exports.settings.getExecutionDetails(folder);
 
-			let pythonExtensionInstance = new PythonExtension(pythonExtension.exports, folder.uri);
+			let pythonExtensionInstance = new PythonExtension(pythonExtension.exports, folder);
 			//add the EnvSelector button
 			pythonExtensionInstance.addEnvSelector();
 
@@ -104,7 +103,6 @@ export async function activate(context: ExtensionContext) {
 			log(`becausese doc ${document.fileName.toString()} was opened`);
 			let languageserver = new LanguageServer(context, pythonExtensionInstance.pythonPath, folder);
 			let errorHandler = new LsErrorHandler(languageserver);
-			languageserver.addErrorHandler(errorHandler);
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.
@@ -162,7 +160,11 @@ export async function activate(context: ExtensionContext) {
 			logMap(languageServers);
 
 		}
+		else {
+			log(`Folder already in the map`);
+		}
 	}
+
 	
 	workspace.onDidOpenTextDocument(didOpenTextDocument);
 	// context.subscriptions.push(workspace.onDidOpenTextDocument(async event => didOpenTextDocument(event)));

@@ -43,7 +43,9 @@ def generate_safe_log_file():
     file_name = "vscode-inmanta-%08x.log" % round(time.time() * 1000000)
     while os.path.exists(os.path.join(tempfile.gettempdir(), file_name)):
         file_name = "vscode-inmanta-%08x.log" % round(time.time() * 1000000)
-    return os.path.join(tempfile.gettempdir(), file_name)
+    log_file_path = os.path.join(tempfile.gettempdir(), file_name)
+    logger.debug("generating log file at %s", log_file_path)
+    return log_file_path
 
 
 class ErrorCodes(Enum):
@@ -131,6 +133,7 @@ class JsonRpcHandler(object):
         self.io_loop = IOLoop.current()
         self.writelock = Semaphore(1)
 
+        logging.basicConfig(level=logging.DEBUG)
         # Setting up logging for the LServer
         self.log_file = generate_safe_log_file()
         formatter = logging.Formatter(fmt="%(asctime)s %(name)-25s%(levelname)-8s%(message)s")
@@ -141,7 +144,6 @@ class JsonRpcHandler(object):
         log_stderr.setLevel(logging.DEBUG)
         log_stderr.setFormatter(formatter)
 
-        logging.basicConfig(level=logging.DEBUG)
 
         logging.root.handlers = [log_file_stream, log_stderr]
 
@@ -202,6 +204,7 @@ class JsonRpcHandler(object):
 
     async def start(self):
         self.running = True
+        logger.debug("Starting server in jsonrpc...")
 
         try:
             while self.running:
@@ -222,6 +225,7 @@ class JsonRpcHandler(object):
             self.outstream.close()
 
     async def decode_and_dispatch(self, body):
+        logger.debug(body)
         try:
             body = json.loads(body)
             if "id" in body:

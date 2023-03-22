@@ -280,7 +280,7 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("workspaceFolders=%s", workspaceFolders)
         logger.debug("rootPath=%s", rootPath)
         logger.debug("rootUri=%s", rootUri)
-        logger.debug("kwargs=%s", kwargs)
+        # logger.debug("kwargs=%s", kwargs)
 
         if rootPath:
             logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
@@ -397,6 +397,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
             self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
 
+            # logger.debug(self.anchormap)
             def treeify_reverse(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
@@ -410,6 +411,7 @@ class InmantaLSHandler(JsonRpcHandler):
             self.reverse_anchormap = {
                 os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
             }
+            # logger.debug(self.reverse_anchormap)
 
         try:
             if self.shutdown_requested:
@@ -522,6 +524,7 @@ class InmantaLSHandler(JsonRpcHandler):
             }
 
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
+        logger.debug("textDocument_definition")
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
@@ -542,6 +545,7 @@ class InmantaLSHandler(JsonRpcHandler):
         return self.convert_location(loc)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
+        logger.debug("textDocument_references")
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
