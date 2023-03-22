@@ -26,6 +26,8 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Set, Tuple
 
+from tornado.iostream import BaseIOStream
+
 import inmanta.ast.type as inmanta_type
 import pkg_resources
 import yaml
@@ -41,7 +43,6 @@ from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotF
 from intervaltree.interval import Interval
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
-from tornado.iostream import BaseIOStream
 
 CORE_VERSION: version.Version = version.Version(pkg_resources.get_distribution("inmanta-core").version)
 """
