@@ -16,14 +16,15 @@ export class PythonExtension {
 	 * @param {IExtensionApi} pythonApi The Python extension API.
 	 * @param {Function} onChangeCallback The callback function to be called when the active interpreter is changed.
 	 */
-	constructor(pythonApi : IExtensionApi, resource: WorkspaceFolder) {
+	constructor(pythonApi : IExtensionApi) {
 		log("Instantiating new python extension");
-		log(`  resource: ${JSON.stringify(resource)}`);
-		log(`  resource: ${JSON.stringify(resource.index)}`);
-		log(`  resourcename: ${JSON.stringify(resource.name)}`);
-		log(`  resourceuri: ${JSON.stringify(resource.uri["path"])}`);
+		// log(`  resource: ${JSON.stringify(resource)}`);
+		// log(`  resource: ${JSON.stringify(resource.index)}`);
+		// log(`  resourcename: ${JSON.stringify(resource.name)}`);
+		// log(`  resourceuri: ${JSON.stringify(resource.uri["path"])}`);
 
-		this.executionDetails = pythonApi.settings.getExecutionDetails(resource.uri); //workspace.workspaceFolders?.[0].uri);
+		// this.executionDetails = pythonApi.settings.getExecutionDetails(resource.uri); //workspace.workspaceFolders?.[0].uri);
+		this.executionDetails = pythonApi.settings.getExecutionDetails(workspace.workspaceFolders?.[0].uri);
 		log(`  execdeets ${this.executionDetails}`);
 		this.onChange(pythonApi);
 	}
@@ -122,6 +123,8 @@ export class PythonExtension {
 	private onChange(pythonApi : IExtensionApi) {
 		pythonApi.settings.onDidChangeExecutionDetails(
 			(resource: Resource) => {
+				log(`EXECUTION DEETS CHANGED ${resource}`);
+
 				let newExecutionDetails = pythonApi.settings.getExecutionDetails(resource);
 				if(this.executionDetails.execCommand[0] !== newExecutionDetails.execCommand[0]){
 					this.executionDetails = newExecutionDetails;

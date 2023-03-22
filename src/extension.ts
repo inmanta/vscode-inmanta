@@ -64,6 +64,10 @@ export async function activate(context: ExtensionContext) {
 	log("Activate Python extension");
 	await pythonExtension.activate();
 
+	let pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
+	//add the EnvSelector button
+	pythonExtensionInstance.addEnvSelector();
+
 	//adds the SetupAssistantButton Button
 	addSetupAssistantButton();
 
@@ -94,15 +98,11 @@ export async function activate(context: ExtensionContext) {
 		
 			// let path = pythonExtension.exports.settings.getExecutionDetails(folder);
 
-			let pythonExtensionInstance = new PythonExtension(pythonExtension.exports, folder);
-			//add the EnvSelector button
-			pythonExtensionInstance.addEnvSelector();
-
 			// Create a new instance of LanguageServer and an ErrorHandler
 			log("create new instance of LanguageServer");
 			log(`becausese doc ${document.fileName.toString()} was opened`);
 			let languageserver = new LanguageServer(context, pythonExtensionInstance.pythonPath, folder);
-			let errorHandler = new LsErrorHandler(languageserver);
+			// let errorHandler = new LsErrorHandler(languageserver);
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.
