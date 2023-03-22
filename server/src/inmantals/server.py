@@ -230,12 +230,13 @@ class InmantaLSHandler(JsonRpcHandler):
 
             # fresh project
             setup_project()
-
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
             compiler_instance: compiler.Compiler = compiler.Compiler()
             (statements, blocks) = compiler_instance.compile()
             scheduler_instance = scheduler.Scheduler()
+            print("ok?")
             anchormap = scheduler_instance.anchormap(compiler_instance, statements, blocks)
+            print("ok!")
             # Make sure everything is an AnchorTarget, this is for backward compatibility
             anchormap_with_anchor_target = [(s, AnchorTarget(t)) if isinstance(t, Location) else (s, t) for s, t in anchormap]
             self.types = scheduler_instance.get_types()
