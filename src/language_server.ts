@@ -275,7 +275,7 @@ export class LanguageServer {
 		}
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents
-			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.toString()}/**/*`}],
+			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`}],
 			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
