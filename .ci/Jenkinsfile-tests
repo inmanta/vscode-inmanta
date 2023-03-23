@@ -49,8 +49,7 @@ pipeline {
                     python3 -m venv $INMANTA_EXTENSION_TEST_ENV
                     source $INMANTA_EXTENSION_TEST_ENV/bin/activate
                     pip install --upgrade pip
-                    ls
-                    pip install --pre inmantals
+                    pip install -e --pre server
                     deactivate
                     rm -rf node_modules
                     npm i --also=dev
