@@ -353,7 +353,7 @@ class InmantaLSHandler(JsonRpcHandler):
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass
 
-    def convert_location(self, location):
+    def convert_location(self, location: Location):
         prefix = "file:///" if os.name == "nt" else "file://"
         if isinstance(location, Range):
             return {
