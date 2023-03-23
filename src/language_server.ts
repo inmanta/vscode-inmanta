@@ -277,7 +277,7 @@ export class LanguageServer {
 			// Register the server for inmanta documents
 			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`}],
 			outputChannel: this.lsOutputChannel,
-			// errorHandler: this.errorHandler,
+			// errorHandler: new LsErrorHandler(this),
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6

@@ -39,7 +39,7 @@ function sortedWorkspaceFolders(): string[] {
 }
 workspace.onDidChangeWorkspaceFolders(() => _sortedWorkspaceFolders = undefined);
 
-function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
+export function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
 	const sorted = sortedWorkspaceFolders();
 	for (const element of sorted) {
 		let uri = folder.uri.toString();
@@ -89,34 +89,39 @@ export async function activate(context: ExtensionContext) {
 		}
 		// If we have nested workspace folders we only start a server on the outer most workspace folder.
 		folder = getOuterMostWorkspaceFolder(folder);
+		let folderURI = folder.uri.toString();
 
 		
-		let folderURI = folder.uri.toString();
 		log(`OPened folder ${folderURI}`);
 		if (!languageServers.has(folderURI)) {
-
-		
 			// let path = pythonExtension.exports.settings.getExecutionDetails(folder);
 
 			// Create a new instance of LanguageServer and an ErrorHandler
 			log("create new instance of LanguageServer");
 			log(`becausese doc ${document.fileName.toString()} was opened`);
-			let languageserver = new LanguageServer(context, pythonExtensionInstance.pythonPath, folder);
+
+
+			let pppath = pythonExtensionInstance.pythonPath;
+			log(`With old python path ${pppath}`);
+			let newPath = pythonExtensionInstance.getPathForResource(folder.uri);
+			log(`With new python path ${JSON.stringify(newPath)}`);
+
+			let languageserver = new LanguageServer(context, newPath , folder);
 			// let errorHandler = new LsErrorHandler(languageserver);
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.
 			pythonExtensionInstance.registerCallbackOnChange(()=>{
-				languageserver.updatePythonPath(pythonExtensionInstance.pythonPath);
+				languageserver.updatePythonPath(pppath);
 			});
 
 
 			// Create a new instance of InmantaCommands to register commands
 			log("register commands");
 			inmantaCommands = new InmantaCommands(context);
-			inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pythonExtensionInstance.pythonPath));
+			inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pppath));
 			inmantaCommands.registerCommand("inmanta.activateLS", commandActivateLSHandler);
-			inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pythonExtensionInstance.pythonPath));
+			inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pppath));
 			inmantaCommands.registerCommand("inmanta.installLS", () => {
 				languageserver.installLanguageServer();
 			});
@@ -127,10 +132,10 @@ export async function activate(context: ExtensionContext) {
 			// register listener to recreate those commands with the right pythonPath if it changes
 			log("register listeners");
 			pythonExtensionInstance.registerCallbackOnChange(()=>{
-				inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pythonExtensionInstance.pythonPath));
+				inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pppath));
 			});
 			pythonExtensionInstance.registerCallbackOnChange(()=>{
-				inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pythonExtensionInstance.pythonPath));
+				inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pppath));
 			});
 
 
@@ -188,7 +193,7 @@ export async function activate(context: ExtensionContext) {
 
 
 
-	// Subscribe to workspace configuration changes and restart the language server if necessary
+	// Subscribe to workspace configuration changes and restart the affected language server(s) if necessary
 	context.subscriptions.push(workspace.onDidChangeConfiguration(async event => {
 		log("config changed" + String(event));
 		const promises: Thenable<void>[] = [];

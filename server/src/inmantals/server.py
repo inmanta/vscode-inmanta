@@ -236,9 +236,11 @@ class Folder:
         return inmanta_project_dir
 
     def install_project(self):
-        logger.debug("Installing project at %s", self.inmanta_project_dir)
 
         module.Project.set(module.Project(self.inmanta_project_dir))
+        env_path = module.Project.get().virtualenv.env_path
+        python_path = module.Project.get().virtualenv.python_path
+        logger.debug("Installing project at %s in env....\n%s\n%s", self.inmanta_project_dir, env_path, python_path)
         if self.kind == module.ModuleV2:
             # If the open folder is a v2 module we must install it in editable mode in the temporary project and provide
             # the correct pip indexes for its dependencies. These indexes are set in the "repos" extension setting.
@@ -498,7 +500,7 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
-        logger.info("Doc got saved %s", str(**kwargs))
+        logger.info(f"Doc got saved {kwargs}")
         await self.compile_and_anchor()
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802

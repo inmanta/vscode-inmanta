@@ -3,6 +3,8 @@ import { exec } from 'child_process';
 import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, WorkspaceFolder} from 'vscode';
 import { IExtensionApi, Resource } from './types';
 import { fileOrDirectoryExists, log } from './utils';
+import { getOuterMostWorkspaceFolder } from './extension';
+
 
 export const PYTHONEXTENSIONID = "ms-python.python";
 
@@ -10,6 +12,7 @@ export class PythonExtension {
 	executionDetails: {execCommand: string[] | undefined;};
 	callBacksOnchange: Array<() => void> = [];
 	inmantaEnvSelector;
+	pythonApi;
 
 	/**
 	 * Creates an instance of PythonExtension.
@@ -25,8 +28,9 @@ export class PythonExtension {
 
 		// this.executionDetails = pythonApi.settings.getExecutionDetails(resource.uri); //workspace.workspaceFolders?.[0].uri);
 		this.executionDetails = pythonApi.settings.getExecutionDetails(workspace.workspaceFolders?.[0].uri);
-		log(`  execdeets ${this.executionDetails}`);
+		log(`  execdeets ${JSON.stringify(this.executionDetails)}`);
 		this.onChange(pythonApi);
+		this.pythonApi = pythonApi;
 	}
 
 
@@ -69,7 +73,24 @@ export class PythonExtension {
 		});
 	}
 
-	async updateInmantaEnvVisibility() {
+	async updateInmantaEnvVisibility(event?) {
+		console.log("EVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENT");
+		console.log(event);
+		let folderName = "";
+		if (event) {
+			console.log(JSON.stringify(event.document));
+
+			const uri = event.document.uri;
+
+			let folder = workspace.getWorkspaceFolder(uri);
+			if (!folder) {
+				// not clicking on a cf file -> do nothing
+				return;
+			}
+			folderName = folder.name;
+
+
+		}
 		let version ="";
 		try{
 			version = await this.updatePythonVersion();
@@ -81,7 +102,7 @@ export class PythonExtension {
 			this.inmantaEnvSelector.backgroundColor = new ThemeColor('statusBarItem.warningBackground');
 		} else {
 			this.inmantaEnvSelector.backgroundColor = undefined;
-			text = `${version} ('${this.virtualEnvName}')`;
+			text = `${version} ('${this.virtualEnvName}') ${folderName}`;
 		}
 		const editor = window.activeTextEditor;
 		this.inmantaEnvSelector.text = text;
@@ -102,7 +123,7 @@ export class PythonExtension {
 		// Update the button visibility when the extension is activated
 		this.updateInmantaEnvVisibility();
 		// Update the button visibility when the active editor changes
-		window.onDidChangeActiveTextEditor(()=>this.updateInmantaEnvVisibility());
+		window.onDidChangeActiveTextEditor((event)=>this.updateInmantaEnvVisibility(event));
 		this.registerCallbackOnChange(()=>this.updateInmantaEnvVisibility());
 
 	}
@@ -114,6 +135,15 @@ export class PythonExtension {
 	 */
 	registerCallbackOnChange(onChangeCallback: () => void) {
 		this.callBacksOnchange.push(onChangeCallback);
+	}
+
+	getPathForResource(resource) {
+		log(`getPathForResource ${JSON.stringify(resource)}`);
+		try{
+			return this.pythonApi.settings.getExecutionDetails(resource).execCommand[0];
+		} catch (error){
+			console.error(`Failed to getPathForResource   :` + error.name + error.message);
+		}
 	}
 
 	/**
