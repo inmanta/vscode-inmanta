@@ -387,36 +387,18 @@ class InmantaLSHandler(JsonRpcHandler):
         else:
             return ""
 
-    def get_range_from_position(self, textDocument, position) -> Optional[Interval]:
+    def get_range_from_position(self, textDocument, position, anchormap) -> Optional[Interval]:
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
 
-        if self.anchormap is None:
+        if anchormap is None:
             return None
 
-        if url not in self.anchormap:
+        if url not in anchormap:
             return None
 
-        tree = self.anchormap[url]
-
-        range = tree[self.flatten(position["line"], position["character"])]
-        if range is None or len(range) == 0:
-            return None
-        return range
-
-    def get_range_from_position_reverse(self, textDocument, position) -> Optional[Interval]:
-        uri = textDocument["uri"]
-
-        url = os.path.realpath(uri.replace("file://", ""))
-
-        if self.reverse_anchormap is None:
-            return None
-
-        if url not in self.reverse_anchormap:
-            return None
-
-        tree = self.reverse_anchormap[url]
+        tree = anchormap[url]
 
         range = tree[self.flatten(position["line"], position["character"])]
         if range is None or len(range) == 0:
@@ -424,21 +406,21 @@ class InmantaLSHandler(JsonRpcHandler):
         return range
 
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
-        range = self.get_range_from_position(textDocument, position)
+        range = self.get_range_from_position(textDocument, position, self.anchormap)
         if not range:
             return {}
         target = list(range)[0].data
         return self.convert_location(target.location)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
-        range = self.get_range_from_position_reverse(textDocument, position)
+        range = self.get_range_from_position(textDocument, position, self.reverse_anchormap)
         if not range:
             return {}
 
         return [self.convert_location(location.data) for location in range]
 
     async def textDocument_hover(self, textDocument, position):
-        range = self.get_range_from_position(textDocument, position)
+        range = self.get_range_from_position(textDocument, position, self.anchormap)
         if not range:
             return {}
 

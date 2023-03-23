@@ -13,7 +13,7 @@ async function main() {
 			// eslint-disable-next-line @typescript-eslint/naming-convention
 			"inmanta.ls.enabled": true,
 			// eslint-disable-next-line @typescript-eslint/naming-convention
-			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV // eslint-disable-next-line camelcase
+			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV
 		};
 
 		// Saving settings of testing workspace to file
