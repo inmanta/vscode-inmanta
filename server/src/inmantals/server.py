@@ -222,7 +222,7 @@ class InmantaLSHandler(JsonRpcHandler):
                         module.Project.set(module.Project(project_dir))
                 else:
                     module.Project.set(module.Project(project_dir))
-                    module.Project.get().install_modules()
+                    module.Project.get().install_modules(bypass_module_cache=True)
 
             # reset all
             resources.resource.reset()
