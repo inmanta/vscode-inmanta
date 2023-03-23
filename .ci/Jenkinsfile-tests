@@ -24,6 +24,7 @@ pipeline {
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
       INMANTA_STYLE_CHECK_ENV="${env.WORKSPACE}/style-check-venv"
+      INMANTA_COMPILER_CACHE="False"
     }
 
     stages {
@@ -35,9 +36,7 @@ pipeline {
                 sh '''
                     rm -rf $INMANTA_LS_TEST_ENV
                     python3 -m venv $INMANTA_LS_TEST_ENV
-                    source $INMANTA_LS_TEST_ENV/bin/activate
-                    export INMANTA_COMPILER_CACHE="False"
-                    deactivate
+                    env
                     $INMANTA_LS_TEST_ENV/bin/python3 -m pip install -U tox pip wheel
                 '''
                 dir("server"){
