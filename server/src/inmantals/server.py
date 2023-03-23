@@ -32,6 +32,7 @@ import inmanta.ast.type as inmanta_type
 import pkg_resources
 import yaml
 from inmanta import compiler, module, resources
+from inmanta.config import Config
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
@@ -104,7 +105,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
     async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
-
+        Config.set("compiler", "cache", "False")
         if rootPath is None:
             raise InvalidExtensionSetup("A folder should be opened instead of a file in order to use the inmanta extension.")
 
@@ -222,7 +223,7 @@ class InmantaLSHandler(JsonRpcHandler):
                         module.Project.set(module.Project(project_dir))
                 else:
                     module.Project.set(module.Project(project_dir))
-                    module.Project.get().install_modules(bypass_module_cache=True)
+                    module.Project.get().install_modules()
 
             # reset all
             resources.resource.reset()
