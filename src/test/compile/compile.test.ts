@@ -12,6 +12,11 @@ const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/co
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
+const displayLogFile = () => {
+	fs.readFile(logPath, "utf8", (err, file) => {
+	  console.log(file);
+	});
+  };
 
 describe('Compile checks', () => {
 	const tests = [
@@ -49,7 +54,11 @@ describe('Compile checks', () => {
 			assert.strictEqual(doc.isDirty, true, "The file should be dirty, but isn't");
 			await doc.save();
 
+			console.log("===========================save");
 			const succeeded = await waitForCompile(logPath, 60000);
+			displayLogFile();
+			console.log(succeeded);
+
 			assert.strictEqual(succeeded, test.succeed, `The model should ${test.succeed ? "" : "not"} compile, but did ${succeeded ? "" : "not"}.`);
 
 			const libsExists = fs.pathExistsSync(libsPath);
