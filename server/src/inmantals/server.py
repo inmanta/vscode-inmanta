@@ -35,7 +35,6 @@ from inmanta import compiler, module, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
-from inmanta.config import Config
 from inmanta.execute import scheduler
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
