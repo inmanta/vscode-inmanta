@@ -50,7 +50,6 @@ describe('Compile checks', () => {
 			await doc.save();
 
 			const succeeded = await waitForCompile(logPath, 60000);
-
 			assert.strictEqual(succeeded, test.succeed, `The model should ${test.succeed ? "" : "not"} compile, but did ${succeeded ? "" : "not"}.`);
 
 			const libsExists = fs.pathExistsSync(libsPath);
