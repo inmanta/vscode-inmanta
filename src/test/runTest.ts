@@ -10,8 +10,10 @@ async function main() {
 	const tmpHomeDir: string = fs.mkdtempSync("/tmp/vscode-tests");
 	try {
 		const settings = {
+			// eslint-disable-next-line @typescript-eslint/naming-convention
 			"inmanta.ls.enabled": true,
-			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV
+			// eslint-disable-next-line @typescript-eslint/naming-convention
+			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV // eslint-disable-next-line camelcase
 		};
 
 		// Saving settings of testing workspace to file
