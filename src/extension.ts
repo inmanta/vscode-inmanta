@@ -12,9 +12,9 @@ import { env } from 'process';
 let inmantaCommands;
 
 // Keep track of active language servers per independant folder in the workspace
-const languageServers: Map<string, LanguageServer> = new Map();
+export var languageServers: Map<string, LanguageServer> = new Map();
 
-function logMap(map: Map<string, LanguageServer>) {
+export function logMap(map: Map<string, LanguageServer>) {
 	for (let [key, value] of map) {
 		console.log(key);
 	}
@@ -111,17 +111,18 @@ export async function activate(context: ExtensionContext) {
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.
-			pythonExtensionInstance.registerCallbackOnChange(()=>{
-				languageserver.updatePythonPath(pppath);
+			pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
+				languageserver.updatePythonPath(updatedPath);
+				pythonExtensionInstance.updateInmantaEnvVisibility();
 			});
 
 
 			// Create a new instance of InmantaCommands to register commands
 			log("register commands");
 			inmantaCommands = new InmantaCommands(context);
-			inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pppath));
+			inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(newPath));
 			inmantaCommands.registerCommand("inmanta.activateLS", commandActivateLSHandler);
-			inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pppath));
+			inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(newPath));
 			inmantaCommands.registerCommand("inmanta.installLS", () => {
 				languageserver.installLanguageServer();
 			});
@@ -131,11 +132,11 @@ export async function activate(context: ExtensionContext) {
 
 			// register listener to recreate those commands with the right pythonPath if it changes
 			log("register listeners");
-			pythonExtensionInstance.registerCallbackOnChange(()=>{
-				inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(pppath));
+			pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
+				inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(updatedPath));
 			});
-			pythonExtensionInstance.registerCallbackOnChange(()=>{
-				inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pppath));
+			pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
+				inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(updatedPath));
 			});
 
 
@@ -163,10 +164,13 @@ export async function activate(context: ExtensionContext) {
 
 			languageServers.set(folder.uri.toString(), languageserver);
 			logMap(languageServers);
+			pythonExtensionInstance.updateInmantaEnvVisibility();
 
 		}
 		else {
 			log(`Folder already in the map`);
+			pythonExtensionInstance.updateInmantaEnvVisibility();
+
 		}
 	}
 
@@ -224,4 +228,8 @@ export async function deactivate(): Promise<void> {
 }
 
 
+export function getLanguageMap():  Map<string, LanguageServer>{
+	// logMap(languageServers);
+	return languageServers;
+}
 

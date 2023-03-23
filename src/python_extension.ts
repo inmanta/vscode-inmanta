@@ -3,17 +3,17 @@ import { exec } from 'child_process';
 import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, WorkspaceFolder} from 'vscode';
 import { IExtensionApi, Resource } from './types';
 import { fileOrDirectoryExists, log } from './utils';
-import { getOuterMostWorkspaceFolder } from './extension';
+import { getLanguageMap, getOuterMostWorkspaceFolder , logMap} from './extension';
 
 
 export const PYTHONEXTENSIONID = "ms-python.python";
 
 export class PythonExtension {
 	executionDetails: {execCommand: string[] | undefined;};
-	callBacksOnchange: Array<() => void> = [];
+	callBacksOnchange: Array<(string?) => void> = [];
 	inmantaEnvSelector;
 	pythonApi;
-
+	lastOpenedFolder: WorkspaceFolder;
 	/**
 	 * Creates an instance of PythonExtension.
 	 * @param {IExtensionApi} pythonApi The Python extension API.
@@ -43,15 +43,19 @@ export class PythonExtension {
 	}
 
 	get virtualEnvName(): string | null {
+		return this.pythonPathToEnvName(this.pythonPath);
+	}
+
+	pythonPathToEnvName(path: string) : string {
 		// Match the virtual environment name using a regular expression
-		const match = this.pythonPath.match(/.*\/(.*?)\/bin\/python$/);
+		const match = path.match(/.*\/(.*?)\/bin\/python$/);
 
 		// If a match is found, return the first capture group (the virtual environment name)
 		if (match && match.length > 1) {
 			return match[1];
 		}
 		// If no match is found, return the pythonpath
-		return this.pythonPath;
+		return path;
 	}
 
 
@@ -74,23 +78,39 @@ export class PythonExtension {
 	}
 
 	async updateInmantaEnvVisibility(event?) {
-		console.log("EVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENT");
-		console.log(event);
+		console.log("==EVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENT==");
+		let mm = getLanguageMap();
+		logMap(mm);
+		console.log(mm);
+
+		console.log(`event: ${event}`);
+		let venvName = this.virtualEnvName;
 		let folderName = "";
+		if (this.lastOpenedFolder) {
+			folderName = this.lastOpenedFolder.name;
+		}
 		if (event) {
-			console.log(JSON.stringify(event.document));
+			console.log(`event.document: ${JSON.stringify(event.document)}`);
 
 			const uri = event.document.uri;
 
 			let folder = workspace.getWorkspaceFolder(uri);
+			console.log(`folder uri ${folder.uri.toString()}`);
+			let ls = mm.get(folder.uri.toString());
+			console.log(`languageServers: ${ls}`); // WHY UNDEFG .???????
+			console.log(`path: ${ls.pythonPath}`); // WHY UNDEFG .???????
+
+
+
 			if (!folder) {
 				// not clicking on a cf file -> do nothing
 				return;
 			}
+			this.lastOpenedFolder = folder;
 			folderName = folder.name;
-
-
+			venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
 		}
+
 		let version ="";
 		try{
 			version = await this.updatePythonVersion();
@@ -102,7 +122,7 @@ export class PythonExtension {
 			this.inmantaEnvSelector.backgroundColor = new ThemeColor('statusBarItem.warningBackground');
 		} else {
 			this.inmantaEnvSelector.backgroundColor = undefined;
-			text = `${version} ('${this.virtualEnvName}') ${folderName}`;
+			text = `${version} ('${venvName}') ${folderName}`;
 		}
 		const editor = window.activeTextEditor;
 		this.inmantaEnvSelector.text = text;
@@ -131,9 +151,9 @@ export class PythonExtension {
 
 	/**
 	 * register a function that will be called when the "onChange" function is called
-	 * @param {() => void} onChangeCallback A function
+	 * @param {(newPath?) => void} onChangeCallback A function
 	 */
-	registerCallbackOnChange(onChangeCallback: () => void) {
+	registerCallbackOnChange(onChangeCallback: (newPath?) => void) {
 		this.callBacksOnchange.push(onChangeCallback);
 	}
 
@@ -159,7 +179,7 @@ export class PythonExtension {
 				if(this.executionDetails.execCommand[0] !== newExecutionDetails.execCommand[0]){
 					this.executionDetails = newExecutionDetails;
 					for (const callback of this.callBacksOnchange) {
-						callback();
+						callback(newExecutionDetails.execCommand[0]);
 					}
 				}
 			}

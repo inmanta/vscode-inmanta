@@ -82,6 +82,7 @@ export class LanguageServer {
 	 * @param {string} newPath the new python path
 	 */
 	updatePythonPath(newPath: string): void {
+		log(`Language server python path changed to ${newPath}`);
     	this.pythonPath = newPath;
 		this.startOrRestartLS();
   	}
@@ -469,8 +470,8 @@ export class LanguageServer {
 
 function logAllClientOptions(clientOptions){
 	let opts = ["documentSelector"];
-	log('client options:');
-	log(JSON.stringify(clientOptions));
+	log('client options: CANTSHOw');
+	// log(JSON.stringify(clientOptions));
 }
 
 
