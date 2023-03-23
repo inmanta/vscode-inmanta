@@ -105,7 +105,6 @@ class InmantaLSHandler(JsonRpcHandler):
 
     async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
-        Config.set("compiler", "cache", "False")
         if rootPath is None:
             raise InvalidExtensionSetup("A folder should be opened instead of a file in order to use the inmanta extension.")
 
