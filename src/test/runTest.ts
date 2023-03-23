@@ -36,7 +36,6 @@ async function main() {
 		const extensionTestsEnv = {
 			HOME: tmpHomeDir,  // eslint-disable-line @typescript-eslint/naming-convention
 			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH,  // eslint-disable-line @typescript-eslint/naming-convention,
-			INMANTA_COMPILER_CACHE: "False" // eslint-disable-line @typescript-eslint/naming-convention,
 		};
 
 		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
