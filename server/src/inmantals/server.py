@@ -105,9 +105,6 @@ class InmantaLSHandler(JsonRpcHandler):
 
     async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
-        if not os.getenv("INMANTA_COMPILER_CACHE"):
-            raise InvalidExtensionSetup("No Cache==============================================")
-            Project(attach_cf_cache=False)
         if rootPath is None:
             raise InvalidExtensionSetup("A folder should be opened instead of a file in order to use the inmanta extension.")
 
@@ -208,6 +205,8 @@ class InmantaLSHandler(JsonRpcHandler):
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
             def setup_project():
+                useCache = os.getenv("INMANTA_COMPILER_CACHE")
+
                 # Check that we are working inside an existing project:
                 project_file: str = os.path.join(self.rootPath, module.Project.PROJECT_FILE)
                 if os.path.exists(project_file):
@@ -220,11 +219,11 @@ class InmantaLSHandler(JsonRpcHandler):
                 if LEGACY_MODE_COMPILER_VENV:
                     if self.compiler_venv_path:
                         logger.debug("Using venv path " + str(self.compiler_venv_path))
-                        module.Project.set(module.Project(project_dir, venv_path=self.compiler_venv_path))
+                        module.Project.set(module.Project(project_dir, venv_path=self.compiler_venv_path, attach_cf_cache=useCache))
                     else:
-                        module.Project.set(module.Project(project_dir))
+                        module.Project.set(module.Project(project_dir, attach_cf_cache=useCache))
                 else:
-                    module.Project.set(module.Project(project_dir))
+                    module.Project.set(module.Project(project_dir, attach_cf_cache=useCache))
                     module.Project.get().install_modules()
 
             # reset all
