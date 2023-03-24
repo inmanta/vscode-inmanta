@@ -21,6 +21,7 @@ import logging
 import os
 import tempfile
 import textwrap
+import warnings
 import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
@@ -35,8 +36,8 @@ from inmanta import compiler, module, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
-from inmanta.module import Project
 from inmanta.execute import scheduler
+from inmanta.warnings import InmantaWarning
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -206,6 +207,13 @@ class InmantaLSHandler(JsonRpcHandler):
         def sync_compile_and_anchor() -> None:
             def setup_project():
                 useCache = os.getenv("INMANTA_COMPILER_CACHE", True)
+                warnings.warn(
+                    InmantaWarning(
+                        ("===============INMANTA_COMPILER_CACHE===============\n"
+                        f'{os.getenv("INMANTA_COMPILER_CACHE")}\n'
+                        f"{useCache}")
+                    )
+                )
 
                 # Check that we are working inside an existing project:
                 project_file: str = os.path.join(self.rootPath, module.Project.PROJECT_FILE)
