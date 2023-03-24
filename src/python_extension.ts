@@ -95,6 +95,10 @@ export class PythonExtension {
 			const uri = event.document.uri;
 
 			let folder = workspace.getWorkspaceFolder(uri);
+			if (!folder) {
+				// not clicking on a cf file -> do nothing
+				return;
+			}
 			console.log(`folder uri ${folder.uri.toString()}`);
 			let ls = mm.get(folder.uri.toString());
 			console.log(`languageServers: ${ls}`); // WHY UNDEFG .???????
@@ -102,10 +106,7 @@ export class PythonExtension {
 
 
 
-			if (!folder) {
-				// not clicking on a cf file -> do nothing
-				return;
-			}
+
 			this.lastOpenedFolder = folder;
 			folderName = folder.name;
 			venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
