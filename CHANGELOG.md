@@ -1,5 +1,6 @@
 # v 1.3.0 (?)
 Changes in this release:
+- Show docstring for Entities and Plugins when hovering over references to those.
 - Add information about how to show the python interpreter information in the status bar and make it so the status bar should appear when opening an inmanta file.
 - A warning that suggests running the `inmanta project install` command is now shown when the compiler fails to install modules. (#894)
 - Add support to work on a module. (#891)
