@@ -26,7 +26,6 @@ describe('Language Server Code navigation', () => {
 			const succeeded = await waitForCompile(logPath, 25000);
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(13, 16));
-			console.log(attributeInSameFile);
 			let expectedAttributeLocation = new Range(new Position(2, 11), new Position(2, 15));
 			assert.strictEqual((attributeInSameFile as Location[]).length, 1);
 			assert.strictEqual(attributeInSameFile[0].uri.fsPath, modelUri.fsPath);
