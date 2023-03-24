@@ -46,7 +46,7 @@ export async function activate(context: ExtensionContext) {
 	inmantaCommands.registerCommand("inmanta.installLS", () => {
 		languageserver.installLanguageServer(false);
 	});
-	inmantaCommands.registerCommand("inmanta.openWalkthrough", async () => {
+	inmantaCommands.registerCommand("inmanta.openWalkthrough", () => {
 		commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 	});
 

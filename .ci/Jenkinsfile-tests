@@ -36,7 +36,6 @@ pipeline {
                 sh '''
                     rm -rf $INMANTA_LS_TEST_ENV
                     python3 -m venv $INMANTA_LS_TEST_ENV
-                    env
                     $INMANTA_LS_TEST_ENV/bin/python3 -m pip install -U tox pip wheel
                 '''
                 dir("server"){
