@@ -27,7 +27,6 @@ from inmantals.server import InmantaLSHandler
 logger = logging.getLogger(__name__)
 
 
-
 def main():
     stdin = PipeIOStream(sys.stdin.fileno())
     stdout = PipeIOStream(sys.stdout.fileno())

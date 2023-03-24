@@ -144,7 +144,6 @@ class JsonRpcHandler(object):
         log_stderr.setLevel(logging.DEBUG)
         log_stderr.setFormatter(formatter)
 
-
         logging.root.handlers = [log_file_stream, log_stderr]
 
     def assert_field(self, message, field, value=None, id=None):

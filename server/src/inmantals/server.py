@@ -226,7 +226,6 @@ class Folder:
         return inmanta_project_dir
 
     def install_project(self):
-
         module.Project.set(module.Project(self.inmanta_project_dir))
         env_path = module.Project.get().virtualenv.env_path
         python_path = module.Project.get().virtualenv.python_path
@@ -256,8 +255,6 @@ class InmantaLSHandler(JsonRpcHandler):
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
         self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = None
-
-
 
         # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
         self.compiler_venv_path: Optional[str] = None
