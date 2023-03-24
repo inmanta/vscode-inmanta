@@ -131,6 +131,7 @@ async def initialize(
         rootPath=path,
         rootUri=f"file://{path}",
         capabilities=client_capabilities,
+        useCache=False
     )
     await client.assert_one(ret)
 
@@ -178,7 +179,7 @@ async def test_connection(client, caplog):
     caplog.set_level(logging.DEBUG)
 
     path = os.path.join(os.path.dirname(__file__), "project")
-    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", capabilities={})
+    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", capabilities={}, useCache=False)
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
@@ -355,5 +356,5 @@ async def test_root_path_is_none(client: JsonRPC) -> None:
     """
     The language server should return an error when it is started with `rootPath is None`.
     """
-    await client.call("initialize", rootPath=None, rootUri=None, capabilities={})
+    await client.call("initialize", rootPath=None, rootUri=None, capabilities={},useCache=False)
     await client.assert_error(message="A folder should be opened instead of a file in order to use the inmanta extension.")
