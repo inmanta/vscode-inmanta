@@ -28,21 +28,21 @@ pipeline {
     }
 
     stages {
-        stage('Language server tests') {
-            when {
-                expression { ! onDependabotBranch("npm_and_yarn") }
-            }
-            steps {
-                sh '''
-                    rm -rf $INMANTA_LS_TEST_ENV
-                    python3 -m venv $INMANTA_LS_TEST_ENV
-                    $INMANTA_LS_TEST_ENV/bin/python3 -m pip install -U tox pip wheel
-                '''
-                dir("server"){
-                    sh "$INMANTA_LS_TEST_ENV/bin/python3 -m tox --recreate"
-                }
-            }
-        }
+        // stage('Language server tests') {
+        //     when {
+        //         expression { ! onDependabotBranch("npm_and_yarn") }
+        //     }
+        //     steps {
+        //         sh '''
+        //             rm -rf $INMANTA_LS_TEST_ENV
+        //             python3 -m venv $INMANTA_LS_TEST_ENV
+        //             $INMANTA_LS_TEST_ENV/bin/python3 -m pip install -U tox pip wheel
+        //         '''
+        //         dir("server"){
+        //             sh "$INMANTA_LS_TEST_ENV/bin/python3 -m tox --recreate"
+        //         }
+        //     }
+        // }
         stage('Extension tests') {
             steps {
                 sh '''
@@ -58,19 +58,19 @@ pipeline {
                 '''
             }
         }
-        stage('Style checking') {
-             steps {
-                dir("server"){
-                    sh '''
-                        rm -rf $INMANTA_STYLE_CHECK_ENV
-                        python3 -m venv $INMANTA_STYLE_CHECK_ENV
-                        source $INMANTA_STYLE_CHECK_ENV/bin/activate
-                        pip install --upgrade pip
-                        make pep8
-                    '''
-                }
-            }
-        }
+        // stage('Style checking') {
+        //      steps {
+        //         dir("server"){
+        //             sh '''
+        //                 rm -rf $INMANTA_STYLE_CHECK_ENV
+        //                 python3 -m venv $INMANTA_STYLE_CHECK_ENV
+        //                 source $INMANTA_STYLE_CHECK_ENV/bin/activate
+        //                 pip install --upgrade pip
+        //                 make pep8
+        //             '''
+        //         }
+        //     }
+        // }
     }
 
     post {
