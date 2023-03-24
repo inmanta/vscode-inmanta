@@ -205,7 +205,9 @@ class InmantaLSHandler(JsonRpcHandler):
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
             def setup_project():
-                useCache = os.getenv("INMANTA_COMPILER_CACHE")
+                useCache = os.getenv("INMANTA_COMPILER_CACHE", True)
+                logger.info("useCache " + str(useCache))
+
 
                 # Check that we are working inside an existing project:
                 project_file: str = os.path.join(self.rootPath, module.Project.PROJECT_FILE)
@@ -219,7 +221,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 if LEGACY_MODE_COMPILER_VENV:
                     if self.compiler_venv_path:
                         logger.debug("Using venv path " + str(self.compiler_venv_path))
-                        module.Project.set(module.Project(project_dir, venv_path=self.compiler_venv_path, attach_cf_cache=useCache))
+                        module.Project.set(module.Project(project_dir, venv_path=self.compiler_venv_path))
                     else:
                         module.Project.set(module.Project(project_dir, attach_cf_cache=useCache))
                 else:
@@ -239,6 +241,7 @@ class InmantaLSHandler(JsonRpcHandler):
             anchormap = scheduler_instance.anchormap(compiler_instance, statements, blocks)
             # Make sure everything is an AnchorTarget, this is for backward compatibility
             anchormap_with_anchor_target = [(s, AnchorTarget(t)) if isinstance(t, Location) else (s, t) for s, t in anchormap]
+            print(anchormap_with_anchor_target)
             self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
