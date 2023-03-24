@@ -17,8 +17,6 @@ export function waitForCompile(logPath: string, timeout: number): Promise<boolea
 			} else {
 				fs.ensureFileSync(logPath);
 				fs.readFile(logPath, 'utf-8', (err, data) => {
-					console.log("_______________________________________");
-					console.log(data);
 					if (err) {
 						console.log(`Got an error while waiting for compile: ${err}`);
 					} else if (data.includes('Compilation succeeded')) {
