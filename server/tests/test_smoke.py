@@ -126,12 +126,7 @@ async def initialize(
     if client_capabilities is None:
         client_capabilities = {}
     path = os.path.join(os.path.dirname(__file__), project)
-    ret = await client.call(
-        "initialize",
-        rootPath=path,
-        rootUri=f"file://{path}",
-        capabilities=client_capabilities,
-    )
+    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", capabilities=client_capabilities)
     await client.assert_one(ret)
 
 
@@ -192,6 +187,7 @@ async def test_connection(client, caplog):
             "definitionProvider": True,
             "referencesProvider": True,
             "workspaceSymbolProvider": {"workDoneProgress": False},
+            "hoverProvider": True,
         }
     }
 

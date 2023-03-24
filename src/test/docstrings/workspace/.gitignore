@@ -1,0 +1,4 @@
+libs/*
+.env/
+.vscode
+!libs/testmodule/
