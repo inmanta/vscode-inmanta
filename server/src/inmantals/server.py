@@ -103,10 +103,10 @@ class InmantaLSHandler(JsonRpcHandler):
         # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
         self.compiler_venv_path: Optional[str] = None
 
-    async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], useCache=True, **kwargs):  # noqa: N803
+    async def initialize(self, rootPath, rootUri, capabilities: Dict[str, object], **kwargs):  # noqa: N803
         logger.debug("Init: " + json.dumps(kwargs))
         if not os.getenv("INMANTA_COMPILER_CACHE"):
-            Project(attach_cf_cache=useCache)
+            Project(attach_cf_cache=False)
         if rootPath is None:
             raise InvalidExtensionSetup("A folder should be opened instead of a file in order to use the inmanta extension.")
 
