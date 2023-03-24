@@ -33,8 +33,6 @@ from inmantals.server import CORE_VERSION, InmantaLSHandler
 from packaging import version
 from pkg_resources import Requirement, parse_requirements
 
-# CORE_VERSION = version.Version(get_distribution("inmanta-core").version)
-
 
 class JsonRPC(object):
     def __init__(self, ios: IOStream) -> None:

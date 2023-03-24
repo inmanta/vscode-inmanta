@@ -25,7 +25,7 @@ import typing
 from collections import abc
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
-from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type
 from urllib.parse import urlparse
 
 from tornado.iostream import BaseIOStream
@@ -88,7 +88,7 @@ class Folder:
 
         self.folder_path = os.path.abspath(folder_uri.path)
         self.handler = handler  # Keep a reference to the handler for cleanup
-        self.kind: Union[Type[module.Project], Type[module.ModuleV1], Type[module.ModuleV2]]
+        self.kind: Type[module.ModuleLike]
 
         # Check that we are working inside an existing project:
         project_file: str = os.path.join(self.folder_path, module.Project.PROJECT_FILE)
@@ -278,7 +278,7 @@ class InmantaLSHandler(JsonRpcHandler):
             workspaceFolders = [rootUri]
             workspace_folder = lsp_types.WorkspaceFolder(uri=rootUri, name=os.path.dirname(urlparse(rootUri).path))
         else:
-            workspace_folder = lsp_types.WorkspaceFolder(uri=workspaceFolders[0]["uri"], name=workspaceFolders[0]["name"])
+            workspace_folder = lsp_types.WorkspaceFolder(**workspaceFolders[0])
 
         if len(workspaceFolders) > 1:
             raise InvalidExtensionSetup(
