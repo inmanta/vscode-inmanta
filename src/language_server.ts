@@ -388,7 +388,15 @@ export class LanguageServer {
 
 		this.client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		// Create the language client and start the client.
+
+		log(`Starting Language Client with options: ${JSON.stringify({
+			serverOptions: serverOptions,
+			clientOptions: clientOptions
+		}, null, 2)}`);
+		
 		await this.client.start();
+
+
 	}
 
 	/**
@@ -417,10 +425,10 @@ export class LanguageServer {
 		logAllClientOptions(clientOptions);
 		this.client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		log("Waiting for language Client to start");
-		// log(`Starting Language Client with options: ${JSON.stringify({
-		// 	// serverOptions: serverOptions,
-		// 	clientOptions: clientOptions
-		// }, null, 2)}`);
+		log(`Starting Language Client with options: ${JSON.stringify({
+			serverOptions: serverOptions,
+			clientOptions: clientOptions
+		}, null, 2)}`);
 		await this.client.start();
 	}
 

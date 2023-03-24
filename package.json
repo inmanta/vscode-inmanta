@@ -70,6 +70,30 @@
                     "markdownDescription": "Optional yaml list of repositories to indicate the Inmanta extension where to look for modules when working on an individual module.\nWhen working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories defined in the repo section of the [project.yaml](https://docs.inmanta.com/community/latest/reference/projectyml.html#project-yml) file.",
                     "scope": "resource"
                 },
+                "inmanta.userFriendlyRepos": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "title": "inner objects",
+                        "properties": {
+                            "url": {
+                                "type": "string",
+                                "description": "Url of the git repo of pip index"
+                            },
+                            "type":{
+                                "type": "string",
+                                "enum": ["git", "package"],
+                                "enumDescriptions": [
+                                  "Url of the git repository containing a v1 module",
+                                  "Pip index url in which to look for v2 modules"
+                                ]
+                            }
+                        }
+                    },
+                    "default": [],
+                    "markdownDescription": "List of git repositories and pip indexes to indicate the Inmanta extension where to look for modules when working on an individual module.\nWhen working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories and pip indexes defined in the repo section of the [project.yaml](https://docs.inmanta.com/community/latest/reference/projectyml.html#project-yml) file.",
+                    "scope": "resource"
+                },
                 "inmanta-ls.trace.server": {
 					"scope": "window",
 					"type": "string",
