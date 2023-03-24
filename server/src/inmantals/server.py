@@ -25,7 +25,7 @@ import typing
 from collections import abc
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
-from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type
 from urllib.parse import urlparse
 
 from tornado.iostream import BaseIOStream
@@ -73,56 +73,40 @@ class Folder:
     Wrapper class around a folder (inmanta module or inmanta project). This folder can either be standalone or live in a
     workspace alongside other folders.
 
-    The constructor should not be called explicitly. Instantiation is done through the unpack_workspaces method
-    :param folder_uri: uri of the folder that is assumed to live in a workspace
-    :param name: name of the folder
-    :param handler: reference to the InmantaLSHandler responsible for this folder
     """
 
-    folder_uri: str
-    name: str
-    inmanta_project_dir: Union[Optional[tempfile.TemporaryDirectory], str]
+    folder_path: str
+    inmanta_project_dir: str
     handler: "InmantaLSHandler"
 
     def __init__(self, root_uri: str, handler: "InmantaLSHandler"):
         folder_uri = urlparse(root_uri)
+        """
+        :param root_uri: path of the outermost folder that is assumed to live in a workspace
+        :param handler: reference to the InmantaLSHandler responsible for this folder
+        """
 
-        self.folder_uri = os.path.abspath(folder_uri.path)
+        self.folder_path = os.path.abspath(folder_uri.path)
         self.handler = handler  # Keep a reference to the handler for cleanup
-        self.kind: object
+        self.kind: Type[module.ModuleLike]
 
         # Check that we are working inside an existing project:
-        project_file: str = os.path.join(self.folder_uri, module.Project.PROJECT_FILE)
+        project_file: str = os.path.join(self.folder_path, module.Project.PROJECT_FILE)
         if os.path.exists(project_file):
             self.inmanta_project_dir = os.path.dirname(project_file)
             self.kind = module.Project
         else:
+            # self.kind is set by this method
             self.inmanta_project_dir = self.create_tmp_project()
 
-    def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        """
-        Get an inmanta extension setting for this folder
-        """
-        if key == "compiler_venv_path":  # support for versions of core that require a compiler venv.
-            return os.path.join(self.folder_uri, ".env-ls-compiler")
-        try:
-            # Look for some custom settings for this folder
-            with open(os.path.join(self.folder_uri, ".vscode", "settings.json")) as settings_file:
-                settings: dict[str, str] = json.load(settings_file)
-                return settings.get(key, default)
-        except FileNotFoundError:
-            return default
-
-    def cleanup(self) -> None:
-        logger.info("Cleaning up %s...", self)
-        if self.inmanta_project_dir:
-            self.inmanta_project_dir.cleanup()
-
     def install_v2_module_editable_mode(self):
+        """
+        This method relies on the assumption that an inmanta project has already been set up and that the correct pip indexes
+        have been set up through the "repos" Inmanta extension setting.
+        """
         # TODO: this method is heavily inspired by https://github.com/inmanta/pytest-inmanta-lsm/blob/fffe3c9af9be030f525e3284aeaa277091f1ecc8/src/pytest_inmanta_lsm/resources/setup_project.py#L92  # NOQA E501
         # To avoid code duplication, this should be made into a method into core and we should call this method here and in
-        # pytest-inmanta-lsm
-        # TODO: add ticket reference once its created ?
+        # pytest-inmanta-lsm. Full ticket here: https://github.com/inmanta/inmanta-lsm/issues/1240
 
         @contextlib.contextmanager
         def env_vars(var: abc.Mapping[str, str]) -> abc.Iterator[None]:
@@ -148,8 +132,8 @@ class Folder:
             project.use_virtual_env()
 
         # Load the module
-        logger.info(f"Trying to load module at {self.folder_uri}")
-        mod = module.Module.from_path(str(self.folder_uri))
+        logger.info(f"Trying to load module at {self.folder_path}")
+        mod = module.Module.from_path(str(self.folder_path))
 
         assert isinstance(mod, module.ModuleV2), type(mod)
         logger.info(f"Module {mod.name} is v2, we will attempt to install it")
@@ -178,34 +162,34 @@ class Folder:
         longer used.
         """
         tmp_dir: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory()
-        inmanta_project_dir = os.path.abspath(tmp_dir.name)
+        inmanta_project_dir: str = os.path.abspath(tmp_dir.name)
         logger.debug("Temporary project created at %s.", inmanta_project_dir)
 
         os.mkdir(os.path.join(inmanta_project_dir, "libs"))
 
         install_mode = module.InstallMode.master
 
-        v2_metadata_file: str = os.path.join(self.folder_uri, module.ModuleV2.MODULE_FILE)
-        v1_metadata_file: str = os.path.join(self.folder_uri, module.ModuleV1.MODULE_FILE)
+        v2_metadata_file: str = os.path.join(self.folder_path, module.ModuleV2.MODULE_FILE)
+        v1_metadata_file: str = os.path.join(self.folder_path, module.ModuleV1.MODULE_FILE)
 
         module_name: Optional[str] = None
         libs_folder = os.path.join(inmanta_project_dir, "libs")
 
         if os.path.exists(v1_metadata_file):
-            mv1 = module.ModuleV1(project=None, path=self.folder_uri)
+            mv1 = module.ModuleV1(project=None, path=self.folder_path)
             module_name = mv1.name
-            os.symlink(self.folder_uri, os.path.join(libs_folder, module_name), target_is_directory=True)
+            os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
             self.kind = module.ModuleV1
 
         elif os.path.exists(v2_metadata_file):
-            mv2 = module.ModuleV2(project=None, path=self.folder_uri, is_editable_install=True)
+            mv2 = module.ModuleV2(project=None, path=self.folder_path, is_editable_install=True)
             module_name = mv2.name
             self.kind = module.ModuleV2
 
         if not module_name:
             error_message: str = (
                 "The Inmanta extension only works on projects and modules. "
-                f"Please make sure the folder opened at {self.folder_uri} is a valid "
+                f"Please make sure the folder opened at {self.folder_path} is a valid "
                 "[project](https://docs.inmanta.com/community/latest/model_developers/project_creation.html)"
                 " or "
                 "[module](https://docs.inmanta.com/community/latest/model_developers/module_creation.html)"
@@ -248,15 +232,15 @@ class Folder:
         python_path = module.Project.get().virtualenv.python_path
         logger.debug("Installing project at %s in env....\n%s\n%s", self.inmanta_project_dir, env_path, python_path)
         if self.kind == module.ModuleV2:
-            # If the open folder is a v2 module we must install it in editable mode in the temporary project and provide
-            # the correct pip indexes for its dependencies. These indexes are set in the "repos" extension setting.
+            # If the open folder is a v2 module we must install it in editable mode in the temporary project using the pip
+            # indexes set in the "repos" extension setting for its dependencies.
             self.install_v2_module_editable_mode()
 
         else:
             module.Project.get().install_modules()
 
     def __str__(self):
-        return f"Folder opened at {self.folder_uri}" + " with a project at " + self.inmanta_project_dir + "."
+        return f"Folder opened at {self.folder_path}" + " with a project at " + self.inmanta_project_dir + "."
 
 
 class InmantaLSHandler(JsonRpcHandler):
@@ -272,14 +256,19 @@ class InmantaLSHandler(JsonRpcHandler):
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
         self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = None
+
+
+
+        # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
         self.compiler_venv_path: Optional[str] = None
+        # The scope for the 'compilerVenv' and 'repos' settings in the package.json are set to 'resource' to allow different
+        # values for each folder in the workspace. See https://github.com/Microsoft/vscode/wiki/Adopting-Multi-Root-Workspace-APIs#settings  # NOQA E501
         self.repos: Optional[str] = None
         self.userFriendlyRepos: Optional[List[str]] = None
-        # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
 
     async def initialize(
         self,
-        workspaceFolders: Sequence[lsp_types.WorkspaceFolder],
+        workspaceFolders: Sequence[Dict],
         capabilities: Dict[str, object],
         rootPath=None,
         rootUri=None,
@@ -300,6 +289,10 @@ class InmantaLSHandler(JsonRpcHandler):
             if rootUri is None:
                 raise InvalidExtensionSetup("No workspace folder or rootUri specified.")
             workspaceFolders = [rootUri]
+            workspace_folder = lsp_types.WorkspaceFolder(uri=rootUri, name=os.path.dirname(urlparse(rootUri).path))
+        else:
+            workspace_folder = lsp_types.WorkspaceFolder(**workspaceFolders[0])
+
         if len(workspaceFolders) > 1:
             logger.debug("Working inside a workspace with multiple folders")
             # raise InvalidExtensionSetup(
@@ -499,7 +492,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.shutdown_requested = True  # TODO make sure whether this is should be set only after the cleanup is done
 
     def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory):
-        self.tmp_project: tempfile.TemporaryDirectory = tmp_dir
+        self.tmp_project = tmp_dir
 
     async def exit(self, **kwargs):
         logger.debug("exiting...")
@@ -647,13 +640,13 @@ class InmantaLSHandler(JsonRpcHandler):
         pym = getattr(self, pymethod, None)
 
         if pym is None:
-            # logger.debug("Call to unexisting method %s params %s", method, params)
+            logger.debug("Call to unexisting method %s params %s", method, params)
             raise MethodNotFoundException("Could not find method %s" % method, id)
 
         if params is None:
             params = {}
 
-        # logger.debug("Called: %s %s", pymethod, params)
+        logger.debug("Called: %s %s", pymethod, params)
 
         try:
             result = await pym(**params)

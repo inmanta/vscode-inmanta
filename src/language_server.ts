@@ -443,7 +443,7 @@ export class LanguageServer {
 	/**
 	 * Starts or restarts the language server.
 	 * @param {boolean} start Whether to start the server or restart it.
-	 * @returns {Promise<void>}.
+	 * @returns {Promise<void>}
 	 */
 	async startOrRestartLS(start: boolean = false): Promise<void>{
 		this.diagnoseId = uuidv4();
