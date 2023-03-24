@@ -10,7 +10,7 @@ export const PYTHONEXTENSIONID = "ms-python.python";
 
 export class PythonExtension {
 	executionDetails: {execCommand: string[] | undefined;};
-	callBacksOnchange: Array<(string?) => void> = [];
+	callBacksOnchange: Array<(newPath?, outermost?) => void> = [];
 	inmantaEnvSelector;
 	pythonApi;
 	lastOpenedFolder: WorkspaceFolder;
@@ -153,7 +153,7 @@ export class PythonExtension {
 	 * register a function that will be called when the "onChange" function is called
 	 * @param {(newPath?) => void} onChangeCallback A function
 	 */
-	registerCallbackOnChange(onChangeCallback: (newPath?) => void) {
+	registerCallbackOnChange(onChangeCallback: (newPath?, outermost?) => void, tags?) {
 		this.callBacksOnchange.push(onChangeCallback);
 	}
 
@@ -176,10 +176,12 @@ export class PythonExtension {
 				log(`EXECUTION DEETS CHANGED ${resource}`);
 
 				let newExecutionDetails = pythonApi.settings.getExecutionDetails(resource);
+				let folder = workspace.getWorkspaceFolder(resource);
+				let outermost = getOuterMostWorkspaceFolder(folder).uri;
 				if(this.executionDetails.execCommand[0] !== newExecutionDetails.execCommand[0]){
 					this.executionDetails = newExecutionDetails;
 					for (const callback of this.callBacksOnchange) {
-						callback(newExecutionDetails.execCommand[0]);
+						callback(newExecutionDetails.execCommand[0], outermost);
 					}
 				}
 			}

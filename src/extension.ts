@@ -99,6 +99,7 @@ export async function activate(context: ExtensionContext) {
 			// Create a new instance of LanguageServer and an ErrorHandler
 			log("create new instance of LanguageServer");
 			log(`becausese doc ${document.fileName.toString()} was opened`);
+			await commands.executeCommand('python.setInterpreter');
 
 
 			let pppath = pythonExtensionInstance.pythonPath;
@@ -111,8 +112,8 @@ export async function activate(context: ExtensionContext) {
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.
-			pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
-				languageserver.updatePythonPath(updatedPath);
+			pythonExtensionInstance.registerCallbackOnChange((updatedPath, outermost)=>{
+				languageserver.updatePythonPath(updatedPath, outermost);
 				pythonExtensionInstance.updateInmantaEnvVisibility();
 			});
 
@@ -121,7 +122,7 @@ export async function activate(context: ExtensionContext) {
 			log("register commands");
 			inmantaCommands = new InmantaCommands(context);
 			inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(newPath));
-			inmantaCommands.registerCommand("inmanta.activateLS", commandActivateLSHandler);
+			inmantaCommands.registerCommand("inmanta.activateLS", commandActivateLSHandler(folder));
 			inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(newPath));
 			inmantaCommands.registerCommand("inmanta.installLS", () => {
 				languageserver.installLanguageServer();

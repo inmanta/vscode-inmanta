@@ -1,4 +1,4 @@
-import { ExtensionContext, window, commands, workspace, TerminalOptions, Disposable, Terminal } from "vscode";
+import { ExtensionContext, window, commands, workspace, TerminalOptions, Disposable, Terminal, WorkspaceFolder } from "vscode";
 import { fileOrDirectoryExists } from './utils';
 
 type DisposableDict = Record<string, Disposable>;
@@ -63,10 +63,23 @@ export function createHandlerExportCommand(pythonPath:string) {
  * Updates the 'inmanta.ls.enabled' configuration setting to true.
  * Shows an information message to the user indicating that the language server has been enabled.
  */
-export const commandActivateLSHandler = () => {
-	const config = workspace.getConfiguration();
-	config.update('inmanta.ls.enabled', true);
-	window.showInformationMessage("The Language server has been enabled");
+export const commandActivateLSHandler = (folder: WorkspaceFolder) => {
+
+
+	if (!folder) {
+		// Not in a workspace
+		const config = workspace.getConfiguration();
+		config.update('inmanta.ls.enabled', true);
+		window.showInformationMessage("The Language server has been enabled");
+
+
+	} else {
+		// In a workspace
+		const multiRootConfigForResource = workspace.getConfiguration('inmanta', folder);
+		multiRootConfigForResource.update('inmanta.ls.enabled', true);
+		window.showInformationMessage(`The Language server has been enabled for folder ${folder.name}`);
+		
+	}
 };
 
 

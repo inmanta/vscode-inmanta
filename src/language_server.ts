@@ -81,10 +81,14 @@ export class LanguageServer {
 	 *
 	 * @param {string} newPath the new python path
 	 */
-	updatePythonPath(newPath: string): void {
-		log(`Language server python path changed to ${newPath}`);
-    	this.pythonPath = newPath;
-		this.startOrRestartLS();
+	updatePythonPath(newPath: string, outermost: string): void {
+		log(`Comparing outermost: ${outermost} to rooturi: ${this.rootFolder.uri.toString()}`);
+
+		if (outermost === this.rootFolder.uri.toString()) {
+			log(`Language server python path changed to ${newPath}`);
+			this.pythonPath = newPath;
+			this.startOrRestartLS();
+		}
   	}
 
 	/**
