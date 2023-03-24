@@ -215,13 +215,16 @@ class Folder:
             raise InvalidExtensionSetup(error_message)
 
         repos: str = self.handler.repos if self.handler.repos else ""
+        # ufrepos: str = ""
+        # if self.handler.userFriendlyRepos:
+        #     ufrepos: str = ",".join(f"{k}:{v}" for repo in self.handler.userFriendlyRepos for k, v in repo.items())
 
         logger.debug("project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), repos)
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             metadata: typing.Mapping[str, object] = {
                 "name": "Temporary project",
                 "description": "Temporary project",
-                "repo": yaml.safe_load(repos),
+                "repo": self.handler.userFriendlyRepos if self.handler.userFriendlyRepos else yaml.safe_load(""),
                 "modulepath": "libs",
                 "downloadpath": "libs",
                 "install_mode": install_mode.value,
@@ -268,6 +271,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = None
         self.compiler_venv_path: Optional[str] = None
         self.repos: Optional[str] = None
+        self.userFriendlyRepos: Optional[List[str]] = None
         # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
 
     async def initialize(
@@ -282,7 +286,7 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("workspaceFolders=%s", workspaceFolders)
         logger.debug("rootPath=%s", rootPath)
         logger.debug("rootUri=%s", rootUri)
-        # logger.debug("kwargs=%s", kwargs)
+        logger.debug("kwargs=%s", kwargs)
 
         if rootPath:
             logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
@@ -300,6 +304,7 @@ class InmantaLSHandler(JsonRpcHandler):
             # )
 
         init_options = kwargs.get("initializationOptions", None)
+        logger.debug("init_options= %s", init_options)
 
         if init_options:
             self.compiler_venv_path = init_options.get(
@@ -307,6 +312,10 @@ class InmantaLSHandler(JsonRpcHandler):
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
+            self.userFriendlyRepos = init_options.get("ufRepos", None)
+            logger.debug("self.userFriendlyRepos= %s", self.userFriendlyRepos)
+            logger.debug(type(self.repos))
+            logger.debug(type(self.userFriendlyRepos))
 
         # Keep track of the root folder opened in this workspace
         self.root_folder: Folder = Folder(rootUri, self)
