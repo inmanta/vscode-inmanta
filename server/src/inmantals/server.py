@@ -220,15 +220,18 @@ class Folder:
         #     ufrepos: str = ",".join(f"{k}:{v}" for repo in self.handler.userFriendlyRepos for k, v in repo.items())
 
         logger.debug("project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), repos)
+
+        metadata: typing.Mapping[str, object] = {
+            "name": "Temporary project",
+            "description": "Temporary project",
+            "modulepath": "libs",
+            "downloadpath": "libs",
+            "install_mode": install_mode.value,
+        }
+        if self.handler.userFriendlyRepos:
+            metadata["repo"] = self.handler.userFriendlyRepos
+
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
-            metadata: typing.Mapping[str, object] = {
-                "name": "Temporary project",
-                "description": "Temporary project",
-                "repo": self.handler.userFriendlyRepos if self.handler.userFriendlyRepos else yaml.safe_load(""),
-                "modulepath": "libs",
-                "downloadpath": "libs",
-                "install_mode": install_mode.value,
-            }
             yaml.dump(metadata, fd)
 
         with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
