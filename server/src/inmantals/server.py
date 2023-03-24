@@ -480,16 +480,17 @@ class InmantaLSHandler(JsonRpcHandler):
         await self.compile_and_anchor()
 
     async def shutdown(self, **kwargs):
-        logger.debug("shutdown requested")
-        self.shutdown_requested = True
+        logger.debug("shutdown requested...")
         if self.tmp_project:
             self.tmp_project.cleanup()
         self.threadpool.shutdown(cancel_futures=True)
+        self.shutdown_requested = True  # TODO make sure whether this is should be set only after the cleanup is done
 
     def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory):
         self.tmp_project: tempfile.TemporaryDirectory = tmp_dir
 
     async def exit(self, **kwargs):
+        logger.debug("exiting...")
         self.running = False
 
     async def textDocument_didOpen(self, **kwargs):  # noqa: N802
