@@ -78,7 +78,8 @@
                         "properties": {
                             "url": {
                                 "type": "string",
-                                "description": "Url of the git repo of pip index"
+                                "description": "Url of the git repo or pip index",
+                                "order": 1
                             },
                             "type":{
                                 "type": "string",
@@ -86,7 +87,8 @@
                                 "enumDescriptions": [
                                   "Url of the git repository containing a v1 module",
                                   "Pip index url in which to look for v2 modules"
-                                ]
+                                ],
+                                "order": 2
                             }
                         }
                     },
