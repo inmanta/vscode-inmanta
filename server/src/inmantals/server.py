@@ -205,7 +205,7 @@ class InmantaLSHandler(JsonRpcHandler):
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
             def setup_project():
-                useCache = is_bool(os.getenv("ENV_VAR", "False"))
+                useCache = is_bool(os.getenv("INMANTA_COMPILER_CACHE", "True"))
                 # Check that we are working inside an existing project:
                 project_file: str = os.path.join(self.rootPath, module.Project.PROJECT_FILE)
                 if os.path.exists(project_file):
