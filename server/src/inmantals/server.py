@@ -206,7 +206,7 @@ class InmantaLSHandler(JsonRpcHandler):
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
             def setup_project():
-                useCache = bool(os.getenv("INMANTA_COMPILER_CACHE", True))
+                useCache = os.getenv("ENV_VAR", 'False').lower() in ('true', '1')
                 warnings.warn(
                     InmantaWarning(
                         ("===============INMANTA_COMPILER_CACHE===============\n"
