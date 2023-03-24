@@ -35,6 +35,7 @@ from inmanta import compiler, module, resources
 from inmanta.agent import handler
 from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
+from inmanta.config import is_bool
 from inmanta.execute import scheduler
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
@@ -204,7 +205,7 @@ class InmantaLSHandler(JsonRpcHandler):
     async def compile_and_anchor(self) -> None:
         def sync_compile_and_anchor() -> None:
             def setup_project():
-                useCache = os.getenv("ENV_VAR", "False").lower() in ("true", "1")
+                useCache = is_bool(os.getenv("ENV_VAR", "False"))
                 # Check that we are working inside an existing project:
                 project_file: str = os.path.join(self.rootPath, module.Project.PROJECT_FILE)
                 if os.path.exists(project_file):
