@@ -198,12 +198,6 @@ class Folder:
 
             raise InvalidExtensionSetup(error_message)
 
-        repos: str = self.handler.repos if self.handler.repos else ""
-        # ufrepos: str = ""
-        # if self.handler.userFriendlyRepos:
-        #     ufrepos: str = ",".join(f"{k}:{v}" for repo in self.handler.userFriendlyRepos for k, v in repo.items())
-
-        logger.debug("project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), repos)
 
         metadata: typing.Mapping[str, object] = {
             "name": "Temporary project",
@@ -212,8 +206,9 @@ class Folder:
             "downloadpath": "libs",
             "install_mode": install_mode.value,
         }
-        if self.handler.userFriendlyRepos:
-            metadata["repo"] = self.handler.userFriendlyRepos
+        if self.handler.repos:
+            metadata["repo"] = self.handler.repos
+        logger.debug("project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), self.handler.repos)
 
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
@@ -261,7 +256,6 @@ class InmantaLSHandler(JsonRpcHandler):
         # The scope for the 'compilerVenv' and 'repos' settings in the package.json are set to 'resource' to allow different
         # values for each folder in the workspace. See https://github.com/Microsoft/vscode/wiki/Adopting-Multi-Root-Workspace-APIs#settings  # NOQA E501
         self.repos: Optional[str] = None
-        self.userFriendlyRepos: Optional[List[str]] = None
 
     async def initialize(
         self,
@@ -305,10 +299,6 @@ class InmantaLSHandler(JsonRpcHandler):
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
-            self.userFriendlyRepos = init_options.get("ufRepos", None)
-            logger.debug("self.userFriendlyRepos= %s", self.userFriendlyRepos)
-            logger.debug(type(self.repos))
-            logger.debug(type(self.userFriendlyRepos))
 
         # Keep track of the root folder opened in this workspace
         self.root_folder: Folder = Folder(workspace_folder.uri, self)
@@ -342,12 +332,6 @@ class InmantaLSHandler(JsonRpcHandler):
                     # the language server does not report work done progress for workspace symbol requests
                     "workDoneProgress": False,
                 },
-                # "workspace": {
-                #     "workspaceFolders": {
-                #         "supported": True,
-                #         "changeNotifications": True,
-                #     }
-                # },
             }
         }
 
@@ -401,7 +385,6 @@ class InmantaLSHandler(JsonRpcHandler):
 
             self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
 
-            # logger.debug(self.anchormap)
             def treeify_reverse(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
@@ -415,7 +398,6 @@ class InmantaLSHandler(JsonRpcHandler):
             self.reverse_anchormap = {
                 os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
             }
-            # logger.debug(self.reverse_anchormap)
 
         try:
             if self.shutdown_requested:

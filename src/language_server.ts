@@ -265,23 +265,16 @@ export class LanguageServer {
 
 		let compilerVenv: string | undefined;
 		let repos: string | undefined;
-		let ufRepos: string | undefined;
 
 		if (!folder) {
 			// Not in a workspace
 			compilerVenv = workspace.getConfiguration('inmanta').compilerVenv;
 			repos = workspace.getConfiguration('inmanta').repos;
-			ufRepos = workspace.getConfiguration('inmanta').userFriendlyRepos;
-;
-
-
 		} else {
 			// In a workspace
 			const multiRootConfigForResource = workspace.getConfiguration('inmanta', folder);
 			compilerVenv = multiRootConfigForResource.get('compilerVenv');
 			repos = multiRootConfigForResource.get('repos');
-			ufRepos = multiRootConfigForResource.get('userFriendlyRepos');
-
 		}
 
 		if (this.lsOutputChannel === null) {
@@ -296,7 +289,6 @@ export class LanguageServer {
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
 				repos: repos,
-				ufRepos: ufRepos,
 			},
 			workspaceFolder: this.rootFolder,
 		};
@@ -318,7 +310,6 @@ export class LanguageServer {
 			log(`${JSON.stringify(clientOptions.initializationOptions)}`);
 			// log(`${JSON.stringify(clientOptions)}`);
 		} catch (err) {
-			log("ERROR ERROR ERROR ERROR");
 			log(err);
 			return;
 		}

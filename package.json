@@ -24,9 +24,6 @@
     "categories": [
         "Programming Languages"
     ],
-    "activationEvents": [
-    "onLanguage:inmanta"
-    ],
     "contributes": {
         "languages": [
             {
@@ -65,12 +62,6 @@
                     "scope": "resource"
                 },
                 "inmanta.repos": {
-                    "type": "string",
-                    "default": "",
-                    "markdownDescription": "Optional yaml list of repositories to indicate the Inmanta extension where to look for modules when working on an individual module.\nWhen working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories defined in the repo section of the [project.yaml](https://docs.inmanta.com/community/latest/reference/projectyml.html#project-yml) file.",
-                    "scope": "resource"
-                },
-                "inmanta.userFriendlyRepos": {
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -92,7 +83,7 @@
                             }
                         }
                     },
-                    "default": [  
+                    "default": [
                         {"url": "https://github.com/inmanta/", "type": "git"},
                         {"url": "https://pypi.org/simple/", "type": "package"}
                     ],
