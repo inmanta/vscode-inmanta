@@ -20,15 +20,7 @@ export class PythonExtension {
 	 * @param {Function} onChangeCallback The callback function to be called when the active interpreter is changed.
 	 */
 	constructor(pythonApi : IExtensionApi) {
-		log("Instantiating new python extension");
-		// log(`  resource: ${JSON.stringify(resource)}`);
-		// log(`  resource: ${JSON.stringify(resource.index)}`);
-		// log(`  resourcename: ${JSON.stringify(resource.name)}`);
-		// log(`  resourceuri: ${JSON.stringify(resource.uri["path"])}`);
-
-		// this.executionDetails = pythonApi.settings.getExecutionDetails(resource.uri); //workspace.workspaceFolders?.[0].uri);
 		this.executionDetails = pythonApi.settings.getExecutionDetails(workspace.workspaceFolders?.[0].uri);
-		log(`  execdeets ${JSON.stringify(this.executionDetails)}`);
 		this.onChange(pythonApi);
 		this.pythonApi = pythonApi;
 	}
@@ -78,35 +70,18 @@ export class PythonExtension {
 	}
 
 	async updateInmantaEnvVisibility(document?) {
-		console.log("==EVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENT==");
-		let mm = getLanguageMap();
-		logMap(mm);
-		console.log(mm);
-
-		console.log(`document: ${JSON.stringify(document)}`);
 		let venvName = this.virtualEnvName;
 		let folderName = "";
 		if (this.lastOpenedFolder) {
 			folderName = this.lastOpenedFolder.name;
 		}
 		if (document) {
-			console.log(`event.document: ${JSON.stringify(document)}`);
-
 			const uri = document.uri;
-
 			let folder = workspace.getWorkspaceFolder(uri);
 			if (!folder) {
 				// not clicking on a cf file -> do nothing
 				return;
 			}
-			console.log(`folder uri ${folder.uri.toString()}`);
-			let ls = mm.get(folder.uri.toString());
-			console.log(`languageServers: ${ls}`);
-			console.log(`path: ${ls.pythonPath}`);
-
-
-
-
 			this.lastOpenedFolder = folder;
 			folderName = folder.name;
 			venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
@@ -136,7 +111,6 @@ export class PythonExtension {
 
 
 	addEnvSelector():void {
-		log("add virtual env selector");
 		// Add the EnvSelectorWindow
 		this.inmantaEnvSelector = window.createStatusBarItem(StatusBarAlignment.Right);
 		this.inmantaEnvSelector.command = "python.setInterpreter";
@@ -159,7 +133,6 @@ export class PythonExtension {
 	}
 
 	getPathForResource(resource) {
-		log(`getPathForResource ${JSON.stringify(resource)}`);
 		try{
 			return this.pythonApi.settings.getExecutionDetails(resource).execCommand[0];
 		} catch (error){
@@ -174,8 +147,6 @@ export class PythonExtension {
 	private onChange(pythonApi : IExtensionApi) {
 		pythonApi.settings.onDidChangeExecutionDetails(
 			(resource: Resource) => {
-				log(`EXECUTION DEETS CHANGED ${resource}`);
-
 				let newExecutionDetails = pythonApi.settings.getExecutionDetails(resource);
 				let folder = workspace.getWorkspaceFolder(resource);
 				let outermost = getOuterMostWorkspaceFolder(folder).uri;

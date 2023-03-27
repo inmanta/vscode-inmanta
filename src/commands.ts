@@ -43,7 +43,6 @@ export class InmantaCommands {
  */
 export function createHandlerExportCommand(pythonPath:string) {
 	return () => {
-		log(`EXPORT REQUESTED... ${pythonPath}`);
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			window.showErrorMessage(`Could not run the export command. Make sure a valid venv is selected`);
 		}
@@ -68,23 +67,21 @@ export function createHandlerExportCommand(pythonPath:string) {
 export function commandActivateLSHandler(folder: WorkspaceFolder) {
 
 	return () => {
-
-		log(`LS activation request for folder ${folder}`);
 		if (!folder) {
 			// Not in a workspace
 			const config = workspace.getConfiguration();
 
-			window.showInformationMessage("The Language server has been enabled");
+			window.showInformationMessage("The Language server has been enabled.");
 			config.update('inmanta.ls.enabled', true);
 
 
 		} else {
 			// In a workspace
 			const multiRootConfigForResource = workspace.getConfiguration('inmanta', folder);
-			window.showInformationMessage(`The Language server has been enabled for folder ${folder.name}`);
+			window.showInformationMessage(`The Language server has been enabled for folder ${folder.name}.`);
 			multiRootConfigForResource.update('ls.enabled', true);
 		}
-	}
+	};
 	
 };
 
@@ -96,9 +93,8 @@ export function commandActivateLSHandler(folder: WorkspaceFolder) {
  */
 export function createProjectInstallHandler(pythonPath: string){
 	return () => {
-		log(`Project install requested for path ${pythonPath}`);
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
-			window.showErrorMessage(`Could not run the 'project install' command. Make sure a valid venv is selected`);
+			window.showErrorMessage(`Could not run the 'project install' command. Make sure a valid venv is selected.`);
 		}
 		if (!installProjectTerminal) {
 			const options: TerminalOptions = {

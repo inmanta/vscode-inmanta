@@ -1,6 +1,6 @@
 'use strict';
 
-import { workspace, ExtensionContext, extensions, window, commands , WorkspaceFolder, Uri, TextDocument} from 'vscode';
+import { workspace, ExtensionContext, extensions, window, commands , WorkspaceFolder, Uri, TextDocument, TextEditor} from 'vscode';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 import { log } from './utils';
 import { LanguageServer, LsErrorHandler } from './language_server';
@@ -11,7 +11,14 @@ import { env } from 'process';
 
 let inmantaCommands;
 
-// Keep track of active language servers per independant folder in the workspace
+/*
+	Keep track of active language servers per independant top-most folder in the workspace.
+	We lazily spin up a new language server any time a .cf file living inside a folder is opened for the first time.
+	Once the language server is up, it is added to the languageServers map with the uri of the top-most folder it is 
+	responsible for as a key. This allows the servers to be properly stopped if/when the folder is removed from the
+	workspace
+*/
+
 export var languageServers: Map<string, LanguageServer> = new Map();
 
 export function logMap(map: Map<string, LanguageServer>) {
@@ -19,6 +26,32 @@ export function logMap(map: Map<string, LanguageServer>) {
 		console.log(key);
 	}
 }
+
+/*
+	The following functions sortedWorkspaceFolders and getOuterMostWorkspaceFolder are taken from the vs-code extension example at
+	https://github.com/microsoft/vscode-extension-samples/blob/main/lsp-multi-server-sample/client/src/extension.ts
+	under this license: https://github.com/microsoft/vscode-extension-samples/blob/main/LICENSE
+*/
+
+/*
+Copyright (c) Microsoft Corporation
+
+All rights reserved. 
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software 
+is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS 
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT 
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 let _sortedWorkspaceFolders: string[] | undefined;
 function sortedWorkspaceFolders(): string[] {
@@ -37,19 +70,8 @@ function sortedWorkspaceFolders(): string[] {
 	}
 	return _sortedWorkspaceFolders;
 }
+
 workspace.onDidChangeWorkspaceFolders(() => _sortedWorkspaceFolders = undefined);
-
-function registerCommands(ls: LanguageServer): void {
-
-	// Create a new instance of InmantaCommands to register commands
-	log("Registering commands...");
-	inmantaCommands.registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(ls.pythonPath));
-	inmantaCommands.registerCommand(`inmanta.activateLS`, commandActivateLSHandler(ls.rootFolder));
-	inmantaCommands.registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(ls.pythonPath));
-	inmantaCommands.registerCommand(`inmanta.installLS`, () => {ls.installLanguageServer();});
-
-}
-
 
 export function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
 	const sorted = sortedWorkspaceFolders();
@@ -65,10 +87,22 @@ export function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceF
 	return folder;
 }
 
+function registerCommands(languageServer: LanguageServer): void {
+	// We have to register these commands each time a diffent language server is being activated or "focussed".
+	// Activation happens the first time a .cf file from this language server's folders is opened and focus
+	// happens when selecting a file from a different workspace folder
+
+
+	log(`Registering inmanta commands for language server responsible for ${languageServer.rootFolder} using ${languageServer.pythonPath} environment.`);
+	inmantaCommands.registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(languageServer.pythonPath));
+	inmantaCommands.registerCommand(`inmanta.activateLS`, commandActivateLSHandler(languageServer.rootFolder));
+	inmantaCommands.registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(languageServer.pythonPath));
+	inmantaCommands.registerCommand(`inmanta.installLS`, () => {languageServer.installLanguageServer();});
+
+}
+
 export async function activate(context: ExtensionContext) {
 	// Get and activate the Python extension instance
-
-	// Start a new instance of the python extension
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
 	if (pythonExtension === undefined) {
 		throw Error("Python extension not found");
@@ -76,6 +110,7 @@ export async function activate(context: ExtensionContext) {
 	log("Activate Python extension");
 	await pythonExtension.activate();
 
+	// Start a new instance of the python extension
 	let pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
 	//add the EnvSelector button
 	pythonExtensionInstance.addEnvSelector();
@@ -89,24 +124,23 @@ export async function activate(context: ExtensionContext) {
 		commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 	});
 
-	function changeActiveTextEditor(event) {
-		log(`Active text editor changed bc of event: ${JSON.stringify(event)}`);
-		log(`Doc: ${JSON.stringify(event.document)}`);
-
-
+	function changeActiveTextEditor(event: TextEditor) {
+		// Any time we select a .cf file from another folder in the workspace we have to override the already registered commands
+		// so that they operate on the desired folders, with the correct virtual environment.
+		if (event === undefined) {
+			return;
+		}
 		const uri = event.document.uri;
 		let folder = workspace.getWorkspaceFolder(uri);
 		folder = getOuterMostWorkspaceFolder(folder);
 	
-		const ls = languageServers.get(folder.uri.toString());
+		const languageServer = languageServers.get(folder.uri.toString());
 	
-		registerCommands(ls);
+		registerCommands(languageServer);
 	}
 
 	async function didOpenTextDocument(document: TextDocument): Promise<void> {
-		log(`didOpenTextDocument TRIGGERED ${JSON.stringify(document)}`);
-
-		// We are only interested in language mode text
+		// We are only interested in .cf files
 		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file' && document.uri.scheme !== 'untitled')) {
 			return;
 		}
@@ -114,23 +148,17 @@ export async function activate(context: ExtensionContext) {
 		const uri = document.uri;
 
 		let folder = workspace.getWorkspaceFolder(uri);
-		// Files outside a folder can't be handled. This might depend on the language.
-		// Single file languages like JSON might handle files outside the workspace folders.
+		// Files outside a folder can't be handled.
 		if (!folder) {
 			return;
 		}
-		// If we have nested workspace folders we only start a server on the outer most workspace folder.
+		// If we have nested workspace folders we only start a language server on the outer most workspace folder.
 		folder = getOuterMostWorkspaceFolder(folder);
 		let folderURI = folder.uri.toString();
 
-
-		log(`OPened folder ${folderURI}`);
 		if (!languageServers.has(folderURI)) {
-			// let path = pythonExtension.exports.settings.getExecutionDetails(folder);
-
 			// Create a new instance of LanguageServer and an ErrorHandler
 			log("create new instance of LanguageServer");
-			log(`becausese doc ${document.fileName.toString()} was opened`);
 
 
 			await commands.executeCommand('python.setInterpreter');
@@ -140,7 +168,6 @@ export async function activate(context: ExtensionContext) {
 			log(`With new python path ${JSON.stringify(newPath)}`);
 
 			let languageserver = new LanguageServer(context, newPath , folder);
-			// let errorHandler = new LsErrorHandler(languageserver);
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.
@@ -150,33 +177,7 @@ export async function activate(context: ExtensionContext) {
 			});
 
 
-			// Create a new instance of InmantaCommands to register commands
-			log("register commands");
 			registerCommands(languageserver);
-
-
-			// register listener to recreate those commands with the right pythonPath if it changes
-			// log("register listeners");
-			// pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
-			// 	inmantaCommands.registerCommand(`inmanta.${folderURI}.exportToServer`, createHandlerExportCommand(updatedPath));
-			// });
-			// pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
-			// 	inmantaCommands.registerCommand(`inmanta.${folderURI}.projectInstall`, createProjectInstallHandler(updatedPath));
-			// });
-
-
-			// const serverOptions = {
-			// 	run: { module, transport: TransportKind.ipc },
-			// 	debug: { module, transport: TransportKind.ipc }
-			// };
-			// const clientOptions: LanguageClientOptions = {
-			// 	documentSelector: [
-			// 		{ scheme: 'file', language: 'plaintext', pattern: `${folder.uri.fsPath}/**/*` }
-			// 	],
-			// 	diagnosticCollectionName: 'lsp-multi-server-example',
-			// 	workspaceFolder: folder,
-			// 	outputChannel: outputChannel
-			// };
 
 			// Start the language server if enabled in the workspace configuration
 			const enable: boolean = workspace.getConfiguration('inmanta', folder).ls.enabled;
@@ -202,9 +203,8 @@ export async function activate(context: ExtensionContext) {
 
 
 	workspace.onDidOpenTextDocument(didOpenTextDocument);
-	// context.subscriptions.push(workspace.onDidOpenTextDocument(async event => didOpenTextDocument(event)));
 	workspace.textDocuments.forEach(didOpenTextDocument);
-	window.onDidChangeActiveTextEditor((event)=>changeActiveTextEditor(event));
+	window.onDidChangeActiveTextEditor((event: TextEditor)=>changeActiveTextEditor(event));
 	workspace.onDidChangeWorkspaceFolders((event) => {
 		log("workspaces changed" + String(event));
 		log(`before `);
