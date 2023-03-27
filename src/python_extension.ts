@@ -77,22 +77,22 @@ export class PythonExtension {
 		});
 	}
 
-	async updateInmantaEnvVisibility(event?) {
+	async updateInmantaEnvVisibility(document?) {
 		console.log("==EVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENTEVENT==");
 		let mm = getLanguageMap();
 		logMap(mm);
 		console.log(mm);
 
-		console.log(`event: ${event}`);
+		console.log(`document: ${JSON.stringify(document)}`);
 		let venvName = this.virtualEnvName;
 		let folderName = "";
 		if (this.lastOpenedFolder) {
 			folderName = this.lastOpenedFolder.name;
 		}
-		if (event) {
-			console.log(`event.document: ${JSON.stringify(event.document)}`);
+		if (document) {
+			console.log(`event.document: ${JSON.stringify(document)}`);
 
-			const uri = event.document.uri;
+			const uri = document.uri;
 
 			let folder = workspace.getWorkspaceFolder(uri);
 			if (!folder) {
@@ -101,8 +101,8 @@ export class PythonExtension {
 			}
 			console.log(`folder uri ${folder.uri.toString()}`);
 			let ls = mm.get(folder.uri.toString());
-			console.log(`languageServers: ${ls}`); // WHY UNDEFG .???????
-			console.log(`path: ${ls.pythonPath}`); // WHY UNDEFG .???????
+			console.log(`languageServers: ${ls}`);
+			console.log(`path: ${ls.pythonPath}`);
 
 
 
@@ -144,7 +144,7 @@ export class PythonExtension {
 		// Update the button visibility when the extension is activated
 		this.updateInmantaEnvVisibility();
 		// Update the button visibility when the active editor changes
-		window.onDidChangeActiveTextEditor((event)=>this.updateInmantaEnvVisibility(event));
+		window.onDidChangeActiveTextEditor((event)=>this.updateInmantaEnvVisibility(event.document));
 		this.registerCallbackOnChange(()=>this.updateInmantaEnvVisibility());
 
 	}

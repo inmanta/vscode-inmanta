@@ -39,6 +39,18 @@ function sortedWorkspaceFolders(): string[] {
 }
 workspace.onDidChangeWorkspaceFolders(() => _sortedWorkspaceFolders = undefined);
 
+function registerCommands(ls: LanguageServer): void {
+
+	// Create a new instance of InmantaCommands to register commands
+	log("Registering commands...");
+	inmantaCommands.registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(ls.pythonPath));
+	inmantaCommands.registerCommand(`inmanta.activateLS`, commandActivateLSHandler(ls.rootFolder));
+	inmantaCommands.registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(ls.pythonPath));
+	inmantaCommands.registerCommand(`inmanta.installLS`, () => {ls.installLanguageServer();});
+
+}
+
+
 export function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
 	const sorted = sortedWorkspaceFolders();
 	for (const element of sorted) {
@@ -71,8 +83,28 @@ export async function activate(context: ExtensionContext) {
 	//adds the SetupAssistantButton Button
 	addSetupAssistantButton();
 
-	async function didOpenTextDocument(document: TextDocument): Promise<void> {
+	inmantaCommands = new InmantaCommands(context);
 
+	inmantaCommands.registerCommand(`inmanta.openWalkthrough`, () => {
+		commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
+	});
+
+	function changeActiveTextEditor(event) {
+		log(`Active text editor changed bc of event: ${JSON.stringify(event)}`);
+		log(`Doc: ${JSON.stringify(event.document)}`);
+
+
+		const uri = event.document.uri;
+		let folder = workspace.getWorkspaceFolder(uri);
+		folder = getOuterMostWorkspaceFolder(folder);
+	
+		const ls = languageServers.get(folder.uri.toString());
+	
+		registerCommands(ls);
+	}
+
+	async function didOpenTextDocument(document: TextDocument): Promise<void> {
+		log(`didOpenTextDocument TRIGGERED ${JSON.stringify(document)}`);
 
 		// We are only interested in language mode text
 		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file' && document.uri.scheme !== 'untitled')) {
@@ -91,7 +123,7 @@ export async function activate(context: ExtensionContext) {
 		folder = getOuterMostWorkspaceFolder(folder);
 		let folderURI = folder.uri.toString();
 
-		
+
 		log(`OPened folder ${folderURI}`);
 		if (!languageServers.has(folderURI)) {
 			// let path = pythonExtension.exports.settings.getExecutionDetails(folder);
@@ -99,11 +131,11 @@ export async function activate(context: ExtensionContext) {
 			// Create a new instance of LanguageServer and an ErrorHandler
 			log("create new instance of LanguageServer");
 			log(`becausese doc ${document.fileName.toString()} was opened`);
+
+
 			await commands.executeCommand('python.setInterpreter');
 
 
-			let pppath = pythonExtensionInstance.pythonPath;
-			log(`With old python path ${pppath}`);
 			let newPath = pythonExtensionInstance.getPathForResource(folder.uri);
 			log(`With new python path ${JSON.stringify(newPath)}`);
 
@@ -114,31 +146,23 @@ export async function activate(context: ExtensionContext) {
 			//register listener to restart the LS if the python interpreter changes.
 			pythonExtensionInstance.registerCallbackOnChange((updatedPath, outermost)=>{
 				languageserver.updatePythonPath(updatedPath, outermost);
-				pythonExtensionInstance.updateInmantaEnvVisibility();
+				pythonExtensionInstance.updateInmantaEnvVisibility(document);
 			});
 
 
 			// Create a new instance of InmantaCommands to register commands
 			log("register commands");
-			inmantaCommands = new InmantaCommands(context);
-			inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(newPath));
-			inmantaCommands.registerCommand("inmanta.activateLS", commandActivateLSHandler(folder));
-			inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(newPath));
-			inmantaCommands.registerCommand("inmanta.installLS", () => {
-				languageserver.installLanguageServer();
-			});
-			inmantaCommands.registerCommand("inmanta.openWalkthrough", () => {
-				commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
-			});
+			registerCommands(languageserver);
+
 
 			// register listener to recreate those commands with the right pythonPath if it changes
-			log("register listeners");
-			pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
-				inmantaCommands.registerCommand("inmanta.exportToServer", createHandlerExportCommand(updatedPath));
-			});
-			pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
-				inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(updatedPath));
-			});
+			// log("register listeners");
+			// pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
+			// 	inmantaCommands.registerCommand(`inmanta.${folderURI}.exportToServer`, createHandlerExportCommand(updatedPath));
+			// });
+			// pythonExtensionInstance.registerCallbackOnChange((updatedPath)=>{
+			// 	inmantaCommands.registerCommand(`inmanta.${folderURI}.projectInstall`, createProjectInstallHandler(updatedPath));
+			// });
 
 
 			// const serverOptions = {
@@ -165,7 +189,7 @@ export async function activate(context: ExtensionContext) {
 
 			languageServers.set(folder.uri.toString(), languageserver);
 			logMap(languageServers);
-			pythonExtensionInstance.updateInmantaEnvVisibility();
+			pythonExtensionInstance.updateInmantaEnvVisibility(document);
 
 		}
 		else {
@@ -173,12 +197,14 @@ export async function activate(context: ExtensionContext) {
 			pythonExtensionInstance.updateInmantaEnvVisibility();
 
 		}
+
 	}
 
-	
+
 	workspace.onDidOpenTextDocument(didOpenTextDocument);
 	// context.subscriptions.push(workspace.onDidOpenTextDocument(async event => didOpenTextDocument(event)));
 	workspace.textDocuments.forEach(didOpenTextDocument);
+	window.onDidChangeActiveTextEditor((event)=>changeActiveTextEditor(event));
 	workspace.onDidChangeWorkspaceFolders((event) => {
 		log("workspaces changed" + String(event));
 		log(`before `);
@@ -189,6 +215,7 @@ export async function activate(context: ExtensionContext) {
 			if (ls) {
 				languageServers.delete(folder.uri.toString());
 				ls.stopServerAndClient();
+				ls.cleanOutputChannel();
 			}
 		}
 		log(`after `);

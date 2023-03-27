@@ -1,5 +1,5 @@
 import { ExtensionContext, window, commands, workspace, TerminalOptions, Disposable, Terminal, WorkspaceFolder } from "vscode";
-import { fileOrDirectoryExists } from './utils';
+import { fileOrDirectoryExists, log } from './utils';
 
 type DisposableDict = Record<string, Disposable>;
 
@@ -24,6 +24,7 @@ export class InmantaCommands {
 	 * @param {(...args: any[]) => void} handler The function to execute when the command is triggered.
 	 */
 	registerCommand(id:string, handler:(...args: any[]) => void){
+		log(`registering command ${id}`);
 		if (id in commands){
 			commands[id].dispose();
 		}
@@ -42,6 +43,7 @@ export class InmantaCommands {
  */
 export function createHandlerExportCommand(pythonPath:string) {
 	return () => {
+		log(`EXPORT REQUESTED... ${pythonPath}`);
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			window.showErrorMessage(`Could not run the export command. Make sure a valid venv is selected`);
 		}
@@ -63,23 +65,27 @@ export function createHandlerExportCommand(pythonPath:string) {
  * Updates the 'inmanta.ls.enabled' configuration setting to true.
  * Shows an information message to the user indicating that the language server has been enabled.
  */
-export const commandActivateLSHandler = (folder: WorkspaceFolder) => {
+export function commandActivateLSHandler(folder: WorkspaceFolder) {
+
+	return () => {
+
+		log(`LS activation request for folder ${folder}`);
+		if (!folder) {
+			// Not in a workspace
+			const config = workspace.getConfiguration();
+
+			window.showInformationMessage("The Language server has been enabled");
+			config.update('inmanta.ls.enabled', true);
 
 
-	if (!folder) {
-		// Not in a workspace
-		const config = workspace.getConfiguration();
-		config.update('inmanta.ls.enabled', true);
-		window.showInformationMessage("The Language server has been enabled");
-
-
-	} else {
-		// In a workspace
-		const multiRootConfigForResource = workspace.getConfiguration('inmanta', folder);
-		multiRootConfigForResource.update('inmanta.ls.enabled', true);
-		window.showInformationMessage(`The Language server has been enabled for folder ${folder.name}`);
-		
+		} else {
+			// In a workspace
+			const multiRootConfigForResource = workspace.getConfiguration('inmanta', folder);
+			window.showInformationMessage(`The Language server has been enabled for folder ${folder.name}`);
+			multiRootConfigForResource.update('ls.enabled', true);
+		}
 	}
+	
 };
 
 
@@ -90,6 +96,7 @@ export const commandActivateLSHandler = (folder: WorkspaceFolder) => {
  */
 export function createProjectInstallHandler(pythonPath: string){
 	return () => {
+		log(`Project install requested for path ${pythonPath}`);
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			window.showErrorMessage(`Could not run the 'project install' command. Make sure a valid venv is selected`);
 		}
@@ -101,7 +108,8 @@ export function createProjectInstallHandler(pythonPath: string){
 			};
 			installProjectTerminal = window.createTerminal(options);
 		}
-		installProjectTerminal.sendText(pythonPath+' -m inmanta.app project install');
+		let command = pythonPath+' -m inmanta.app project install';
+		installProjectTerminal.sendText(command);
 		installProjectTerminal.show();
 	};
 }

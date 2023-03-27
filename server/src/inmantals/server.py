@@ -292,9 +292,9 @@ class InmantaLSHandler(JsonRpcHandler):
 
         if len(workspaceFolders) > 1:
             logger.debug("Working inside a workspace with multiple folders")
-            # raise InvalidExtensionSetup(
-            #     "InmantaLSHandler can only handle a single folder. Instantiate one InmantaLSHandler per folder instead."
-            # )
+            raise InvalidExtensionSetup(
+                "InmantaLSHandler can only handle a single folder. Instantiate one InmantaLSHandler per folder instead."
+            )
 
         init_options = kwargs.get("initializationOptions", None)
         logger.debug("init_options= %s", init_options)
@@ -311,7 +311,7 @@ class InmantaLSHandler(JsonRpcHandler):
             logger.debug(type(self.userFriendlyRepos))
 
         # Keep track of the root folder opened in this workspace
-        self.root_folder: Folder = Folder(rootUri, self)
+        self.root_folder: Folder = Folder(workspace_folder.uri, self)
         value_set: List[int]
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
@@ -342,12 +342,12 @@ class InmantaLSHandler(JsonRpcHandler):
                     # the language server does not report work done progress for workspace symbol requests
                     "workDoneProgress": False,
                 },
-                "workspace": {
-                    "workspaceFolders": {
-                        "supported": True,
-                        "changeNotifications": True,
-                    }
-                },
+                # "workspace": {
+                #     "workspaceFolders": {
+                #         "supported": True,
+                #         "changeNotifications": True,
+                #     }
+                # },
             }
         }
 

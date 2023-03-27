@@ -217,6 +217,8 @@ export class LanguageServer {
 	 * @returns {Promise<void>}.
 	 */
 	async installLanguageServer(): Promise<void> {
+		log(`LS install requested for root folder ${this.rootFolder}`);
+
 		this.diagnoseId = uuidv4();
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			return this.selectInterpreter(this.diagnoseId);
@@ -462,6 +464,7 @@ export class LanguageServer {
 		await this.stopServerAndClient();
 		if (enable) {
 			await this.startServerAndClient();
+			window.showInformationMessage(`The Language server has been enabled for folder ${this.rootFolder.name}`);
 		}
 
 	}
@@ -471,6 +474,7 @@ export class LanguageServer {
 	 */
 	async stopServerAndClient() {
 		log("stopping serv and  client");
+		// this.lsOutputChannel = null;
 		await this.mutex.runExclusive(async () => {
 			if (this.client) {
 				if(this.client.needsStop()){
@@ -486,12 +490,14 @@ export class LanguageServer {
 			}
 		});
 	}
+
+	cleanOutputChannel() {
+		this.lsOutputChannel.dispose();
+	}
 }
 
 function logAllClientOptions(clientOptions){
-	let opts = ["documentSelector"];
-	log('client options: CANTSHOw');
-	// log(JSON.stringify(clientOptions));
+	log(JSON.stringify(clientOptions));
 }
 
 
