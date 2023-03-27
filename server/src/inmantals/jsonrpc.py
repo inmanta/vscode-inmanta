@@ -133,7 +133,6 @@ class JsonRpcHandler(object):
         self.io_loop = IOLoop.current()
         self.writelock = Semaphore(1)
 
-        logging.basicConfig(level=logging.DEBUG)
         # Setting up logging for the LServer
         self.log_file = generate_safe_log_file()
         formatter = logging.Formatter(fmt="%(asctime)s %(name)-25s%(levelname)-8s%(message)s")
@@ -141,9 +140,10 @@ class JsonRpcHandler(object):
         log_file_stream.setLevel(logging.DEBUG)
         log_file_stream.setFormatter(formatter)
         log_stderr = logging.StreamHandler(sys.stderr)
-        log_stderr.setLevel(logging.DEBUG)
+        log_stderr.setLevel(logging.INFO)
         log_stderr.setFormatter(formatter)
 
+        logging.basicConfig(level=logging.DEBUG)
         logging.root.handlers = [log_file_stream, log_stderr]
 
     def assert_field(self, message, field, value=None, id=None):
@@ -203,7 +203,6 @@ class JsonRpcHandler(object):
 
     async def start(self):
         self.running = True
-        logger.debug("Starting server in jsonrpc...")
 
         try:
             while self.running:
@@ -224,7 +223,6 @@ class JsonRpcHandler(object):
             self.outstream.close()
 
     async def decode_and_dispatch(self, body):
-        logger.debug(body)
         try:
             body = json.loads(body)
             if "id" in body:

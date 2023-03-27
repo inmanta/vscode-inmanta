@@ -70,10 +70,8 @@ export function commandActivateLSHandler(folder: WorkspaceFolder) {
 		if (!folder) {
 			// Not in a workspace
 			const config = workspace.getConfiguration();
-
 			window.showInformationMessage("The Language server has been enabled.");
 			config.update('inmanta.ls.enabled', true);
-
 
 		} else {
 			// In a workspace
@@ -82,7 +80,7 @@ export function commandActivateLSHandler(folder: WorkspaceFolder) {
 			multiRootConfigForResource.update('ls.enabled', true);
 		}
 	};
-	
+
 };
 
 

@@ -50,7 +50,6 @@ export class LanguageServer {
 	mutex = new Mutex();
 	client: LanguageClient;
 	lsOutputChannel: OutputChannel = null;
-	// traceOutputChannel: OutputChannel = null;
 	serverProcess: cp.ChildProcess;
 	context: ExtensionContext;
 	pythonPath: string;
@@ -63,12 +62,10 @@ export class LanguageServer {
 	 * @param {Extension<any>} pythonExtension the Python extension.
 	 */
 	constructor(context: ExtensionContext, pythonPath: string, rootFolder: WorkspaceFolder) {
-		log("Creating language server");
+		log("Creating new language server...");
 		log(String(context));
 		log(String(pythonPath));
 		log(rootFolder.toString());
-
-
 
 		this.context = context;
 		this.pythonPath = pythonPath;
@@ -214,7 +211,7 @@ export class LanguageServer {
 
 	/**
 	 * Install the Inmanta Language Server and start it if specified.
-	 * @returns {Promise<void>}.
+	 * @returns {Promise<void>}
 	 */
 	async installLanguageServer(): Promise<void> {
 		log(`LS install requested for root folder ${this.rootFolder}`);
@@ -281,10 +278,9 @@ export class LanguageServer {
 			this.lsOutputChannel = window.createOutputChannel(`Inmanta Language Server[${this.rootFolder.uri.toString()}]`);
 		}
 		const clientOptions: LanguageClientOptions = {
-			// Register the server for inmanta documents
+			// Register the server for inmanta documents.
 			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`}],
 			outputChannel: this.lsOutputChannel,
-			// errorHandler: new LsErrorHandler(this),
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
@@ -308,7 +304,6 @@ export class LanguageServer {
 			clientOptions = await this.getClientOptions();
 			log("Retrieved client options");
 			log(`${JSON.stringify(clientOptions.initializationOptions)}`);
-			// log(`${JSON.stringify(clientOptions)}`);
 		} catch (err) {
 			log(err);
 			return;
@@ -396,8 +391,6 @@ export class LanguageServer {
 		}, null, 2)}`);
 		
 		await this.client.start();
-
-
 	}
 
 	/**
@@ -465,7 +458,6 @@ export class LanguageServer {
 	 */
 	async stopServerAndClient() {
 		log("stopping serv and  client");
-		// this.lsOutputChannel = null;
 		await this.mutex.runExclusive(async () => {
 			if (this.client) {
 				if(this.client.needsStop()){

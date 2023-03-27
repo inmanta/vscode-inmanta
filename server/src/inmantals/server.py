@@ -273,8 +273,6 @@ class InmantaLSHandler(JsonRpcHandler):
 
         if rootPath:
             logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
-        if rootUri:
-            logger.warning("The rootUri parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
 
         if workspaceFolders is None:
             if rootUri is None:
@@ -468,24 +466,21 @@ class InmantaLSHandler(JsonRpcHandler):
         if self.tmp_project:
             self.tmp_project.cleanup()
         self.threadpool.shutdown(cancel_futures=True)
-        self.shutdown_requested = True  # TODO make sure whether this is should be set only after the cleanup is done
+        self.shutdown_requested = True
 
     def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory):
         self.tmp_project = tmp_dir
 
     async def exit(self, **kwargs):
-        logger.debug("exiting...")
         self.running = False
 
     async def textDocument_didOpen(self, **kwargs):  # noqa: N802
         pass
 
     async def textDocument_didChange(self, **kwargs):  # noqa: N802
-        logger.info("Doc changed %s", str(**kwargs))
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
-        logger.info(f"Doc got saved {kwargs}")
         await self.compile_and_anchor()
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
@@ -511,7 +506,6 @@ class InmantaLSHandler(JsonRpcHandler):
             }
 
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
-        logger.debug("textDocument_definition")
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
@@ -532,7 +526,6 @@ class InmantaLSHandler(JsonRpcHandler):
         return self.convert_location(loc)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
-        logger.debug("textDocument_references")
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))

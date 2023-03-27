@@ -14,7 +14,7 @@ let inmantaCommands;
 /*
 	Keep track of active language servers per independant top-most folder in the workspace.
 	We lazily spin up a new language server any time a .cf file living inside a folder is opened for the first time.
-	Once the language server is up, it is added to the languageServers map with the uri of the top-most folder it is 
+	Once the language server is up, it is added to the languageServers map with the uri of the top-most folder it is
 	responsible for as a key. This allows the servers to be properly stopped if/when the folder is removed from the
 	workspace
 */
@@ -36,20 +36,20 @@ export function logMap(map: Map<string, LanguageServer>) {
 /*
 Copyright (c) Microsoft Corporation
 
-All rights reserved. 
+All rights reserved.
 
 MIT License
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software 
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
 is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS 
-BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT 
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
@@ -133,9 +133,9 @@ export async function activate(context: ExtensionContext) {
 		const uri = event.document.uri;
 		let folder = workspace.getWorkspaceFolder(uri);
 		folder = getOuterMostWorkspaceFolder(folder);
-	
+
 		const languageServer = languageServers.get(folder.uri.toString());
-	
+
 		registerCommands(languageServer);
 	}
 
@@ -223,8 +223,6 @@ export async function activate(context: ExtensionContext) {
 
 	});
 
-
-
 	// Subscribe to workspace configuration changes and restart the affected language server(s) if necessary
 	context.subscriptions.push(workspace.onDidChangeConfiguration(async event => {
 		log("config changed" + String(event));
@@ -234,19 +232,10 @@ export async function activate(context: ExtensionContext) {
 				await ls.startOrRestartLS();
 			}
 		}
-
 	}));
-
-
-
-
 
 }
 
-// export async function deactivate(){
-// 	log("deactivate");
-// 	return languageserver.stopServerAndClient();
-// }
 export async function deactivate(): Promise<void> {
 	const promises: Thenable<void>[] = [];
 	for (const ls of languageServers.values()) {
@@ -257,7 +246,6 @@ export async function deactivate(): Promise<void> {
 
 
 export function getLanguageMap():  Map<string, LanguageServer>{
-	// logMap(languageServers);
 	return languageServers;
 }
 
