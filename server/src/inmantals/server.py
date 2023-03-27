@@ -236,8 +236,8 @@ class InmantaLSHandler(JsonRpcHandler):
             scheduler_instance = scheduler.Scheduler()
             # call anchormap_extended if it exists, otherwise call anchormap to stay backward compatible.
             anchormap: Union[Sequence[Tuple[Location, Location]], Sequence[Tuple[Location, AnchorTarget]]] = (
-                scheduler_instance.anchormap_extended(compiler_instance, statements, blocks)
-                if hasattr(scheduler_instance, "anchormap_extended")
+                scheduler_instance.get_anchormap(compiler_instance, statements, blocks)
+                if hasattr(scheduler_instance, "get_anchormap")
                 else scheduler_instance.anchormap(compiler_instance, statements, blocks)
             )
             # Make sure everything is an AnchorTarget: this is for backward compatibility
