@@ -24,7 +24,7 @@ import textwrap
 import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Union
 
 from tornado.iostream import BaseIOStream
 
@@ -235,13 +235,15 @@ class InmantaLSHandler(JsonRpcHandler):
             (statements, blocks) = compiler_instance.compile()
             scheduler_instance = scheduler.Scheduler()
             # call anchormap_extended if it exists, otherwise call anchormap to stay backward compatible.
-            anchormap = (
+            anchormap: Union[Sequence[Tuple[Location, Location]], Sequence[Tuple[Location, AnchorTarget]]] = (
                 scheduler_instance.anchormap_extended(compiler_instance, statements, blocks)
                 if hasattr(scheduler_instance, "anchormap_extended")
                 else scheduler_instance.anchormap(compiler_instance, statements, blocks)
             )
-            # Make sure everything is an AnchorTarget, this is for backward compatibility
-            anchormap_with_anchor_target = [(s, AnchorTarget(t)) if isinstance(t, Location) else (s, t) for s, t in anchormap]
+            # Make sure everything is an AnchorTarget: this is for backward compatibility
+            anchormap_with_anchor_target: Sequence[Tuple[Location, AnchorTarget]] = [
+                (s, AnchorTarget(t)) if isinstance(t, Location) else (s, t) for s, t in anchormap
+            ]
             self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
