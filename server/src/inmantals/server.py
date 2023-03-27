@@ -198,7 +198,6 @@ class Folder:
 
             raise InvalidExtensionSetup(error_message)
 
-
         metadata: typing.Mapping[str, object] = {
             "name": "Temporary project",
             "description": "Temporary project",
@@ -208,7 +207,9 @@ class Folder:
         }
         if self.handler.repos:
             metadata["repo"] = self.handler.repos
-        logger.debug("project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), self.handler.repos)
+        logger.debug(
+            "project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), self.handler.repos
+        )
 
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
