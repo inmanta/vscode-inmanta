@@ -24,7 +24,7 @@ import textwrap
 import typing
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
 
 from tornado.iostream import BaseIOStream
 
@@ -234,9 +234,16 @@ class InmantaLSHandler(JsonRpcHandler):
             compiler_instance: compiler.Compiler = compiler.Compiler()
             (statements, blocks) = compiler_instance.compile()
             scheduler_instance = scheduler.Scheduler()
-            anchormap = scheduler_instance.anchormap(compiler_instance, statements, blocks)
-            # Make sure everything is an AnchorTarget, this is for backward compatibility
-            anchormap_with_anchor_target = [(s, AnchorTarget(t)) if isinstance(t, Location) else (s, t) for s, t in anchormap]
+            # call anchormap_extended if it exists, otherwise call anchormap to stay backward compatible.
+            anchormap: Sequence[Tuple[Location, AnchorTarget]] = (
+                scheduler_instance.get_anchormap(compiler_instance, statements, blocks)
+                if hasattr(scheduler_instance, "get_anchormap")
+                else [
+                    # Make sure everything is an AnchorTarget: this is for backward compatibility
+                    (s, AnchorTarget(t)) if isinstance(t, Location) else (s, t)
+                    for s, t in scheduler_instance.anchormap(compiler_instance, statements, blocks)
+                ]
+            )
             self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
@@ -247,9 +254,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     tree[start:end] = t
                 return tree
 
-            self.anchormap = {
-                os.path.realpath(k): treeify(v) for k, v in groupby(anchormap_with_anchor_target, lambda x: x[0].file)
-            }
+            self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
 
             def treeify_reverse(iterator):
                 tree = IntervalTree()
@@ -262,8 +267,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 return tree
 
             self.reverse_anchormap = {
-                os.path.realpath(k): treeify_reverse(v)
-                for k, v in groupby(anchormap_with_anchor_target, lambda x: x[1].location.file)
+                os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].location.file)
             }
 
         try:
