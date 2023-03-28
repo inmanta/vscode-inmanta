@@ -3,11 +3,9 @@
 import { workspace, ExtensionContext, extensions, window, commands , WorkspaceFolder, Uri, TextDocument, TextEditor} from 'vscode';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 import { log } from './utils';
-import { LanguageServer, LsErrorHandler } from './language_server';
+import { LanguageServer, LsErrorHandler} from './language_server';
 import { commandActivateLSHandler, createHandlerExportCommand, createProjectInstallHandler, InmantaCommands } from './commands';
-import { ErrorHandler, Message, ErrorAction, CloseAction, ErrorHandlerResult, CloseHandlerResult } from 'vscode-languageclient';
 import { addSetupAssistantButton } from './walkthrough_button';
-import { env } from 'process';
 
 let inmantaCommands;
 let lastActiveFolder: WorkspaceFolder = undefined;
@@ -174,7 +172,8 @@ export async function activate(context: ExtensionContext) {
 			let newPath = pythonExtensionInstance.getPathForResource(folder.uri);
 			log(`With new python path ${JSON.stringify(newPath)}`);
 
-			let languageserver = new LanguageServer(context, newPath , folder);
+			let errorHandler = new LsErrorHandler(folder);
+			let languageserver = new LanguageServer(context, newPath , folder, errorHandler);
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.

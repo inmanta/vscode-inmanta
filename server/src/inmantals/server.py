@@ -291,7 +291,7 @@ class InmantaLSHandler(JsonRpcHandler):
         rootUri=None,
         **kwargs,
     ):  # noqa: N803
-        logger.debug("Init INIT: %s", json.dumps(kwargs))
+        logger.debug("Init: %s", json.dumps(kwargs))
         logger.debug("workspaceFolders=%s", workspaceFolders)
         logger.debug("rootPath=%s", rootPath)
         logger.debug("rootUri=%s", rootUri)

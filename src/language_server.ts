@@ -11,6 +11,7 @@ import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
 import { fileOrDirectoryExists, log } from './utils';
 import { v4 as uuidv4 } from 'uuid';
+import { getLanguageMap } from './extension';
 
 enum LanguageServerDiagnoseResult {
 	wrongInterpreter,
@@ -25,17 +26,22 @@ enum LanguageServerDiagnoseResult {
  * An implementation of the ErrorHandler interface for the language server client.
  */
 export class LsErrorHandler implements ErrorHandler{
-	languageserver :LanguageServer;
-	constructor(languageserver: LanguageServer) {
-		this.languageserver = languageserver;
+	folder: WorkspaceFolder;
+	constructor(folder: WorkspaceFolder) {
+		this.folder = folder;
 	}
 	async error(error: Error, message: Message | undefined, count: number | undefined): Promise<ErrorHandlerResult> {
-		const languageServerDiagnose = await this.languageserver.canServerStart();
+		let languageServer: LanguageServer = getLanguageMap().get(this.folder.uri.toString());
+
+		if (languageServer === undefined) {
+			return;
+		}
+		const languageServerDiagnose = await languageServer.canServerStart();
 		if (languageServerDiagnose === LanguageServerDiagnoseResult.unknown){
 			window.showErrorMessage(error.name+": "+error.message);
 		}
 		if (languageServerDiagnose !== LanguageServerDiagnoseResult.ok){
-			await this.languageserver.proposeSolution(languageServerDiagnose, uuidv4());
+			await languageServer.proposeSolution(languageServerDiagnose, uuidv4());
 		}
 		return {action: ErrorAction.Shutdown};
 	}
@@ -55,13 +61,14 @@ export class LanguageServer {
 	pythonPath: string;
 	rootFolder: WorkspaceFolder;
 	diagnoseId: string;
+	errorHandler: LsErrorHandler;
 	/**
 	 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
 	 *
 	 * @param {ExtensionContext} context the extension context.
 	 * @param {Extension<any>} pythonExtension the Python extension.
 	 */
-	constructor(context: ExtensionContext, pythonPath: string, rootFolder: WorkspaceFolder) {
+	constructor(context: ExtensionContext, pythonPath: string, rootFolder: WorkspaceFolder, errorHandler: LsErrorHandler) {
 		log("Creating new language server...");
 		log(String(context));
 		log(String(pythonPath));
@@ -70,6 +77,7 @@ export class LanguageServer {
 		this.context = context;
 		this.pythonPath = pythonPath;
 		this.rootFolder = rootFolder;
+		this.errorHandler = errorHandler;
 	}
 
 
@@ -280,6 +288,7 @@ export class LanguageServer {
 			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`}],
 			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
+			errorHandler: this.errorHandler,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
 				repos: repos,
