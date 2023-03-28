@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import tempfile
+import textwrap
 import typing
 from collections import abc
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -35,13 +36,15 @@ import pkg_resources
 import yaml
 from inmanta import compiler, env, module, resources
 from inmanta.agent import handler
-from inmanta.ast import CompilerException, Range
+from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
+from inmanta.config import is_bool
 from inmanta.execute import scheduler
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
 from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
+from intervaltree.interval import Interval
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
 
@@ -55,6 +58,29 @@ LEGACY_MODE_COMPILER_VENV: bool = CORE_VERSION < version.Version("6.dev")
 Older versions of inmanta-core work with a separate compiler venv and install modules and their dependencies on the fly.
 Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
 """
+
+try:
+    from inmanta.ast import AnchorTarget
+except ImportError:
+    """
+    Before version 8.3.0.dev on core the AnchorTarget class does not exist so we will create it ourself here and transform all
+    locations and ranges to AnchorTarget's where needed.
+    Otherwise will return AnchorTargets where needed and the AnchorTarget class of core will be used.
+    """
+
+    class AnchorTarget(object):
+        def __init__(
+            self,
+            location: Location,
+            docstring: Optional[str] = None,
+        ) -> None:
+            """
+            :param location: the location of the target of the anchor
+            :param docstring: the docstring attached to the target
+            """
+            self.location = location
+            self.docstring = docstring
+
 
 logger = logging.getLogger(__name__)
 
@@ -219,10 +245,9 @@ class Folder:
         self.handler.register_tmp_project(tmp_dir)
         return inmanta_project_dir
 
-    def install_project(self):
+    def install_project(attach_cf_cache: bool):
         logger.debug("Installing project at %s", self.inmanta_project_dir)
-
-        module.Project.set(module.Project(self.inmanta_project_dir))
+        module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
         if self.kind == module.ModuleV2:
             # If the open folder is a v2 module we must install it in editable mode in the temporary project using the pip
             # indexes set in the "repos" extension setting for its dependencies.
@@ -332,6 +357,7 @@ class InmantaLSHandler(JsonRpcHandler):
                         "changeNotifications": True,
                     }
                 },
+                "hoverProvider": True,
             }
         }
 
@@ -345,10 +371,11 @@ class InmantaLSHandler(JsonRpcHandler):
         Perform a compile and compute an anchormap for the currently open folder.
         """
 
-        def sync_compile_and_anchor():
+        def sync_compile_and_anchor() -> None:
             logger.info("Compile and anchor for root folder %s.", self.root_folder)
 
             def setup_project(folder: Folder):
+                useCache: bool = is_bool(os.getenv("INMANTA_COMPILER_CACHE", "True"))
                 # Check that we are working inside an existing project:
                 if not folder.inmanta_project_dir:
                     raise InvalidExtensionSetup("No inmanta project found.")
@@ -359,7 +386,7 @@ class InmantaLSHandler(JsonRpcHandler):
                     else:
                         module.Project.set(module.Project(folder.inmanta_project_dir))
                 else:
-                    folder.install_project()
+                    folder.install_project(attach_cf_cache=useCache)
 
             # reset all
             resources.resource.reset()
@@ -372,7 +399,16 @@ class InmantaLSHandler(JsonRpcHandler):
             compiler_instance: compiler.Compiler = compiler.Compiler()
             (statements, blocks) = compiler_instance.compile()
             scheduler_instance = scheduler.Scheduler()
-            anchormap = scheduler_instance.anchormap(compiler_instance, statements, blocks)
+            # call anchormap_extended if it exists, otherwise call anchormap to stay backward compatible.
+            anchormap: Sequence[Tuple[Location, AnchorTarget]] = (
+                scheduler_instance.get_anchormap(compiler_instance, statements, blocks)
+                if hasattr(scheduler_instance, "get_anchormap")
+                else [
+                    # Make sure everything is an AnchorTarget: this is for backward compatibility
+                    (s, AnchorTarget(t)) if isinstance(t, Location) else (s, t)
+                    for s, t in scheduler_instance.anchormap(compiler_instance, statements, blocks)
+                ]
+            )
             self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
@@ -388,15 +424,15 @@ class InmantaLSHandler(JsonRpcHandler):
             def treeify_reverse(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
-                    if isinstance(t, Range):
-                        start = self.flatten(t.lnr - 1, t.start_char - 1)
-                        end = self.flatten(t.end_lnr - 1, t.end_char - 1)
+                    if isinstance(t.location, Range):
+                        start = self.flatten(t.location.lnr - 1, t.location.start_char - 1)
+                        end = self.flatten(t.location.end_lnr - 1, t.location.end_char - 1)
                         if start <= end:
                             tree[start:end] = f
                 return tree
 
             self.reverse_anchormap = {
-                os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].file)
+                os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].location.file)
             }
 
         try:
@@ -487,64 +523,95 @@ class InmantaLSHandler(JsonRpcHandler):
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass
 
-    def convert_location(self, loc):
+    def convert_location(self, location: Location):
         prefix = "file:///" if os.name == "nt" else "file://"
-        if isinstance(loc, Range):
+        if isinstance(location, Range):
             return {
-                "uri": prefix + loc.file,
+                "uri": prefix + location.file,
                 "range": {
-                    "start": {"line": loc.lnr - 1, "character": loc.start_char - 1},
-                    "end": {"line": loc.end_lnr - 1, "character": loc.end_char - 1},
+                    "start": {"line": location.lnr - 1, "character": location.start_char - 1},
+                    "end": {"line": location.end_lnr - 1, "character": location.end_char - 1},
                 },
             }
         else:
             return {
-                "uri": prefix + loc.file,
+                "uri": prefix + location.file,
                 "range": {
-                    "start": {"line": loc.lnr - 1, "character": 0},
-                    "end": {"line": loc.lnr, "character": 0},
+                    "start": {"line": location.lnr - 1, "character": 0},
+                    "end": {"line": location.lnr, "character": 0},
                 },
             }
 
-    async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
+    def get_definition(self, target: AnchorTarget) -> str:
+        file_path = target.location.file
+        start_line = target.location.lnr - 1
+        with open(file_path, "r") as f:
+            line = f.readlines()[start_line]
+        return line
+
+    def get_file_type(self, filepath: str) -> str:
+        file_extension = os.path.splitext(filepath)[1].lower()
+        if file_extension == ".py":
+            return "python"
+        elif file_extension == ".cf":
+            return "inmanta"
+        else:
+            return ""
+
+    def get_range_from_position(self, textDocument, position, anchormap) -> Optional[Interval]:
         uri = textDocument["uri"]
 
         url = os.path.realpath(uri.replace("file://", ""))
 
-        if self.anchormap is None:
-            return {}
+        if anchormap is None:
+            return None
 
-        if url not in self.anchormap:
-            return {}
+        if url not in anchormap:
+            return None
 
-        tree = self.anchormap[url]
+        tree = anchormap[url]
 
         range = tree[self.flatten(position["line"], position["character"])]
-
         if range is None or len(range) == 0:
+            return None
+        return range
+
+    async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
+        range = self.get_range_from_position(textDocument, position, self.anchormap)
+        if not range:
             return {}
-        loc = list(range)[0].data
-        return self.convert_location(loc)
+        target = list(range)[0].data
+        return self.convert_location(target.location)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
-        uri = textDocument["uri"]
-
-        url = os.path.realpath(uri.replace("file://", ""))
-
-        if self.reverse_anchormap is None:
+        range = self.get_range_from_position(textDocument, position, self.reverse_anchormap)
+        if not range:
             return {}
 
-        if url not in self.reverse_anchormap:
+        return [self.convert_location(location.data) for location in range]
+
+    async def textDocument_hover(self, textDocument, position):
+        range = self.get_range_from_position(textDocument, position, self.anchormap)
+        if not range:
             return {}
 
-        tree = self.reverse_anchormap[url]
-
-        range = tree[self.flatten(position["line"], position["character"])]
-
-        if range is None or len(range) == 0:
-            return {}
-
-        return [self.convert_location(loc.data) for loc in range]
+        data = list(range)[0].data
+        docstring = textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
+        docstring = docstring.replace(" ", "&nbsp;")
+        definition = self.get_definition(data).strip()
+        language = self.get_file_type(data.location.file)
+        definition_md = f"""
+        ```{language}
+        {definition}
+        ```
+        """
+        value = textwrap.dedent(definition_md) + "\n___\n" + docstring
+        return {
+            "contents": {
+                "kind": "markdown",
+                "value": value,
+            },
+        }
 
     async def workspace_symbol(self, query: str) -> List[Dict[str, object]]:
         if self.types is None:

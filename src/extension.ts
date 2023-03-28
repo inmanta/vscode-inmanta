@@ -1,6 +1,6 @@
 'use strict';
 
-import { workspace, ExtensionContext, extensions, window, commands } from 'vscode';
+import { workspace, ExtensionContext, extensions, window, commands, Position, Range } from 'vscode';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 import { log } from './utils';
 import { LanguageServer } from './language_server';
