@@ -245,7 +245,7 @@ class Folder:
         self.handler.register_tmp_project(tmp_dir)
         return inmanta_project_dir
 
-    def install_project(attach_cf_cache: bool):
+    def install_project(self, attach_cf_cache: bool):
         logger.debug("Installing project at %s", self.inmanta_project_dir)
         module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
         if self.kind == module.ModuleV2:
