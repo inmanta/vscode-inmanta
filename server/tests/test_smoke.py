@@ -194,7 +194,6 @@ async def test_connection(client, caplog):
                 "willSaveWaitUntil": False,
                 "save": {"includeText": False},
             },
-            "workspace": {"workspaceFolders": {"supported": True, "changeNotifications": True}},
             "definitionProvider": True,
             "referencesProvider": True,
             "workspaceSymbolProvider": {"workDoneProgress": False},
