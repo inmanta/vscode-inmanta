@@ -89,18 +89,7 @@
                     ],
                     "markdownDescription": "List of git repositories and pip indexes to indicate the Inmanta extension where to look for modules when working on an individual module.\nWhen working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories and pip indexes defined in the repo section of the [project.yaml](https://docs.inmanta.com/community/latest/reference/projectyml.html#project-yml) file.",
                     "scope": "resource"
-                },
-                "inmanta-ls.trace.server": {
-					"scope": "window",
-					"type": "string",
-					"enum": [
-						"off",
-						"messages",
-						"verbose"
-					],
-					"default": "off",
-					"description": "Traces the communication between VS Code and the language server."
-				}
+                }
             }
         },
         "commands": [

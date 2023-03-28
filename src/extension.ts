@@ -10,6 +10,7 @@ import { addSetupAssistantButton } from './walkthrough_button';
 import { env } from 'process';
 
 let inmantaCommands;
+let lastActiveFolder: WorkspaceFolder = undefined;
 
 /*
 	Keep track of active language servers per independant top-most folder in the workspace.
@@ -107,7 +108,7 @@ export async function activate(context: ExtensionContext) {
 	if (pythonExtension === undefined) {
 		throw Error("Python extension not found");
 	}
-	log("Activate Python extension");
+	log("Activate Python EXTENSION");
 	await pythonExtension.activate();
 
 	// Start a new instance of the python extension
@@ -134,6 +135,10 @@ export async function activate(context: ExtensionContext) {
 		let folder = workspace.getWorkspaceFolder(uri);
 		folder = getOuterMostWorkspaceFolder(folder);
 
+		if (folder === lastActiveFolder) {
+			return;
+		}
+		lastActiveFolder = folder;
 		const languageServer = languageServers.get(folder.uri.toString());
 
 		registerCommands(languageServer);
@@ -154,10 +159,11 @@ export async function activate(context: ExtensionContext) {
 		}
 		// If we have nested workspace folders we only start a language server on the outer most workspace folder.
 		folder = getOuterMostWorkspaceFolder(folder);
+		lastActiveFolder = folder;
 		let folderURI = folder.uri.toString();
 
 		if (!languageServers.has(folderURI)) {
-			// Create a new instance of LanguageServer and an ErrorHandler
+			// Create a new instance of LanguageServer
 			log("create new instance of LanguageServer");
 
 
