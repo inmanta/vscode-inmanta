@@ -254,10 +254,20 @@ async def test_working_on_v1_modules(client, caplog):
     # This dummy module is used because it is only present in the dev artifacts and not in pypi index.
     assert not venv.are_installed(reqs)
 
-    options = {"repos": [{"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"}, ]}
+    options = {
+        "repos": [
+            {"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},
+        ]
+    }
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
-    ret = await client.call("initialize", workspaceFolders=[path_uri], rootUri="file://{path_to_module}",capabilities={}, initializationOptions=options)
+    ret = await client.call(
+        "initialize",
+        workspaceFolders=[path_uri],
+        rootUri="file://{path_to_module}",
+        capabilities={},
+        initializationOptions=options,
+    )
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
@@ -320,7 +330,13 @@ async def test_working_on_v2_modules(client, caplog):
     }
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
-    ret = await client.call("initialize", workspaceFolders=[path_uri], rootUri=f"file://{path_to_module}",  capabilities={}, initializationOptions=options)
+    ret = await client.call(
+        "initialize",
+        workspaceFolders=[path_uri],
+        rootUri=f"file://{path_to_module}",
+        capabilities={},
+        initializationOptions=options,
+    )
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
