@@ -355,12 +355,6 @@ class InmantaLSHandler(JsonRpcHandler):
                     # the language server does not report work done progress for workspace symbol requests
                     "workDoneProgress": False,
                 },
-                "workspace": {
-                    "workspaceFolders": {
-                        "supported": True,
-                        "changeNotifications": True,
-                    }
-                },
                 "hoverProvider": True,
             }
         }
