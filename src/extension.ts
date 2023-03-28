@@ -140,6 +140,8 @@ export async function activate(context: ExtensionContext) {
 		lastActiveFolder = folder;
 		const languageServer = languageServers.get(folder.uri.toString());
 
+		// Update the button visibility when the active editor changes
+		pythonExtensionInstance.updateInmantaEnvVisibility(folder);
 		registerCommands(languageServer);
 	}
 
@@ -199,11 +201,6 @@ export async function activate(context: ExtensionContext) {
 			pythonExtensionInstance.updateInmantaEnvVisibility(document);
 
 		}
-		else {
-			log(`Folder already in the map`);
-			pythonExtensionInstance.updateInmantaEnvVisibility();
-
-		}
 
 	}
 
@@ -255,3 +252,6 @@ export function getLanguageMap():  Map<string, LanguageServer>{
 	return languageServers;
 }
 
+export function getLastActiveFolder():  WorkspaceFolder{
+	return lastActiveFolder;
+}

@@ -3,7 +3,7 @@ import { exec } from 'child_process';
 import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, WorkspaceFolder} from 'vscode';
 import { IExtensionApi, Resource } from './types';
 import { fileOrDirectoryExists, log } from './utils';
-import { getLanguageMap, getOuterMostWorkspaceFolder , logMap} from './extension';
+import { getLanguageMap, getLastActiveFolder, getOuterMostWorkspaceFolder , logMap} from './extension';
 
 
 export const PYTHONEXTENSIONID = "ms-python.python";
@@ -72,8 +72,9 @@ export class PythonExtension {
 	async updateInmantaEnvVisibility(document?) {
 		let venvName = this.virtualEnvName;
 		let folderName = "";
-		if (this.lastOpenedFolder) {
-			folderName = this.lastOpenedFolder.name;
+		let lastActiveFolder = getLastActiveFolder();
+		if (lastActiveFolder) {
+			folderName = lastActiveFolder.name;
 		}
 		if (document) {
 			const uri = document.uri;
@@ -82,7 +83,6 @@ export class PythonExtension {
 				// not clicking on a cf file -> do nothing
 				return;
 			}
-			this.lastOpenedFolder = folder;
 			folderName = folder.name;
 			venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
 		}
@@ -117,8 +117,6 @@ export class PythonExtension {
 		this.inmantaEnvSelector.tooltip = "Select a virtual environment";
 		// Update the button visibility when the extension is activated
 		this.updateInmantaEnvVisibility();
-		// Update the button visibility when the active editor changes
-		window.onDidChangeActiveTextEditor((event)=>this.updateInmantaEnvVisibility(event.document));
 		this.registerCallbackOnChange(()=>this.updateInmantaEnvVisibility());
 
 	}

@@ -250,7 +250,7 @@ class Folder:
     def install_project(self, attach_cf_cache: bool):
         module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
         env_path = module.Project.get().virtualenv.env_path
-        logger.debug("Installing project at %s in env %s.", self.inmanta_project_dir, env_path)
+        logger.info("Installing project at %s in env %s.", self.inmanta_project_dir, env_path)
         if self.kind == module.ModuleV2:
             # If the open folder is a v2 module we must install it in editable mode in the temporary project using the pip
             # indexes set in the "repos" extension setting for its dependencies.
@@ -260,7 +260,7 @@ class Folder:
             module.Project.get().install_modules()
 
     def __str__(self):
-        return f"Folder opened at {self.folder_path}" + " with a project at " + self.inmanta_project_dir + "."
+        return f"Folder opened at {self.folder_path}" + " with a project at " + self.inmanta_project_dir
 
 
 class InmantaLSHandler(JsonRpcHandler):
