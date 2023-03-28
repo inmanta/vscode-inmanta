@@ -211,12 +211,29 @@ export class LanguageServer {
 	 * @throws {Error} Throws an error if a file is opened instead of a folder.
 	 */
 	private	async getClientOptions(): Promise<LanguageClientOptions> {
-		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
-		let repos: string = workspace.getConfiguration('inmanta').repos;
 		if (this.context.storageUri === undefined) {
 			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 		}
+		const editor = window.activeTextEditor;
+		const resource = editor.document.uri;
+		const folder = workspace.getWorkspaceFolder(resource);
+
+
+		let compilerVenv: string | undefined;
+		let repos: string | undefined;
+		if (!folder) {
+			// Not in a workspace
+			compilerVenv = workspace.getConfiguration('inmanta').compilerVenv;
+			repos = workspace.getConfiguration('inmanta').repos;
+
+		} else {
+			// In a workspace
+			const multiRootConfigForResource = workspace.getConfiguration('inmanta', resource);
+			compilerVenv = multiRootConfigForResource.get('compilerVenv');
+			repos = multiRootConfigForResource.get('repos');
+		}
+
 		if (this.lsOutputChannel === null) {
 			this.lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
 		}
@@ -224,7 +241,7 @@ export class LanguageServer {
 			// Register the server for inmanta documents
 			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
 			errorHandler: this.errorHandler,
-			outputChannel:this.lsOutputChannel,
+			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
@@ -232,6 +249,7 @@ export class LanguageServer {
 			}
 		};
 		return clientOptions;
+
 	}
 
 	/**

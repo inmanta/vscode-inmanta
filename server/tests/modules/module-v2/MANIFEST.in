@@ -1,0 +1,5 @@
+include inmanta_plugins/module_v2/setup.cfg
+include inmanta_plugins/module_v2/py.typed
+recursive-include inmanta_plugins/module_v2/model *.cf
+graft inmanta_plugins/module_v2/files
+graft inmanta_plugins/module_v2/templates

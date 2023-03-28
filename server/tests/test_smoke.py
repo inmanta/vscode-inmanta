@@ -18,6 +18,7 @@
 import json
 import logging
 import os
+import shutil
 import socket
 from typing import AsyncIterator, Dict, List, Optional
 
@@ -25,9 +26,12 @@ import pytest
 from tornado.iostream import IOStream
 from tornado.tcpclient import TCPClient
 
+from inmanta import env
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
-from inmantals.server import InmantaLSHandler
+from inmantals.server import CORE_VERSION, InmantaLSHandler
+from packaging import version
+from pkg_resources import Requirement, parse_requirements
 
 
 class JsonRPC(object):
@@ -126,7 +130,12 @@ async def initialize(
     if client_capabilities is None:
         client_capabilities = {}
     path = os.path.join(os.path.dirname(__file__), project)
-    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", capabilities=client_capabilities)
+    folder = {"uri": f"file://{path}", "name": project}
+    ret = await client.call(
+        "initialize",
+        workspaceFolders=[folder],
+        capabilities=client_capabilities,
+    )
     await client.assert_one(ret)
 
 
@@ -173,7 +182,8 @@ async def test_connection(client, caplog):
     caplog.set_level(logging.DEBUG)
 
     path = os.path.join(os.path.dirname(__file__), "project")
-    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", capabilities={})
+    path_uri = {"uri": f"file://{path}", "name": "project"}
+    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[path_uri], capabilities={})
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
@@ -184,6 +194,7 @@ async def test_connection(client, caplog):
                 "willSaveWaitUntil": False,
                 "save": {"includeText": False},
             },
+            "workspace": {"workspaceFolders": {"supported": True, "changeNotifications": True}},
             "definitionProvider": True,
             "referencesProvider": True,
             "workspaceSymbolProvider": {"workDoneProgress": False},
@@ -210,6 +221,134 @@ async def test_connection(client, caplog):
 
     ret = await client.call("exit")
     await client.assert_one(ret)
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.asyncio
+async def test_working_on_v1_modules(client, caplog):
+    """
+    Simulate opening a v1 module in vscode. This test makes sure the module's requirements are correctly installed from the
+    specified index.
+    """
+    if CORE_VERSION < version.Version("5"):
+        pytest.skip("Feature not supported below iso5")
+
+    caplog.set_level(logging.DEBUG)
+
+    module_name = "module_v1"
+    path_to_module = os.path.join(os.path.dirname(__file__), "modules", module_name)
+
+    env_path = os.path.join(path_to_module, ".env")
+    if os.path.isdir(env_path):
+        shutil.rmtree(env_path)
+        os.makedirs(env_path)
+
+    req_file = os.path.join(path_to_module, "requirements.txt")
+    with open(req_file, "r") as f:
+        reqs = list(parse_requirements(f.readlines()))
+
+    venv = env.VirtualEnv(env_path)
+    venv.use_virtual_env()
+
+    assert Requirement.parse("inmanta-module-dummy>=3.0.8") in reqs
+    # This dummy module is used because it is only present in the dev artifacts and not in pypi index.
+    assert not venv.are_installed(reqs)
+
+    options = {"repos": ("[" '{"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},' "]")}
+
+    path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
+    ret = await client.call("initialize", workspaceFolders=[path_uri], capabilities={}, initializationOptions=options)
+    result = await client.assert_one(ret)
+    assert result == {
+        "capabilities": {
+            "textDocumentSync": {
+                "openClose": True,
+                "change": 1,
+                "willSave": False,
+                "willSaveWaitUntil": False,
+                "save": {"includeText": False},
+            },
+            "hoverProvider": True,
+            "workspace": {"workspaceFolders": {"supported": True, "changeNotifications": True}},
+            "definitionProvider": True,
+            "referencesProvider": True,
+            "workspaceSymbolProvider": {"workDoneProgress": False},
+        }
+    }
+
+    ret = await client.call("initialized")
+    result = await client.assert_one(ret)
+    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
+    assert venv.are_installed(reqs)
+    assert "Anchormap took" in caplog.text
+    caplog.clear()
+
+    ret = await client.call("textDocument/didSave")
+    result = await client.assert_one(ret)
+    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
+    assert "Anchormap took" in caplog.text
+    caplog.clear()
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.asyncio
+async def test_working_on_v2_modules(client, caplog):
+    """
+    Simulate opening a v2 module in vscode. This test makes sure the module is installed in editable mode.
+    """
+    if CORE_VERSION < version.Version("5"):
+        pytest.skip("Feature not supported below iso5")
+
+    caplog.set_level(logging.DEBUG)
+
+    module_name = "module-v2"
+    path_to_module = os.path.join(os.path.dirname(__file__), "modules", module_name)
+
+    env_path = os.path.join(path_to_module, ".env")
+    if os.path.isdir(env_path):
+        shutil.rmtree(env_path)
+        os.makedirs(env_path)
+
+    venv = env.VirtualEnv(env_path)
+    venv.use_virtual_env()
+
+    assert "inmanta-module-module-v2" not in env.PythonWorkingSet.get_packages_in_working_set()
+
+    options = {"repos": ("[" '{"url": "https://pypi.org/simple", "type": "package"},' "]")}
+
+    path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
+    ret = await client.call("initialize", workspaceFolders=[path_uri], capabilities={}, initializationOptions=options)
+    result = await client.assert_one(ret)
+    assert result == {
+        "capabilities": {
+            "textDocumentSync": {
+                "openClose": True,
+                "change": 1,
+                "willSave": False,
+                "willSaveWaitUntil": False,
+                "save": {"includeText": False},
+            },
+            "hoverProvider": True,
+            "workspace": {"workspaceFolders": {"supported": True, "changeNotifications": True}},
+            "definitionProvider": True,
+            "referencesProvider": True,
+            "workspaceSymbolProvider": {"workDoneProgress": False},
+        }
+    }
+
+    ret = await client.call("initialized")
+    result = await client.assert_one(ret)
+    assert "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
+
+    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
+    assert "Anchormap took" in caplog.text
+    caplog.clear()
+
+    ret = await client.call("textDocument/didSave")
+    result = await client.assert_one(ret)
+    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
+    assert "Anchormap took" in caplog.text
+    caplog.clear()
 
 
 def test_lsp_type_serialization() -> None:
@@ -346,9 +485,9 @@ async def test_symbol_provider(client: JsonRPC) -> None:
 
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
-async def test_root_path_is_none(client: JsonRPC) -> None:
+async def test_unspecified_workspace_folder(client: JsonRPC) -> None:
     """
-    The language server should return an error when it is started with `rootPath is None`.
+    The language server should return an error when no workspace folder specified.
     """
-    await client.call("initialize", rootPath=None, rootUri=None, capabilities={})
-    await client.assert_error(message="A folder should be opened instead of a file in order to use the inmanta extension.")
+    await client.call("initialize", workspaceFolders=None, capabilities={})
+    await client.assert_error(message="No workspace folder or rootUri specified.")

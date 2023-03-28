@@ -28,6 +28,7 @@ export async function activate(context: ExtensionContext) {
 	//adds the SetupAssistantButton Button
 	addSetupAssistantButton();
 
+
 	// Create a new instance of LanguageServer and an ErrorHandler
 	log("create LanguageServer");
 	const errorhandler: LsErrorHandler = new LsErrorHandler();
