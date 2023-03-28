@@ -119,6 +119,7 @@ export async function activate(context: ExtensionContext) {
 	//adds the SetupAssistantButton Button
 	addSetupAssistantButton();
 
+	// Create a new instance of InmantaCommands to register commands
 	inmantaCommands = new InmantaCommands(context);
 
 	inmantaCommands.registerCommand(`inmanta.openWalkthrough`, () => {

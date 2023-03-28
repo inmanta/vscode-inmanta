@@ -249,12 +249,10 @@ export class LanguageServer {
 	 * @throws {Error} Throws an error if a file is opened instead of a folder.
 	 */
 	private	async getClientOptions(): Promise<LanguageClientOptions> {
-		log("Geting client options...");
 		if (this.context.storageUri === undefined) {
 			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 		}
-
 		const folder = workspace.getWorkspaceFolder(this.rootFolder.uri);
 
 		log(`  folder ${folder.uri.toString()}`);
@@ -278,7 +276,7 @@ export class LanguageServer {
 			this.lsOutputChannel = window.createOutputChannel(`Inmanta Language Server[${this.rootFolder.uri.toString()}]`);
 		}
 		const clientOptions: LanguageClientOptions = {
-			// Register the server for inmanta documents.
+			// Register the server for inmanta documents living under the root folder.
 			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`}],
 			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
@@ -389,7 +387,7 @@ export class LanguageServer {
 			serverOptions: serverOptions,
 			clientOptions: clientOptions
 		}, null, 2)}`);
-		
+
 		await this.client.start();
 	}
 

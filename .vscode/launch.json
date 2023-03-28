@@ -8,7 +8,6 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": ["${workspaceRoot}/src/test/navigation/workspace", "--extensionDevelopmentPath=${workspaceRoot}" ],
-            "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/**/*.js" ],
             "preLaunchTask": "npm: watch"
@@ -19,7 +18,6 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": ["${workspaceRoot}/src/test/compile/workspace","--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out/test/compile/index" ],
-            "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
             "preLaunchTask": "npm: pretest"
@@ -30,7 +28,6 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": ["${workspaceRoot}/src/test/navigation/workspace","--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out/test/navigation/index" ],
-            "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
             "preLaunchTask": "npm: pretest"
@@ -41,7 +38,16 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": ["--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out/test/loadExtension/index" ],
-            "stopOnEntry": false,
+            "sourceMaps": true,
+            "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
+            "preLaunchTask": "npm: pretest"
+        },
+        {
+            "name": "Extension Test Docstrings",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": ["${workspaceRoot}/src/test/docstrings/workspace","--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out/test/docstrings/index" ],
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
             "preLaunchTask": "npm: pretest"
