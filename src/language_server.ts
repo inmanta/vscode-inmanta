@@ -107,7 +107,7 @@ export class LanguageServer {
 		}
 		const script = "import sys\n" +
 			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
-			"  exit(4)\n" +
+			"  sys.exit(4)\n" +
 			"try:\n" +
 			"  import inmantals\n" +
 			"  sys.exit(0)\n" +
