@@ -109,36 +109,15 @@ export async function activate(context: ExtensionContext) {
 
 			let newPath = pythonExtensionInstance.getPathForResource(folder.uri);
 
-
-			// This check makes sure the active interpreter is part of a venv so we don't install anything in a global env.
-			// Inspired by: https://stackoverflow.com/questions/1871549/determine-if-python-is-running-inside-virtualenv/42580137#42580137
-			const script = "import sys\n" +
-				"real_prefix = getattr(sys, 'real_prefix', None)\n" +
-				"base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
-				"running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
-				"if not running_in_virtualenv:\n" +
-				"  sys.exit(1)";
-
-			let spawnResult = cp.spawnSync(newPath, ["-c", script]);
-			const stdout = spawnResult.stdout.toString();
-			if (spawnResult.status === 1) {
-				const response = await window.showErrorMessage(`The active python interpreter is not part of a virtual environment.`, 'Select interpreter');
-				if (response === 'Select interpreter') {
-					await commands.executeCommand('python.setInterpreter');
-				}
-				else {
-					return;
-				}
-			}
-
 			let errorHandler = new LsErrorHandler(folder);
 			let languageserver = new LanguageServer(context, newPath, folder, errorHandler);
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.
 			pythonExtensionInstance.registerCallbackOnChange((updatedPath, outermost) => {
-				languageserver.updatePythonPath(updatedPath, outermost);
-				pythonExtensionInstance.updateInmantaEnvVisibility(document);
+				languageserver.updatePythonPath(updatedPath, outermost).then( (res) => 
+					pythonExtensionInstance.updateInmantaEnvVisibility(document)
+				);
 			});
 
 

@@ -83,28 +83,50 @@ export class LanguageServer {
 	 *
 	 * @param {string} newPath the new python path
 	 */
-	updatePythonPath(newPath: string, outermost: Uri): void {
+	async updatePythonPath(newPath: string, outermost: Uri): Promise<void> {
 		log(`Comparing outermost: ${outermost} to rooturi: ${this.rootFolder.uri.toString()}`);
 
 		if (outermost === this.rootFolder.uri) {
-			log(`Language server python path changed to ${newPath}`);
-			this.pythonPath = newPath;
-			this.startOrRestartLS();
+			const canStart = await this.canServerStart(newPath);
+
+			if (canStart === LanguageServerDiagnoseResult.ok) {
+				this.pythonPath = newPath;
+				log(`Language server python path changed to ${newPath}`);
+				this.startOrRestartLS(false, canStart);
+			}
+			else {
+				log(`Language server can't start with interpreter ${newPath}`);
+
+				this.diagnoseId = uuidv4();
+				return this.proposeSolution(canStart, this.diagnoseId);
+			}
 		}
   	}
 
 	/**
-	 * Check if the server can start.
+	 * Check if the server can start using the provided interpreter.
+	 * If no interpreter is provided, this check will be performed against the interpreter provided during 
+	 * instantiation of this LanguageServer.
 	 *
+	 * @param {string} pythonPath the new python path
+
 	 * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
 	 */
-	async canServerStart():Promise<LanguageServerDiagnoseResult>{
-		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
+	async canServerStart(pythonPath?: string):Promise<LanguageServerDiagnoseResult>{
+		if (pythonPath === undefined) {
+			pythonPath = this.pythonPath;
+		}
+		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
 		const script = "import sys\n" +
 			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
 			"  sys.exit(4)\n" +
+			"real_prefix = getattr(sys, 'real_prefix', None)\n" +
+			"base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
+			"running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
+			"if not running_in_virtualenv:\n" +
+			"  sys.exit(6)\n" +
 			"try:\n" +
 			"  import inmantals\n" +
 			"  sys.exit(0)\n" +
@@ -114,9 +136,14 @@ export class LanguageServer {
 			"  print(e)\n" +
 			"  sys.exit(5)";
 
-		let spawnResult = cp.spawnSync(this.pythonPath, ["-c", script]);
+		let spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
-		if (spawnResult.status === 4) {
+		if (spawnResult.status === 6) {
+			// This arises when the active interpreter is global. We must make sure the selected interpreter is living in a virtual environment
+			// so that we never install anything in a global env.
+			// The actual python check above is inspired by: https://stackoverflow.com/questions/1871549/determine-if-python-is-running-inside-virtualenv/42580137#42580137
+			return LanguageServerDiagnoseResult.wrongInterpreter;
+		} else if (spawnResult.status === 4) {
 			return LanguageServerDiagnoseResult.wrongPythonVersion;
 		} else if (spawnResult.status === 3) {
 			return LanguageServerDiagnoseResult.languageServerNotInstalled;
@@ -435,9 +462,11 @@ export class LanguageServer {
 	 * @param {boolean} start Whether to start the server or restart it.
 	 * @returns {Promise<void>}
 	 */
-	async startOrRestartLS(start: boolean = false): Promise<void>{
+	async startOrRestartLS(start: boolean = false, canStart?: LanguageServerDiagnoseResult): Promise<void>{
 		this.diagnoseId = uuidv4();
-		const canStart = await this.canServerStart();
+		if (canStart === undefined) {
+			canStart = await this.canServerStart();
+		}
 		if (canStart !== LanguageServerDiagnoseResult.ok){
 			return this.proposeSolution(canStart, this.diagnoseId);
 		}
