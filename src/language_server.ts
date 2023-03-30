@@ -70,9 +70,6 @@ export class LanguageServer {
 	 */
 	constructor(context: ExtensionContext, pythonPath: string, rootFolder: WorkspaceFolder, errorHandler: LsErrorHandler) {
 		log("Creating new language server...");
-		log(String(context));
-		log(String(pythonPath));
-		log(rootFolder.toString());
 
 		this.context = context;
 		this.pythonPath = pythonPath;
@@ -312,7 +309,7 @@ export class LanguageServer {
 			log("Retrieved client options");
 			log(`${JSON.stringify(clientOptions.initializationOptions)}`);
 		} catch (err) {
-			log(err);
+			log("Error occured while retrieving client options:" + err);
 			return;
 		}
 		try{
@@ -451,7 +448,6 @@ export class LanguageServer {
 			log("restarting Language Server");
 		}
 		const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
-		log(`Enabled ? ${enable}`);
 		await this.stopServerAndClient();
 		if (enable) {
 			await this.startServerAndClient();
@@ -464,7 +460,7 @@ export class LanguageServer {
 	 * Stops the language server and its client.
 	 */
 	async stopServerAndClient() {
-		log("stopping serv and  client");
+		log("Stopping server and client...");
 		await this.mutex.runExclusive(async () => {
 			if (this.client) {
 				if(this.client.needsStop()){

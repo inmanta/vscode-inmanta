@@ -2,9 +2,9 @@
 
 import { workspace, ExtensionContext, extensions, window, commands, WorkspaceFolder, Uri, TextDocument, TextEditor } from 'vscode';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
-import { log } from './utils';
+import { log, getOuterMostWorkspaceFolder, logMap } from './utils';
 import { LanguageServer, LsErrorHandler } from './language_server';
-import { commandActivateLSHandler, createHandlerExportCommand, createProjectInstallHandler, InmantaCommands } from './commands';
+import { InmantaCommands } from './commands';
 import { addSetupAssistantButton } from './walkthrough_button';
 import * as cp from 'child_process';
 
@@ -21,85 +21,10 @@ let lastActiveFolder: WorkspaceFolder = undefined;
 
 export var languageServers: Map<string, LanguageServer> = new Map();
 
-export function logMap(map: Map<string, LanguageServer>) {
-	for (let [key, value] of map) {
-		console.log(key);
-	}
-}
-
-/*
-	The following functions sortedWorkspaceFolders and getOuterMostWorkspaceFolder are taken from the vs-code extension example at
-	https://github.com/microsoft/vscode-extension-samples/blob/main/lsp-multi-server-sample/client/src/extension.ts
-	under this license: https://github.com/microsoft/vscode-extension-samples/blob/main/LICENSE
-*/
-
-/*
-Copyright (c) Microsoft Corporation
-
-All rights reserved.
-
-MIT License
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
-files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
-OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-
-let _sortedWorkspaceFolders: string[] | undefined;
-function sortedWorkspaceFolders(): string[] {
-	if (_sortedWorkspaceFolders === void 0) {
-		_sortedWorkspaceFolders = workspace.workspaceFolders ? workspace.workspaceFolders.map(folder => {
-			let result = folder.uri.toString();
-			if (result.charAt(result.length - 1) !== '/') {
-				result = result + '/';
-			}
-			return result;
-		}).sort(
-			(a, b) => {
-				return a.length - b.length;
-			}
-		) : [];
-	}
-	return _sortedWorkspaceFolders;
-}
-
-workspace.onDidChangeWorkspaceFolders(() => _sortedWorkspaceFolders = undefined);
-
-export function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
-	const sorted = sortedWorkspaceFolders();
-	for (const element of sorted) {
-		let uri = folder.uri.toString();
-		if (uri.charAt(uri.length - 1) !== '/') {
-			uri = uri + '/';
-		}
-		if (uri.startsWith(element)) {
-			return workspace.getWorkspaceFolder(Uri.parse(element))!;
-		}
-	}
-	return folder;
-}
-
-function registerCommands(languageServer: LanguageServer): void {
-	// We have to register these commands each time a diffent language server is being activated or "focussed".
-	// Activation happens the first time a .cf file from this language server's folders is opened and focus
-	// happens when selecting a file from a different workspace folder
+let sortedWorkspaceFolders: string[] | undefined;
+workspace.onDidChangeWorkspaceFolders(() => sortedWorkspaceFolders = undefined);
 
 
-	log(`Registering inmanta commands for language server responsible for ${languageServer.rootFolder} using ${languageServer.pythonPath} environment.`);
-	inmantaCommands.registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(languageServer.pythonPath));
-	inmantaCommands.registerCommand(`inmanta.activateLS`, commandActivateLSHandler(languageServer.rootFolder));
-	inmantaCommands.registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(languageServer.pythonPath));
-	inmantaCommands.registerCommand(`inmanta.installLS`, () => { languageServer.installLanguageServer(); });
-
-}
 
 export async function activate(context: ExtensionContext) {
 	// Get and activate the Python extension instance
@@ -144,7 +69,7 @@ export async function activate(context: ExtensionContext) {
 
 		// Update the button visibility when the active editor changes
 		pythonExtensionInstance.updateInmantaEnvVisibility(folder);
-		registerCommands(languageServer);
+		inmantaCommands.registerCommands(languageServer);
 	}
 
 	async function didOpenTextDocument(document: TextDocument): Promise<void> {
@@ -162,7 +87,7 @@ export async function activate(context: ExtensionContext) {
 		let folderURI = folder.uri.toString();
 
 		// We are only interested in .cf files
-		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file' && document.uri.scheme !== 'untitled')) {
+		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
 			return;
 		}
 
@@ -217,7 +142,7 @@ export async function activate(context: ExtensionContext) {
 			});
 
 
-			registerCommands(languageserver);
+			inmantaCommands.registerCommands(languageserver);
 
 			// Start the language server if enabled in the workspace configuration
 			const enable: boolean = workspace.getConfiguration('inmanta', folder).ls.enabled;
@@ -242,9 +167,6 @@ export async function activate(context: ExtensionContext) {
 	window.onDidChangeActiveTextEditor((event: TextEditor) => changeActiveTextEditor(event));
 	workspace.onDidChangeWorkspaceFolders((event) => {
 		log("workspaces changed" + String(event));
-		log(`before `);
-		logMap(languageServers);
-
 		for (const folder of event.removed) {
 			const ls = languageServers.get(folder.uri.toString());
 			if (ls) {
@@ -253,9 +175,6 @@ export async function activate(context: ExtensionContext) {
 				ls.cleanOutputChannel();
 			}
 		}
-		log(`after `);
-		logMap(languageServers);
-
 	});
 
 	// Subscribe to workspace configuration changes and restart the affected language server(s) if necessary
@@ -264,9 +183,10 @@ export async function activate(context: ExtensionContext) {
 		const promises: Thenable<void>[] = [];
 		for (const ls of languageServers.values()) {
 			if (event.affectsConfiguration('inmanta', ls.rootFolder)) {
-				await ls.startOrRestartLS();
+				promises.push(ls.startOrRestartLS());
 			}
 		}
+		await Promise.all(promises);
 	}));
 
 }
@@ -276,7 +196,7 @@ export async function deactivate(): Promise<void> {
 	for (const ls of languageServers.values()) {
 		promises.push(ls.stopServerAndClient());
 	}
-	return Promise.all(promises).then(() => undefined);
+	await Promise.all(promises);
 }
 
 
@@ -286,4 +206,8 @@ export function getLanguageMap(): Map<string, LanguageServer> {
 
 export function getLastActiveFolder(): WorkspaceFolder {
 	return lastActiveFolder;
+}
+
+export function getSortedWorkspaceFolders(): string[] | undefined {
+	return sortedWorkspaceFolders;
 }

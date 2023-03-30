@@ -1,9 +1,9 @@
 'use strict';
 import { exec } from 'child_process';
-import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, WorkspaceFolder} from 'vscode';
+import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, WorkspaceFolder, StatusBarItem} from 'vscode';
 import { IExtensionApi, Resource } from './types';
-import { fileOrDirectoryExists, log } from './utils';
-import { getLanguageMap, getLastActiveFolder, getOuterMostWorkspaceFolder , logMap} from './extension';
+import { fileOrDirectoryExists, log, getOuterMostWorkspaceFolder, logMap} from './utils';
+import { getLanguageMap, getLastActiveFolder} from './extension';
 
 
 export const PYTHONEXTENSIONID = "ms-python.python";
@@ -11,8 +11,8 @@ export const PYTHONEXTENSIONID = "ms-python.python";
 export class PythonExtension {
 	executionDetails: {execCommand: string[] | undefined;};
 	callBacksOnchange: Array<(newPath?, outermost?) => void> = [];
-	inmantaEnvSelector;
-	pythonApi;
+	inmantaEnvSelector: StatusBarItem;
+	pythonApi : IExtensionApi;
 	lastOpenedFolder: WorkspaceFolder;
 	/**
 	 * Creates an instance of PythonExtension.
@@ -21,8 +21,8 @@ export class PythonExtension {
 	 */
 	constructor(pythonApi : IExtensionApi) {
 		this.executionDetails = pythonApi.settings.getExecutionDetails(workspace.workspaceFolders?.[0].uri);
-		this.onChange(pythonApi);
 		this.pythonApi = pythonApi;
+		this.onChange(pythonApi);
 	}
 
 
@@ -39,14 +39,18 @@ export class PythonExtension {
 	}
 
 	pythonPathToEnvName(path: string) : string {
-		// Match the virtual environment name using a regular expression
-		const match = path.match(/.*\/(.*?)\/bin\/python$/);
+		/**
+		 *  Match the virtual environment name using a regular expression to transform 
+		 *  it to an Environment name if a match is found. If no match is found, return the pythonpath
+		 * @returns {string} A string representing the path to the Python interpreter.
+		 */
 
-		// If a match is found, return the first capture group (the virtual environment name)
+		const match = path.match(/.*\/(.*?)\/bin\/python$/);
+		
 		if (match && match.length > 1) {
 			return match[1];
 		}
-		// If no match is found, return the pythonpath
+
 		return path;
 	}
 
@@ -126,7 +130,7 @@ export class PythonExtension {
 	 * register a function that will be called when the "onChange" function is called
 	 * @param {(newPath?) => void} onChangeCallback A function
 	 */
-	registerCallbackOnChange(onChangeCallback: (newPath?, outermost?) => void, tags?) {
+	registerCallbackOnChange(onChangeCallback: (newPath?, outermost?) => void) {
 		this.callBacksOnchange.push(onChangeCallback);
 	}
 

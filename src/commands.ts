@@ -1,4 +1,5 @@
 import { ExtensionContext, window, commands, workspace, TerminalOptions, Disposable, Terminal, WorkspaceFolder } from "vscode";
+import { LanguageServer } from "./language_server";
 import { fileOrDirectoryExists, log } from './utils';
 
 type DisposableDict = Record<string, Disposable>;
@@ -31,6 +32,18 @@ export class InmantaCommands {
 		const disposable = commands.registerCommand(id, handler);
 		commands[id]= disposable;
 		this.context.subscriptions.push(disposable);
+	}
+
+	registerCommands(languageServer: LanguageServer): void {
+		// We have to register these commands each time a diffent language server is being activated or "focussed".
+		// Activation happens the first time a .cf file from this language server's folders is opened and focus
+		// happens when selecting a file from a different workspace folder
+	
+		log(`Registering inmanta commands for language server responsible for ${languageServer.rootFolder} using ${languageServer.pythonPath} environment.`);
+		this.registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(languageServer.pythonPath));
+		this.registerCommand(`inmanta.activateLS`, commandActivateLSHandler(languageServer.rootFolder));
+		this.registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(languageServer.pythonPath));
+		this.registerCommand(`inmanta.installLS`, () => { languageServer.installLanguageServer(); });
 	}
 
 }
