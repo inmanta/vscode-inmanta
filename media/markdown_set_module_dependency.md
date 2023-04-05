@@ -20,4 +20,4 @@ The url property holds the URI of the parent location for a v1 module. (Organiza
 # Type "package"
 
 
-The url property holds the pip index url in which to look for v2 modules. ⚠️ Be mindful of [dependency confusion attacks](https://www.websecuritylens.org/how-dependency-confusion-attack-works-and-how-to-prevent-it/) when setting this up: make sure you have full control over this index.
+The url property holds the pip index url in which to look for v2 modules. ⚠️Be mindful of potential security risks when using more than one index. Please refer to the [documentation](https://docs.inmanta.com/community/latest/reference/projectyml.html#inmanta.module.ProjectMetadata) for more information.
