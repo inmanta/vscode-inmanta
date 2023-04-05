@@ -285,8 +285,9 @@ class InmantaLSHandler(JsonRpcHandler):
 
     async def initialize(
         self,
-        workspaceFolders: Sequence[Dict],
         capabilities: Dict[str, object],
+        *,
+        workspaceFolders: Optional[Sequence[Dict]] = None,
         rootPath=None,
         rootUri=None,
         **kwargs,
