@@ -42,6 +42,17 @@ export class LanguageServer {
 		this.errorHandler = errorHandler;
 	}
 
+	languageServerVersionToInstall(): string[]{
+		const version = [];
+		if (process.env.INMANTA_LS_PATH) {
+			version.push("-e", process.env.INMANTA_LS_PATH);
+			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
+		} else {
+			version.push("inmantals");
+		}
+		return version;
+	}
+
 	/**
 	 * updates the python path used by the LS.
 	 *
@@ -182,15 +193,10 @@ export class LanguageServer {
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			return this.selectInterpreter(this.diagnoseId);
 		}
-		const args = ["-m", "pip", "install"];
-		if (process.env.INMANTA_LS_PATH) {
-			args.push("-e", process.env.INMANTA_LS_PATH);
-			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
-		} else {
-			args.push("inmantals");
-		}
+		const cmdArgs: string[] = ["-m", "pip", "install"]
+		cmdArgs.push(...this.languageServerVersionToInstall());
 		window.showInformationMessage("Installing Inmanta Language server. This may take a few seconds");
-		const child = cp.spawnSync(this.pythonPath, args);
+		const child = cp.spawnSync(this.pythonPath, cmdArgs);
 		if (child.status !== 0) {
 			log(`Can not start server and client`);
 			const response = await window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`,  "Setup assistant");
