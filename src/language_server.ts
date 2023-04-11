@@ -105,7 +105,7 @@ export class LanguageServer {
 
 	/**
 	 * Check if the server can start using the provided interpreter.
-	 * If no interpreter is provided, this check will be performed against the interpreter provided during 
+	 * If no interpreter is provided, this check will be performed against the interpreter provided during
 	 * instantiation of this LanguageServer.
 	 *
 	 * @param {string} pythonPath the new python path
@@ -122,11 +122,6 @@ export class LanguageServer {
 		const script = "import sys\n" +
 			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
 			"  sys.exit(4)\n" +
-			"real_prefix = getattr(sys, 'real_prefix', None)\n" +
-			"base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
-			"running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
-			"if not running_in_virtualenv:\n" +
-			"  sys.exit(6)\n" +
 			"try:\n" +
 			"  import inmantals\n" +
 			"  sys.exit(0)\n" +
@@ -138,12 +133,7 @@ export class LanguageServer {
 
 		let spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
-		if (spawnResult.status === 6) {
-			// This arises when the active interpreter is global. We must make sure the selected interpreter is living in a virtual environment
-			// so that we never install anything in a global env.
-			// The actual python check above is inspired by: https://stackoverflow.com/questions/1871549/determine-if-python-is-running-inside-virtualenv/42580137#42580137
-			return LanguageServerDiagnoseResult.wrongInterpreter;
-		} else if (spawnResult.status === 4) {
+		if (spawnResult.status === 4) {
 			return LanguageServerDiagnoseResult.wrongPythonVersion;
 		} else if (spawnResult.status === 3) {
 			return LanguageServerDiagnoseResult.languageServerNotInstalled;
