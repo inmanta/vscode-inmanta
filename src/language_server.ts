@@ -277,8 +277,6 @@ export class LanguageServer {
 		}
 		const folder = workspace.getWorkspaceFolder(this.rootFolder.uri);
 
-		log(`  folder ${folder.uri.toString()}`);
-
 
 		let compilerVenv: string | undefined;
 		let repos: string | undefined;
