@@ -3,6 +3,8 @@
 import * as net from 'net';
 import * as cp from 'child_process';
 import * as os from 'os';
+import * as path from "path";
+import * as fs from "fs";
 import getPort from 'get-port';
 
 import { commands, ExtensionContext, OutputChannel, window, workspace} from 'vscode';
@@ -12,6 +14,8 @@ import { Mutex } from 'async-mutex';
 import { fileOrDirectoryExists, log } from './utils';
 import { LsErrorHandler } from './extension';
 import { v4 as uuidv4 } from 'uuid';
+
+const REQUIREMENTS_PATH = path.join(__dirname, "requirements.txt");
 
 enum LanguageServerDiagnoseResult {
 	wrongInterpreter,
@@ -42,15 +46,81 @@ export class LanguageServer {
 		this.errorHandler = errorHandler;
 	}
 
-	languageServerVersionToInstall(): string[]{
+	/**
+	 * Returns an array of string(s) representing the version of the Inmanta Language Server
+	 * that needs to be installed. The function checks if the environment variable INMANTA_LS_PATH is
+	 * set and uses it to install the LS from the specified path in editable mode. If the environment variable is not set,
+	 * it checks for the presence of requirements.txt file and installs the LS from it.
+	 * If requirements.txt file is not present, it installs the latest version of Inmanta Language Server.
+	 *
+	 * @returns {string[]} An array of string(s) representing the version of the Inmanta Language Server to be installed.
+	 */
+	languageServerVersionToInstall(): string[] {
 		const version = [];
+
 		if (process.env.INMANTA_LS_PATH) {
-			version.push("-e", process.env.INMANTA_LS_PATH);
-			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
+		  version.push("-e", process.env.INMANTA_LS_PATH);
+		  log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
 		} else {
+		  // Check for the presence of requirements.txt
+		  if (fs.existsSync(REQUIREMENTS_PATH)) {
+			version.push("-r", REQUIREMENTS_PATH);
+			log(`Installing Language Server from requirements file "${REQUIREMENTS_PATH}"`);
+		  } else {
 			version.push("inmantals");
+		  }
 		}
+
 		return version;
+	}
+
+	/**
+	 * Returns the version of the installed Inmanta Language Server, or null if it's not installed.
+	 *
+	 * @returns {string | null} The version of the installed Inmanta Language Server, or null if it's not installed.
+	 */
+	getInstalledInmantaLSVersion(): string | null {
+		try {
+		  const output = cp.execSync("pip show inmantals").toString();
+		  const versionMatch = output.match(/^Version: (.+)$/m);
+		  if (versionMatch) {
+			return versionMatch[1];
+		  }
+		} catch (error) {}
+		return null;
+	}
+
+	/**
+	 * Checks if the correct version of the Inmanta Language Server is installed.
+	 *
+	 * @returns {boolean} True if the correct version of the Inmanta Language Server is installed, false otherwise.
+	 */
+	isCorrectInmantaLSVersionInstalled(): boolean {
+		// Get the expected version from requirement.txt
+		let expectedVersion = null;
+		if (fs.existsSync(REQUIREMENTS_PATH)) {
+		  const requirementTxtContent = fs.readFileSync(REQUIREMENTS_PATH, "utf-8");
+		  const inmantaLSPattern = /^inmantals[=<>].*$/gm;
+		  const inmantaLSLine = requirementTxtContent.match(inmantaLSPattern)?.[0];
+		  if (inmantaLSLine) {
+			expectedVersion = inmantaLSLine.split(/[<=>]/)[1];
+		  }
+		}
+
+		if (!expectedVersion) {
+		  // requirement.txt does not specify inmantals, so cannot check version
+		  return false;
+		}
+
+		// Get the installed version of inmantals
+		const installedVersion = this.getInstalledInmantaLSVersion();
+
+		// Compare the expected and installed versions
+		if (installedVersion === expectedVersion) {
+		  return true;
+		} else {
+		  return false;
+		}
 	}
 
 	/**

@@ -37,6 +37,11 @@ export async function activate(context: ExtensionContext) {
 	pythonExtensionInstance.registerCallbackOnChange(()=>{
 		languageserver.updatePythonPath(pythonExtensionInstance.pythonPath);
 	});
+	if (!process.env.INMANTA_LS_PATH && !languageserver.isCorrectInmantaLSVersionInstalled) {
+		//Make sure the right version of the LS is installed when it is not installed from source in editable mode
+		//If it is not installed, propose to install it.
+		languageserver.proposeInstallLS();
+	}
 
 	// Create a new instance of InmantaCommands to register commands
 	log("register commands");
@@ -45,7 +50,7 @@ export async function activate(context: ExtensionContext) {
 	inmantaCommands.registerCommand("inmanta.activateLS", commandActivateLSHandler);
 	inmantaCommands.registerCommand("inmanta.projectInstall", createProjectInstallHandler(pythonExtensionInstance.pythonPath));
 	inmantaCommands.registerCommand("inmanta.installLS", () => {
-		languageserver.installLanguageServer(false);
+		languageserver.installLanguageServer();
 	});
 	inmantaCommands.registerCommand("inmanta.openWalkthrough", () => {
 		commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
