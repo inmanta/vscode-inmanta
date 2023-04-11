@@ -151,8 +151,8 @@
         "async-mutex": "^0.4.0",
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
-        "lru-cache": "^8.0.5",
-        "minimatch": "^8.0.3",
+        "lru-cache": "^9.0.0",
+        "minimatch": "^9.0.0",
         "uuid": "^9.0.0",
         "vscode-languageclient": "^8.1.0"
     },
@@ -177,14 +177,14 @@
         "@typescript-eslint/parser": "^5.57.1",
         "@vscode/test-electron": "^2.2.3",
         "@vscode/vsce": "^2.18.0",
-        "eslint": "^8.37.0",
+        "eslint": "^8.38.0",
         "eslint-config-google": "^0.14.0",
         "fs-extra": "^11.1.1",
-        "glob": "^9.3.4",
+        "glob": "^10.0.0",
         "mocha": "^10.2.0",
-        "rimraf": "^4.4.1",
+        "rimraf": "^5.0.0",
         "semver": "^7.3.8",
-        "typescript": "^5.0.3"
+        "typescript": "^5.0.4"
     },
     "main": "./out/extension"
 }
