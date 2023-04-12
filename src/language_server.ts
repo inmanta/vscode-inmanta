@@ -15,7 +15,9 @@ import { fileOrDirectoryExists, log } from './utils';
 import { LsErrorHandler } from './extension';
 import { v4 as uuidv4 } from 'uuid';
 
-const REQUIREMENTS_PATH = path.join(__dirname, "requirements.txt");
+const REQUIREMENTS_PATH = path.join(__dirname, "..", "requirements.txt");
+let orange = window.createOutputChannel("Orange");
+
 
 enum LanguageServerDiagnoseResult {
 	wrongInterpreter,
@@ -63,6 +65,8 @@ export class LanguageServer {
 		  log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
 		} else {
 		  // Check for the presence of requirements.txt
+		  orange.appendLine("I am a banana: "+REQUIREMENTS_PATH);
+		  log(REQUIREMENTS_PATH);
 		  if (fs.existsSync(REQUIREMENTS_PATH)) {
 			version.push("-r", REQUIREMENTS_PATH);
 			log(`Installing Language Server from requirements file "${REQUIREMENTS_PATH}"`);
@@ -98,18 +102,20 @@ export class LanguageServer {
 	isCorrectInmantaLSVersionInstalled(): boolean {
 		// Get the expected version from requirement.txt
 		let expectedVersion = null;
+		orange.appendLine("I am a banana: "+REQUIREMENTS_PATH);
 		if (fs.existsSync(REQUIREMENTS_PATH)) {
+		  orange.appendLine("I am a banana:  exisits");
 		  const requirementTxtContent = fs.readFileSync(REQUIREMENTS_PATH, "utf-8");
 		  const inmantaLSPattern = /^inmantals[=<>].*$/gm;
 		  const inmantaLSLine = requirementTxtContent.match(inmantaLSPattern)?.[0];
 		  if (inmantaLSLine) {
-			expectedVersion = inmantaLSLine.split(/[<=>]/)[1];
+			expectedVersion = inmantaLSLine.split(/[<=>]{2}/)[1];
 		  }
 		}
 
 		if (!expectedVersion) {
 		  // requirement.txt does not specify inmantals, so cannot check version
-		  return false;
+		  return true;
 		}
 
 		// Get the installed version of inmantals
@@ -263,7 +269,7 @@ export class LanguageServer {
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			return this.selectInterpreter(this.diagnoseId);
 		}
-		const cmdArgs: string[] = ["-m", "pip", "install"]
+		const cmdArgs: string[] = ["-m", "pip", "install"];
 		cmdArgs.push(...this.languageServerVersionToInstall());
 		window.showInformationMessage("Installing Inmanta Language server. This may take a few seconds");
 		const child = cp.spawnSync(this.pythonPath, cmdArgs);
@@ -275,6 +281,7 @@ export class LanguageServer {
 			};
 			return Promise.reject("failed to install LS");
 		} else{
+			log("LS installed with: "+ cmdArgs.join(' '));
 			window.showInformationMessage("Inmanta Language server was installed successfully");
 			return Promise.resolve();
 		}

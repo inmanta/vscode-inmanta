@@ -22,6 +22,11 @@ pipeline {
             choices: ['none', 'patch', 'minor', 'major'],
             description: 'Indicates what kind of version bump should be done for the extension. Ignored if release_extension == false',
         )
+        string(
+            name: "server_version",
+            defaultValue: "latest",
+            description: "The version of the LS that will be tied to this release of the extenstion"
+        )
     }
 
     options {
@@ -55,6 +60,7 @@ pipeline {
                     job: "/releases/npm/vscode-inmanta-extension-release/${env.BRANCH_NAME}",
                     parameters: [
                         string(name: 'version_increment', value: extension_version_increment),
+                        string(name: 'LS_version', value: server_version),
                         booleanParam(name: 'run_job', value: true),
                         booleanParam(name: 'upload', value: true),
                     ]

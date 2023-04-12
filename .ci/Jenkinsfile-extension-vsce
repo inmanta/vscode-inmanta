@@ -7,6 +7,11 @@ pipeline {
             choices: ['none', 'patch', 'minor', 'major'],
             description: 'Indicates what kind of version bump should be done for the extension.',
         )
+        string(
+            name: "LS_version",
+            defaultValue: "latest",
+            description: "The version of the LS that will be tied to this release of the extenstion"
+        )
         booleanParam(
             name: 'run_job',
             defaultValue: false,
@@ -168,9 +173,18 @@ pipeline {
                     sh '''
                         # install the extension for its vsce dependency, required for building and publishing the extension
                         # and populate vscodeignore with exceptions to node_modules of the needed modules.
+                        # add the requirements.txt file to tie the extenstion to a server version
                         npm ci --omit dev
                         find node_modules/ -mindepth 1 -maxdepth 1 -exec echo '!{}/**' \\; >> .vscodeignore
                         npm i
+
+                        # create the requirements.txt file
+                        if [[ "${LS_version}" == "latest" ]]; then
+                            echo "inmantals" > src/requirements.txt
+                        else
+                            echo "inmantals==${LS_version}" > src/requirements.txt
+                        fi
+
                         $(npm bin)/vsce package
                         git checkout .
                     '''
