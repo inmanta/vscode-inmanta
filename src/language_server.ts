@@ -116,11 +116,7 @@ export class LanguageServer {
 		const installedVersion = this.getInstalledInmantaLSVersion();
 
 		// Compare the expected and installed versions
-		if (installedVersion === expectedVersion) {
-		  return true;
-		} else {
-		  return false;
-		}
+		return installedVersion === expectedVersion;
 	}
 
 	/**
