@@ -5,13 +5,13 @@ import * as cp from 'child_process';
 import * as os from 'os';
 import getPort from 'get-port';
 
-import { commands, ExtensionContext, OutputChannel, window, workspace} from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions} from 'vscode-languageclient';
+import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder} from 'vscode';
+import { RevealOutputChannelOn, LanguageClientOptions, integer, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction} from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
 import { fileOrDirectoryExists, log } from './utils';
-import { LsErrorHandler } from './extension';
 import { v4 as uuidv4 } from 'uuid';
+import { getLanguageMap } from './extension';
 
 enum LanguageServerDiagnoseResult {
 	wrongInterpreter,
@@ -21,6 +21,37 @@ enum LanguageServerDiagnoseResult {
 	ok,
   }
 
+
+/**
+ * An implementation of the ErrorHandler interface for the language server client.
+ */
+export class LsErrorHandler implements ErrorHandler{
+	folder: WorkspaceFolder;
+	constructor(folder: WorkspaceFolder) {
+		this.folder = folder;
+	}
+	async error(error: Error, message: Message | undefined, count: number | undefined): Promise<ErrorHandlerResult> {
+		let languageServer: LanguageServer = getLanguageMap().get(this.folder.uri.toString());
+
+		if (languageServer === undefined) {
+			return;
+		}
+		const languageServerDiagnose = await languageServer.canServerStart();
+		if (languageServerDiagnose === LanguageServerDiagnoseResult.unknown){
+			window.showErrorMessage(error.name+": "+error.message);
+		}
+		if (languageServerDiagnose !== LanguageServerDiagnoseResult.ok){
+			await languageServer.proposeSolution(languageServerDiagnose, uuidv4());
+		}
+		return {action: ErrorAction.Shutdown};
+	}
+
+	closed(): CloseHandlerResult{
+		return {action: CloseAction.DoNotRestart};
+	}
+
+}
+
 export class LanguageServer {
 	mutex = new Mutex();
 	client: LanguageClient;
@@ -28,42 +59,69 @@ export class LanguageServer {
 	serverProcess: cp.ChildProcess;
 	context: ExtensionContext;
 	pythonPath: string;
-	errorHandler = new LsErrorHandler();
+	rootFolder: WorkspaceFolder;
 	diagnoseId: string;
+	errorHandler: LsErrorHandler;
 	/**
 	 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
 	 *
 	 * @param {ExtensionContext} context the extension context.
 	 * @param {Extension<any>} pythonExtension the Python extension.
 	 */
-	constructor(context: ExtensionContext, pythonPath: string, errorHandler: LsErrorHandler) {
+	constructor(context: ExtensionContext, pythonPath: string, rootFolder: WorkspaceFolder, errorHandler: LsErrorHandler) {
+		log("Creating new language server...");
+
 		this.context = context;
 		this.pythonPath = pythonPath;
+		this.rootFolder = rootFolder;
 		this.errorHandler = errorHandler;
 	}
+
 
 	/**
 	 * updates the python path used by the LS.
 	 *
 	 * @param {string} newPath the new python path
 	 */
-	updatePythonPath(newPath: string): void {
-    	this.pythonPath = newPath;
-		this.startOrRestartLS();
+	async updatePythonPath(newPath: string, outermost: Uri): Promise<void> {
+		log(`Comparing outermost: ${outermost} to rooturi: ${this.rootFolder.uri.toString()}`);
+
+		if (outermost === this.rootFolder.uri) {
+			const canStart = await this.canServerStart(newPath);
+
+			if (canStart === LanguageServerDiagnoseResult.ok) {
+				this.pythonPath = newPath;
+				log(`Language server python path changed to ${newPath}`);
+				this.startOrRestartLS(false, canStart);
+			}
+			else {
+				log(`Language server can't start with interpreter ${newPath}`);
+
+				this.diagnoseId = uuidv4();
+				return this.proposeSolution(canStart, this.diagnoseId);
+			}
+		}
   	}
 
 	/**
-	 * Check if the server can start.
+	 * Check if the server can start using the provided interpreter.
+	 * If no interpreter is provided, this check will be performed against the interpreter provided during
+	 * instantiation of this LanguageServer.
 	 *
+	 * @param {string} pythonPath the new python path
+
 	 * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
 	 */
-	async canServerStart():Promise<LanguageServerDiagnoseResult>{
-		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
+	async canServerStart(pythonPath?: string):Promise<LanguageServerDiagnoseResult>{
+		if (pythonPath === undefined) {
+			pythonPath = this.pythonPath;
+		}
+		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
 		const script = "import sys\n" +
 			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
-			"  exit(4)\n" +
+			"  sys.exit(4)\n" +
 			"try:\n" +
 			"  import inmantals\n" +
 			"  sys.exit(0)\n" +
@@ -73,7 +131,7 @@ export class LanguageServer {
 			"  print(e)\n" +
 			"  sys.exit(5)";
 
-		let spawnResult = cp.spawnSync(this.pythonPath, ["-c", script]);
+		let spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
 		if (spawnResult.status === 4) {
 			return LanguageServerDiagnoseResult.wrongPythonVersion;
@@ -178,6 +236,8 @@ export class LanguageServer {
 	 * @returns {Promise<void>}
 	 */
 	async installLanguageServer(): Promise<void> {
+		log(`LS install requested for root folder ${this.rootFolder}`);
+
 		this.diagnoseId = uuidv4();
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			return this.selectInterpreter(this.diagnoseId);
@@ -215,45 +275,44 @@ export class LanguageServer {
 			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
 		}
-		const editor = window.activeTextEditor;
-		const resource = editor.document.uri;
-		const folder = workspace.getWorkspaceFolder(resource);
+		const folder = workspace.getWorkspaceFolder(this.rootFolder.uri);
 
 
 		let compilerVenv: string | undefined;
 		let repos: string | undefined;
+
 		if (!folder) {
 			// Not in a workspace
 			compilerVenv = workspace.getConfiguration('inmanta').compilerVenv;
 			repos = workspace.getConfiguration('inmanta').repos;
-
 		} else {
 			// In a workspace
-			const multiRootConfigForResource = workspace.getConfiguration('inmanta', resource);
+			const multiRootConfigForResource = workspace.getConfiguration('inmanta', folder);
 			compilerVenv = multiRootConfigForResource.get('compilerVenv');
 			repos = multiRootConfigForResource.get('repos');
 		}
 
 		if (this.lsOutputChannel === null) {
-			this.lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
+			this.lsOutputChannel = window.createOutputChannel(`Inmanta Language Server[${this.rootFolder.uri.toString()}]`);
 		}
 		const clientOptions: LanguageClientOptions = {
-			// Register the server for inmanta documents
-			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
-			errorHandler: this.errorHandler,
+			// Register the server for inmanta documents living under the root folder.
+			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`}],
 			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
+			errorHandler: this.errorHandler,
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
 				repos: repos,
-			}
+			},
+			workspaceFolder: this.rootFolder,
 		};
 		return clientOptions;
 
 	}
 
 	/**
-	 * Starts the Inmanta Language Server and client.
+	 * Starts an Inmanta Language Server and client.
 	 * This function should always run under the `mutex` lock.
 	 * @returns {Promise<void>} A Promise that resolves when the server and client are started successfully.
 	 */
@@ -263,7 +322,9 @@ export class LanguageServer {
 		try {
 			clientOptions = await this.getClientOptions();
 			log("Retrieved client options");
+			log(`${JSON.stringify(clientOptions.initializationOptions)}`);
 		} catch (err) {
+			log("Error occured while retrieving client options:" + err);
 			return;
 		}
 		try{
@@ -342,6 +403,12 @@ export class LanguageServer {
 
 		this.client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
 		// Create the language client and start the client.
+
+		log(`Starting Language Client with options: ${JSON.stringify({
+			serverOptions: serverOptions,
+			clientOptions: clientOptions
+		}, null, 2)}`);
+
 		await this.client.start();
 	}
 
@@ -367,7 +434,10 @@ export class LanguageServer {
 		}
 
 		// Create the language client and start the client.
+		log(`serv options ${JSON.stringify(serverOptions)}`);
+		logAllClientOptions(clientOptions);
 		this.client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
+		log("Waiting for language Client to start");
 		log(`Starting Language Client with options: ${JSON.stringify({
 			serverOptions: serverOptions,
 			clientOptions: clientOptions
@@ -380,9 +450,11 @@ export class LanguageServer {
 	 * @param {boolean} start Whether to start the server or restart it.
 	 * @returns {Promise<void>}
 	 */
-	async startOrRestartLS(start: boolean = false): Promise<void>{
+	async startOrRestartLS(start: boolean = false, canStart?: LanguageServerDiagnoseResult): Promise<void>{
 		this.diagnoseId = uuidv4();
-		const canStart = await this.canServerStart();
+		if (canStart === undefined) {
+			canStart = await this.canServerStart();
+		}
 		if (canStart !== LanguageServerDiagnoseResult.ok){
 			return this.proposeSolution(canStart, this.diagnoseId);
 		}
@@ -396,6 +468,7 @@ export class LanguageServer {
 		await this.stopServerAndClient();
 		if (enable) {
 			await this.startServerAndClient();
+			window.showInformationMessage(`The Language server has been enabled for folder ${this.rootFolder.name}`);
 		}
 
 	}
@@ -403,7 +476,8 @@ export class LanguageServer {
 	/**
 	 * Stops the language server and its client.
 	 */
-	private async stopServerAndClient() {
+	async stopServerAndClient() {
+		log("Stopping server and client...");
 		await this.mutex.runExclusive(async () => {
 			if (this.client) {
 				if(this.client.needsStop()){
@@ -419,4 +493,14 @@ export class LanguageServer {
 			}
 		});
 	}
+
+	cleanOutputChannel() {
+		this.lsOutputChannel.dispose();
+	}
 }
+
+function logAllClientOptions(clientOptions){
+	log(JSON.stringify(clientOptions));
+}
+
+

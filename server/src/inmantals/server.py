@@ -105,12 +105,12 @@ class Folder:
     inmanta_project_dir: str
     handler: "InmantaLSHandler"
 
-    def __init__(self, workspace_folder: lsp_types.WorkspaceFolder, handler: "InmantaLSHandler"):
+    def __init__(self, root_uri: str, handler: "InmantaLSHandler"):
+        folder_uri = urlparse(root_uri)
         """
-        :param workspace_folder: path of the folder that is assumed to live in a workspace
+        :param root_uri: path of the outermost folder that is assumed to live in a workspace
         :param handler: reference to the InmantaLSHandler responsible for this folder
         """
-        folder_uri = urlparse(workspace_folder.uri)
 
         self.folder_path = os.path.abspath(folder_uri.path)
         self.handler = handler  # Keep a reference to the handler for cleanup
@@ -224,18 +224,20 @@ class Folder:
 
             raise InvalidExtensionSetup(error_message)
 
-        repos: str = self.handler.repos if self.handler.repos else ""
+        metadata: typing.Mapping[str, object] = {
+            "name": "Temporary project",
+            "description": "Temporary project",
+            "modulepath": "libs",
+            "downloadpath": "libs",
+            "install_mode": install_mode.value,
+        }
+        if self.handler.repos:
+            metadata["repo"] = self.handler.repos
+        logger.debug(
+            "project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), self.handler.repos
+        )
 
-        logger.debug("project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), repos)
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
-            metadata: typing.Mapping[str, object] = {
-                "name": "Temporary project",
-                "description": "Temporary project",
-                "repo": yaml.safe_load(repos),
-                "modulepath": "libs",
-                "downloadpath": "libs",
-                "install_mode": install_mode.value,
-            }
             yaml.dump(metadata, fd)
 
         with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
@@ -246,8 +248,9 @@ class Folder:
         return inmanta_project_dir
 
     def install_project(self, attach_cf_cache: bool):
-        logger.debug("Installing project at %s", self.inmanta_project_dir)
         module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
+        env_path = module.Project.get().virtualenv.env_path
+        logger.info("Installing project at %s in env %s.", self.inmanta_project_dir, env_path)
         if self.kind == module.ModuleV2:
             # If the open folder is a v2 module we must install it in editable mode in the temporary project using the pip
             # indexes set in the "repos" extension setting for its dependencies.
@@ -257,7 +260,7 @@ class Folder:
             module.Project.get().install_modules()
 
     def __str__(self):
-        return f"Folder opened at {self.folder_path}" + " with a project at " + self.inmanta_project_dir + "."
+        return f"Folder opened at {self.folder_path}" + " with a project at " + self.inmanta_project_dir
 
 
 class InmantaLSHandler(JsonRpcHandler):
@@ -273,6 +276,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.state_lock: asyncio.Lock = asyncio.Lock()
         self.diagnostics_cache: Optional[lsp_types.PublishDiagnosticsParams] = None
         self.supported_symbol_kinds: Optional[Set[lsp_types.SymbolKind]] = None
+
         # compiler_venv_path is only relevant for versions of core that require a compiler venv. It is ignored otherwise.
         self.compiler_venv_path: Optional[str] = None
         # The scope for the 'compilerVenv' and 'repos' settings in the package.json are set to 'resource' to allow different
@@ -292,11 +296,10 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("workspaceFolders=%s", workspaceFolders)
         logger.debug("rootPath=%s", rootPath)
         logger.debug("rootUri=%s", rootUri)
+        logger.debug("kwargs=%s", kwargs)
 
         if rootPath:
             logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
-        if rootUri:
-            logger.warning("The rootUri parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
 
         if workspaceFolders is None:
             if rootUri is None:
@@ -312,6 +315,7 @@ class InmantaLSHandler(JsonRpcHandler):
             )
 
         init_options = kwargs.get("initializationOptions", None)
+        logger.debug("init_options= %s", init_options)
 
         if init_options:
             self.compiler_venv_path = init_options.get(
@@ -321,7 +325,7 @@ class InmantaLSHandler(JsonRpcHandler):
             logger.debug("self.repos= %s", self.repos)
 
         # Keep track of the root folder opened in this workspace
-        self.root_folder = Folder(workspace_folder, self)
+        self.root_folder: Folder = Folder(workspace_folder.uri, self)
         value_set: List[int]
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
@@ -351,12 +355,6 @@ class InmantaLSHandler(JsonRpcHandler):
                 "workspaceSymbolProvider": {
                     # the language server does not report work done progress for workspace symbol requests
                     "workDoneProgress": False,
-                },
-                "workspace": {
-                    "workspaceFolders": {
-                        "supported": True,
-                        "changeNotifications": True,
-                    }
                 },
                 "hoverProvider": True,
             }
@@ -501,10 +499,11 @@ class InmantaLSHandler(JsonRpcHandler):
         await self.compile_and_anchor()
 
     async def shutdown(self, **kwargs):
-        self.shutdown_requested = True
+        logger.debug("shutdown requested...")
         if self.tmp_project:
             self.tmp_project.cleanup()
         self.threadpool.shutdown(cancel_futures=True)
+        self.shutdown_requested = True
 
     def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory):
         self.tmp_project = tmp_dir
