@@ -35,10 +35,10 @@ export class InmantaCommands {
 	}
 
 	registerCommands(languageServer: LanguageServer): void {
-		// We have to register these commands each time a diffent language server is being activated or "focussed".
+		// We have to register these commands each time a different language server is being activated or "focused".
 		// Activation happens the first time a .cf file from this language server's folders is opened and focus
 		// happens when selecting a file from a different workspace folder
-	
+
 		log(`Registering inmanta commands for language server responsible for ${languageServer.rootFolder} using ${languageServer.pythonPath} environment.`);
 		this.registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(languageServer.pythonPath));
 		this.registerCommand(`inmanta.activateLS`, commandActivateLSHandler(languageServer.rootFolder));
