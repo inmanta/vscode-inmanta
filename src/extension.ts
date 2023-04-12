@@ -38,7 +38,7 @@ export async function activate(context: ExtensionContext) {
 		languageserver.updatePythonPath(pythonExtensionInstance.pythonPath);
 	});
 	if (!process.env.INMANTA_LS_PATH && !languageserver.isCorrectInmantaLSVersionInstalled()) {
-		//Make sure the right version of the LS is installed when it is not installed from source in editable mode
+		//Make sure the right version of the LS is installed when it is not installed in editable mode
 		//If it is not installed, propose to install it.
 		languageserver.proposeInstallLS();
 	}
