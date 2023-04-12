@@ -185,7 +185,7 @@ pipeline {
                             echo "inmantals==${LS_version}" > src/requirements.txt
                         fi
 
-                        $(npm bin)/vsce package
+                        node_modules/.bin/vsce package
                         git checkout .
                     '''
                 }
