@@ -10,7 +10,7 @@ pipeline {
         string(
             name: "LS_version",
             defaultValue: "latest",
-            description: "The version(semvar format ex. 1.3.0 or latest) of the LS that will be tied to this release of the extenstion.
+            description: "The version(semvar format ex. 1.3.0 or latest) of the LS that will be tied to this release of the extenstion.",
         )
         booleanParam(
             name: 'run_job',
@@ -180,7 +180,8 @@ pipeline {
 
                         # create the requirements.txt file
                         if [[ "${LS_version}" == "latest" ]]; then
-                            echo "inmantals" > requirements.txt
+                            latest_version=$(pip install inmantals && pip show inmantals | grep Version | awk '{print $2}')
+                            echo "inmantals==${latest_version}" > requirements.txt
                         else
                             echo "inmantals==${LS_version}" > requirements.txt
                         fi
