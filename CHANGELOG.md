@@ -1,7 +1,9 @@
 # v 1.3.0 (?)
 Changes in this release:
-- Show docstring for Entities and Plugins on hover.
-- Add information about how to show the python interpreter information in the status bar and make it so the status bar should appear when opening an inmanta file.
+- Tie the version of the language server to the version of the extension to make sure everything stays compatible.(#1099)
+- Show docstring for Entities and Plugins on hover.(#1035)
+- Add support for workspaces (#892)
+- Add information about how to show the python interpreter information in the status bar and make it so the status bar should appear when opening an inmanta file. (#939)
 - A warning that suggests running the `inmanta project install` command is now shown when the compiler fails to install modules. (#894)
 - Add support to work on a module. (#891)
 - make some unclear error messages more helpfull (#970)
