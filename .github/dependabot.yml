@@ -19,5 +19,3 @@ updates:
   ignore:
     - dependency-name: "get-port"
       update-types: ["version-update:semver-major"]
-    - dependency-name: "@types/vscode"
-      update-types: ["version-update:semver-minor"]
