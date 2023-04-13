@@ -45,6 +45,8 @@ pipeline {
                     checkout scm
                     withCredentials([string(credentialsId: 'fff7ef7e-cb20-4fb2-a93b-c5139463c6bf', variable: 'GITHUB_TOKEN')]) {
                         sh '''
+                            python3 -m venv ${WORKSPACE}/env
+                            ${WORKSPACE}/env/bin/pip install -U pip wheel
                             # set up git ASK_PASS
                             echo 'echo \${GITHUB_TOKEN}' > ${GIT_ASKPASS}
                             chmod u+x ${GIT_ASKPASS}
