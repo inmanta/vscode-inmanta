@@ -182,11 +182,12 @@ pipeline {
 
                         # create the requirements.txt file
                         if [[ "${LS_version}" == "latest" ]]; then
-                            latest_version=$(${WORKSPACE}/env/bin/pip install inmantals && ${WORKSPACE}/env/bin/pip show inmantals | grep Version | awk '{print $2}')
-                            echo "inmantals==${latest_version}" > requirements.txt
+                            ${WORKSPACE}/env/bin/pip install inmantals
                         else
-                            echo "inmantals==${LS_version}" > requirements.txt
+                            ${WORKSPACE}/env/bin/pip install inmantals==${LS_version}"
                         fi
+                        latest_version=$(${WORKSPACE}/env/bin/pip show inmantals | grep Version | awk '{print $2}')
+                        echo "inmantals==${latest_version}" > requirements.txt
 
                         node_modules/.bin/vsce package
                         git checkout .
