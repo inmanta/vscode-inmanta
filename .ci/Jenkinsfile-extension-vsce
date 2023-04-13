@@ -184,7 +184,7 @@ pipeline {
                         if [[ "${LS_version}" == "latest" ]]; then
                             ${WORKSPACE}/env/bin/pip install inmantals
                         else
-                            ${WORKSPACE}/env/bin/pip install inmantals==${LS_version}"
+                            ${WORKSPACE}/env/bin/pip install inmantals=="${LS_version}"
                         fi
                         latest_version=$(${WORKSPACE}/env/bin/pip show inmantals | grep Version | awk '{print $2}')
                         echo "inmantals==${latest_version}" > requirements.txt
