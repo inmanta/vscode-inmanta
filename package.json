@@ -181,7 +181,7 @@
     },
     "dependencies": {
         "async-mutex": "^0.4.0",
-        "get-port": "^6.1.2",
+        "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
         "lru-cache": "^9.0.0",
         "minimatch": "^9.0.0",
