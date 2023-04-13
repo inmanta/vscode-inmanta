@@ -248,8 +248,9 @@ export class LanguageServer {
 		const cmdArgs: string[] = ["-m", "pip", "install"];
 		cmdArgs.push(...this.languageServerVersionToInstall());
 		const cmd = `run "${this.pythonPath} ${cmdArgs.join(' ')}"?`;
-		const msg="Inmanta Language Server not installed: " ? reason === LanguageServerDiagnoseResult.wrongLanguageServer : "Wrong version of the Inmanta Language Server installed: ";
-
+		const msg = reason === LanguageServerDiagnoseResult.wrongLanguageServer
+		? "Wrong version of the Inmanta Language Server installed: "
+		: "Inmanta Language Server not installed: ";
 		const response = await window.showErrorMessage(msg + cmd, 'Yes', 'No');
 		if(response === 'Yes'){
 			await this.installLanguageServer();
