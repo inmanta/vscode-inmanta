@@ -82,7 +82,7 @@ export class LanguageServer {
 	 */
 	getInstalledInmantaLSVersion(): string | null {
 		try {
-		  const output = cp.execSync("pip show inmantals").toString();
+		  const output = cp.execSync(`${this.pythonPath} -m pip show inmantals`).toString();
 		  const versionMatch = output.match(/^Version: (.+)$/m);
 		  if (versionMatch) {
 			return versionMatch[1];
@@ -245,13 +245,10 @@ export class LanguageServer {
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			await this.selectInterpreter(diagnoseId);
 		}
-		const cmdArgs: string[] = ["-m", "pip", "install"];
-		cmdArgs.push(...this.languageServerVersionToInstall());
-		const cmd = `run "${this.pythonPath} ${cmdArgs.join(' ')}"?`;
 		const msg = reason === LanguageServerDiagnoseResult.wrongLanguageServer
-		? "Wrong version of the Inmanta Language Server installed: "
-		: "Inmanta Language Server not installed: ";
-		const response = await window.showErrorMessage(msg + cmd, 'Yes', 'No');
+		? "Wrong version of the Inmanta Language Server installed. Do you want to update? "
+		: "Inmanta Language Server not installed. Install the Language server? ";
+		const response = await window.showErrorMessage(msg, 'Yes', 'No');
 		if(response === 'Yes'){
 			await this.installLanguageServer();
 			return this.startOrRestartLS(true);
