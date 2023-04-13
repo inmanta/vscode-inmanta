@@ -3,10 +3,11 @@
 import { workspace, ExtensionContext, extensions, window, commands, Position, Range } from 'vscode';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 import { log } from './utils';
-import { LanguageServer } from './language_server';
+import { LanguageServer, LanguageServerDiagnoseResult } from './language_server';
 import { commandActivateLSHandler, createHandlerExportCommand, createProjectInstallHandler, InmantaCommands } from './commands';
 import { ErrorHandler, Message, ErrorAction, CloseAction, ErrorHandlerResult, CloseHandlerResult } from 'vscode-languageclient';
 import { addSetupAssistantButton } from './walkthrough_button';
+import { v4 as uuidv4 } from 'uuid';
 
 let languageserver;
 let pythonExtensionInstance;
@@ -37,11 +38,6 @@ export async function activate(context: ExtensionContext) {
 	pythonExtensionInstance.registerCallbackOnChange(()=>{
 		languageserver.updatePythonPath(pythonExtensionInstance.pythonPath);
 	});
-	if (!process.env.INMANTA_LS_PATH && !languageserver.isCorrectInmantaLSVersionInstalled()) {
-		//Make sure the right version of the LS is installed when it is not installed in editable mode
-		//If it is not installed, propose to install it.
-		languageserver.proposeInstallLS();
-	}
 
 	// Create a new instance of InmantaCommands to register commands
 	log("register commands");
