@@ -170,13 +170,13 @@ export class LanguageServer {
 
 		// Get the installed version of inmantals
 		const installedVersion = this.getInstalledInmantaLSVersion();
+
+		// Compare the expected and installed versions
 		if (operator === "~=") {
 			const [expectedMajor, expectedMinor, expectedPatch] = expectedVersion.split(".").map((num) => parseInt(num));
 			const [installedMajor, installedMinor, installedPatch] = installedVersion.split(".").map((num) => parseInt(num));
 			return expectedMajor === installedMajor && expectedMinor === installedMinor && installedPatch >= expectedPatch;
 		}
-
-		// Compare the expected and installed versions
 		return installedVersion === expectedVersion;
 	}
 
