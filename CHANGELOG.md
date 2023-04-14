@@ -1,6 +1,6 @@
 # v 1.3.0 (?)
 Changes in this release:
-- Tie the version of the language server to the version of the extension to make sure everything stays compatible.(#1099)
+- Tie the version of the language server to the version of the extension to make sure everything stays compatible and up to date.(#1099)
 - Show docstring for Entities and Plugins on hover.(#1035)
 - Add support for workspaces (#892)
 - Add information about how to show the python interpreter information in the status bar and make it so the status bar should appear when opening an inmanta file. (#939)
