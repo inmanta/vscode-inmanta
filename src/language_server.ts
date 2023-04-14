@@ -151,7 +151,7 @@ export class LanguageServer {
 		}
 
 		if (!expectedVersion) {
-		  // requirement.txt does not specify inmantals, so requirements specified
+		  // requirement.txt does not specify inmantals, no requirements specified
 		  return true;
 		}
 
