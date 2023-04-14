@@ -304,7 +304,7 @@ export class LanguageServer {
 			await this.selectInterpreter(diagnoseId);
 		}
 		const msg = reason === LanguageServerDiagnoseResult.wrongLanguageServer
-		? "Wrong version of the Inmanta Language Server installed. Do you want to update? "
+		? "A new version of the Inmanta Language Server is available. Do you want to update? "
 		: "Inmanta Language Server not installed. Install the Language server? ";
 		const response = await window.showErrorMessage(msg, 'Yes', 'No');
 		if(response === 'Yes'){
