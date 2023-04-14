@@ -186,8 +186,8 @@ pipeline {
                         else
                             ${WORKSPACE}/env/bin/pip install inmantals=="${LS_version}"
                         fi
-                        ls_version=$(${WORKSPACE}/env/bin/pip freeze | grep inmantals
-                        echo "inmantals==${ls_version}" > requirements.txt
+                        ls_version=$(${WORKSPACE}/env/bin/pip freeze | grep inmantals | cut -d'=' -f3
+                        echo "inmantals~=${ls_version}" > requirements.txt
 
                         node_modules/.bin/vsce package
                         git checkout .

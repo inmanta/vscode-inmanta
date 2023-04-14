@@ -118,14 +118,25 @@ export class LanguageServer {
 	 */
 	getInstalledInmantaLSVersion(): string | null {
 		try {
-		  const output = cp.execSync(`${this.pythonPath} -m pip show inmantals`).toString();
-		  const versionMatch = output.match(/^Version: (.+)$/m);
-		  if (versionMatch) {
-			return versionMatch[1];
-		  }
+		  const version = cp.execSync(`${this.pythonPath} -m pip freeze | grep inmantals | cut -d'=' -f3`).toString();
+		  return version;
 		} catch (error) {}
 		return null;
 	}
+
+	/**
+	 * @returns {string | null} True if inmantals is installed in editable mode, else false
+	 */
+	isEditableInstall(): boolean {
+		try {
+			  const inmantals = cp.execSync(`${this.pythonPath} -m pip list --editable | grep inmantals`).toString();
+			  if(inmantals){
+				return true;
+			  }
+			  return false;
+			} catch (error) {}
+			return false;
+		}
 
 	/**
 	 * Checks if the correct version of the Inmanta Language Server is installed.
@@ -134,7 +145,7 @@ export class LanguageServer {
 	 */
 	isCorrectInmantaLSVersionInstalled(): boolean {
 		// The LS is installed in editable mode via the env var
-		if (process.env.INMANTA_LS_PATH) {
+		if (process.env.INMANTA_LS_PATH || this.isEditableInstall()) {
 			return true;
 		}
 		// No requirements specified
@@ -143,12 +154,14 @@ export class LanguageServer {
 		}
 		// Get the expected version from requirement.txt
 		let expectedVersion = null;
+		let operator = "==";
 		const requirementTxtContent = fs.readFileSync(REQUIREMENTS_PATH, "utf-8");
-		const inmantaLSPattern = /^inmantals[=<>].*$/gm;
-		const inmantaLSLine = requirementTxtContent.match(inmantaLSPattern)?.[0];
+		const inmantaLSPattern = /^inmantals(==|~=).*$/gm;
+		const inmantaLSLine = requirementTxtContent.match(inmantaLSPattern)[0];
 		if (inmantaLSLine) {
-			expectedVersion = inmantaLSLine.split(/[<=>]{2}/)[1];
-		}
+			operator = inmantaLSLine.match(/(==|~=)/)?.[0] ?? "==";
+			expectedVersion = inmantaLSLine.split(/(==|~=)/)[1];
+		  }
 
 		if (!expectedVersion) {
 		  // requirement.txt does not specify inmantals, no requirements specified
@@ -157,6 +170,11 @@ export class LanguageServer {
 
 		// Get the installed version of inmantals
 		const installedVersion = this.getInstalledInmantaLSVersion();
+		if (operator === "~=") {
+			const [expectedMajor, expectedMinor, expectedPatch] = expectedVersion.split(".").map((num) => parseInt(num));
+			const [installedMajor, installedMinor, installedPatch] = installedVersion.split(".").map((num) => parseInt(num));
+			return expectedMajor === installedMajor && expectedMinor === installedMinor && installedPatch >= expectedPatch;
+		}
 
 		// Compare the expected and installed versions
 		return installedVersion === expectedVersion;
@@ -338,6 +356,7 @@ export class LanguageServer {
 		const cmdArgs: string[] = ["-m", "pip", "install"];
 		cmdArgs.push(...this.languageServerVersionToInstall());
 		window.showInformationMessage("Installing Inmanta Language server. This may take a few seconds");
+		log("installing LS  with: "+ cmdArgs.join(' '));
 		const child = cp.spawnSync(this.pythonPath, cmdArgs);
 		if (child.status !== 0) {
 			log(`Can not start server and client`);
@@ -347,7 +366,6 @@ export class LanguageServer {
 			};
 			return Promise.reject("failed to install LS");
 		} else{
-			log("LS installed with: "+ cmdArgs.join(' '));
 			window.showInformationMessage("Inmanta Language server was installed successfully");
 			return Promise.resolve();
 		}
