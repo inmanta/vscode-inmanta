@@ -25,7 +25,7 @@ pipeline {
         string(
             name: "server_version",
             defaultValue: "latest",
-            description: "The version(semvar format ex. 1.3.0 or latest) of the LS that will be tied to this release of the extenstion.",
+            description: "The version (semver format ex. 1.3.0 or latest) of the LS that will be tied to this release of the extenstion.",
         )
     }
 
