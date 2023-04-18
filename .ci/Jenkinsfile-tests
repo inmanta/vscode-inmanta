@@ -101,7 +101,7 @@ pipeline {
             }
         }
 
-        stage("Build") {
+        stage("Build Extension") {
             when {
                 expression { BRANCH_NAME == "master" }
             }
