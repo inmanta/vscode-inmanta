@@ -86,15 +86,15 @@ pipeline {
                 ]) {
                     dir(env.REPO_NAME){
                         sh '''
-                        ${WORKSPACE}/env/bin/pip3 install -U devpi-client
-                        ${WORKSPACE}/env/bin/devpi use https://artifacts.internal.inmanta.com/inmanta/dev
-                        ${WORKSPACE}/env/bin/devpi login ${DEVPI_USER} --password=${DEVPI_PASS}
+                        pip install -U devpi-client
+                        devpi use https://artifacts.internal.inmanta.com/inmanta/dev
+                        devpi login ${DEVPI_USER} --password=${DEVPI_PASS}
                         rm -f dist/*
 
-                        ${WORKSPACE}/env/bin/python3 setup.py egg_info -Db ".dev$(date +'%Y%m%d%H%M%S' --utc)" sdist
+                        python3 setup.py egg_info -Db ".dev$(date +'%Y%m%d%H%M%S' --utc)" sdist
 
-                        ${WORKSPACE}/env/bin/devpi upload dist/*.dev*
-                        ${WORKSPACE}/env/bin/devpi logoff
+                        devpi upload dist/*.dev*
+                        devpi logoff
                         '''
                     }
                 }
