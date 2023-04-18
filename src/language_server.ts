@@ -161,7 +161,7 @@ export class LanguageServer {
 		if (inmantaLSLine) {
 			operator = inmantaLSLine.match(/(==|~=)/)?.[0] ?? "==";
 			expectedVersion = inmantaLSLine.split(/(==|~=)/)[1];
-		  }
+		}
 
 		if (!expectedVersion) {
 		  // requirement.txt does not specify inmantals, no requirements specified
