@@ -3,6 +3,8 @@
 import * as net from 'net';
 import * as cp from 'child_process';
 import * as os from 'os';
+import * as path from "path";
+import * as fs from "fs";
 import getPort from 'get-port';
 
 import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder} from 'vscode';
@@ -13,10 +15,13 @@ import { fileOrDirectoryExists, log } from './utils';
 import { v4 as uuidv4 } from 'uuid';
 import { getLanguageMap } from './extension';
 
-enum LanguageServerDiagnoseResult {
+const REQUIREMENTS_PATH = path.join(__dirname, "..", "requirements.txt");
+
+export enum LanguageServerDiagnoseResult {
 	wrongInterpreter,
 	wrongPythonVersion,
 	languageServerNotInstalled,
+	wrongLanguageServer,
 	unknown,
 	ok,
   }
@@ -77,6 +82,103 @@ export class LanguageServer {
 		this.errorHandler = errorHandler;
 	}
 
+
+	/**
+	 * Returns an array of string(s) representing the version of the Inmanta Language Server
+	 * that needs to be installed. The function checks if the environment variable INMANTA_LS_PATH is
+	 * set and uses it to install the LS from the specified path in editable mode. If the environment variable is not set,
+	 * it checks for the presence of requirements.txt file and installs the LS from it.
+	 * If requirements.txt file is not present, it installs the latest version of Inmanta Language Server.
+	 *
+	 * @returns {string[]} An array of string(s) representing the version of the Inmanta Language Server to be installed.
+	 */
+	languageServerVersionToInstall(): string[] {
+		const version = [];
+
+		if (process.env.INMANTA_LS_PATH) {
+		  version.push("-e", process.env.INMANTA_LS_PATH);
+		  log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
+		} else {
+		  // Check for the presence of requirements.txt
+		  if (fs.existsSync(REQUIREMENTS_PATH)) {
+			version.push("-r", REQUIREMENTS_PATH);
+			log(`Installing Language Server from requirements file "${REQUIREMENTS_PATH}"`);
+		  } else {
+			version.push("inmantals");
+		  }
+		}
+
+		return version;
+	}
+
+	/**
+	 * Returns the version of the installed Inmanta Language Server, or null if it's not installed.
+	 *
+	 * @returns {string | null} The version of the installed Inmanta Language Server, or null if it's not installed.
+	 */
+	getInstalledInmantaLSVersion(): string | null {
+		try {
+		  const version = cp.execSync(`${this.pythonPath} -m pip freeze | grep inmantals | cut -d'=' -f3`).toString();
+		  return version;
+		} catch (error) {}
+		return null;
+	}
+
+	/**
+	 * @returns {string | null} True if inmantals is installed in editable mode, else false
+	 */
+	isEditableInstall(): boolean {
+		try {
+			  const inmantals = cp.execSync(`${this.pythonPath} -m pip list --editable | grep inmantals`).toString();
+			  if(inmantals){
+				return true;
+			  }
+			  return false;
+			} catch (error) {}
+			return false;
+		}
+
+	/**
+	 * Checks if the correct version of the Inmanta Language Server is installed.
+	 *
+	 * @returns {boolean} True if the correct version of the Inmanta Language Server is installed, false otherwise.
+	 */
+	isCorrectInmantaLSVersionInstalled(): boolean {
+		// The LS is installed in editable mode via the env var
+		if (process.env.INMANTA_LS_PATH || this.isEditableInstall()) {
+			return true;
+		}
+		// No requirements specified
+		if (!fs.existsSync(REQUIREMENTS_PATH)) {
+			return true;
+		}
+		// Get the expected version from requirement.txt
+		let expectedVersion = null;
+		let operator = "==";
+		const requirementTxtContent = fs.readFileSync(REQUIREMENTS_PATH, "utf-8");
+		const inmantaLSPattern = /^inmantals(==|~=).*$/gm;
+		const inmantaLSLine = requirementTxtContent.match(inmantaLSPattern)[0];
+		if (inmantaLSLine) {
+			operator = inmantaLSLine.match(/(==|~=)/)?.[0] ?? "==";
+			expectedVersion = inmantaLSLine.split(/(==|~=)/)[1];
+		}
+
+		if (!expectedVersion) {
+		  // requirement.txt does not specify inmantals, no requirements specified
+		  return true;
+		}
+
+		// Get the installed version of inmantals
+		const installedVersion = this.getInstalledInmantaLSVersion();
+
+		// Compare the expected and installed versions
+		if (operator === "~=") {
+			const [expectedMajor, expectedMinor, expectedPatch] = expectedVersion.split(".").map((num) => parseInt(num));
+			const [installedMajor, installedMinor, installedPatch] = installedVersion.split(".").map((num) => parseInt(num));
+			return expectedMajor === installedMajor && expectedMinor === installedMinor && installedPatch >= expectedPatch;
+		}
+		return installedVersion === expectedVersion;
+	}
 
 	/**
 	 * updates the python path used by the LS.
@@ -141,6 +243,9 @@ export class LanguageServer {
 			log("can not start server due to: "+stdout);
 			return LanguageServerDiagnoseResult.unknown;
 		}
+		if(!this.isCorrectInmantaLSVersionInstalled()){
+			return LanguageServerDiagnoseResult.wrongLanguageServer;
+		}
 		else{
 			return LanguageServerDiagnoseResult.ok;
 		}
@@ -165,7 +270,10 @@ export class LanguageServer {
 				};
 				break;
 			case LanguageServerDiagnoseResult.languageServerNotInstalled:
-				this.proposeInstallLS(diagnoseId);
+				this.proposeInstallLS(diagnoseId, LanguageServerDiagnoseResult.languageServerNotInstalled);
+				break;
+			case LanguageServerDiagnoseResult.wrongLanguageServer:
+				this.proposeInstallLS(diagnoseId, LanguageServerDiagnoseResult.wrongLanguageServer);
 				break;
 			case LanguageServerDiagnoseResult.unknown:
 				response = await window.showErrorMessage(`The Inmanta Language Server failed to start`, "Setup assistant");
@@ -209,11 +317,14 @@ export class LanguageServer {
 	 * @returns {Promise<any>} - A Promise that resolves to the result of `installLanguageServer()` after the server is installed.
 	 * If the user declines to install the server, returns a Promise that rejects with an error message.
 	 */
-	async proposeInstallLS(diagnoseId: string) {
+	async proposeInstallLS(diagnoseId: string, reason: LanguageServerDiagnoseResult) {
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			await this.selectInterpreter(diagnoseId);
 		}
-		const response = await window.showErrorMessage(`Inmanta Language Server not installed, run "${this.pythonPath} -m pip install inmantals" ?`, 'Yes', 'No');
+		const msg = reason === LanguageServerDiagnoseResult.wrongLanguageServer
+		? "A new version of the Inmanta Language Server is available. Do you want to update? "
+		: "Inmanta Language Server not installed. Install the Language server? ";
+		const response = await window.showErrorMessage(msg, 'Yes', 'No');
 		if(response === 'Yes'){
 			await this.installLanguageServer();
 			return this.startOrRestartLS(true);
@@ -242,15 +353,11 @@ export class LanguageServer {
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			return this.selectInterpreter(this.diagnoseId);
 		}
-		const args = ["-m", "pip", "install"];
-		if (process.env.INMANTA_LS_PATH) {
-			args.push("-e", process.env.INMANTA_LS_PATH);
-			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
-		} else {
-			args.push("inmantals");
-		}
+		const cmdArgs: string[] = ["-m", "pip", "install"];
+		cmdArgs.push(...this.languageServerVersionToInstall());
 		window.showInformationMessage("Installing Inmanta Language server. This may take a few seconds");
-		const child = cp.spawnSync(this.pythonPath, args);
+		log("installing LS  with: "+ cmdArgs.join(' '));
+		const child = cp.spawnSync(this.pythonPath, cmdArgs);
 		if (child.status !== 0) {
 			log(`Can not start server and client`);
 			const response = await window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`,  "Setup assistant");

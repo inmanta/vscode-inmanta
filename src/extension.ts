@@ -1,12 +1,11 @@
 'use strict';
 
-import { workspace, ExtensionContext, extensions, window, commands, WorkspaceFolder, Uri, TextDocument, TextEditor } from 'vscode';
+import { workspace, ExtensionContext, extensions, window, commands, WorkspaceFolder, TextDocument, TextEditor } from 'vscode';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
 import { log, getOuterMostWorkspaceFolder, logMap } from './utils';
 import { LanguageServer, LsErrorHandler } from './language_server';
 import { InmantaCommands } from './commands';
 import { addSetupAssistantButton } from './walkthrough_button';
-import * as cp from 'child_process';
 
 let inmantaCommands;
 let lastActiveFolder: WorkspaceFolder = undefined;
@@ -97,14 +96,14 @@ export async function activate(context: ExtensionContext) {
 				The document that was just opened is not living inside a folder that has a language server responsible for it.
 				We need to start a new language server for this folder. For a seamless user experience, we mimick the behaviour
 				of the pylance extension:
-				
+
 				- Case 1: a venv for this folder has already been selected in the past and persisted by vs code in the persistent
 				storage ==> we simply use this venv and start a new language server. see https://github.com/microsoft/vscode-python/wiki/Setting-descriptions#pythondefaultinterpreterpath)
 
 				- Case 2: this is a fresh folder with no pre-selected venv
 					* if a workspace-wide venv has been selected -> use this one
 					* use the default environment used by the python extension (https://code.visualstudio.com/docs/python/environments#_where-the-extension-looks-for-environments)
-				
+
 			*/
 
 			let newPath = pythonExtensionInstance.getPathForResource(folder.uri);
@@ -115,7 +114,7 @@ export async function activate(context: ExtensionContext) {
 
 			//register listener to restart the LS if the python interpreter changes.
 			pythonExtensionInstance.registerCallbackOnChange((updatedPath, outermost) => {
-				languageserver.updatePythonPath(updatedPath, outermost).then( (res) => 
+				languageserver.updatePythonPath(updatedPath, outermost).then( (res) =>
 					pythonExtensionInstance.updateInmantaEnvVisibility(document)
 				);
 			});

@@ -191,6 +191,7 @@
     "extensionDependencies": [
         "ms-python.python"
     ],
+    "activationEvents": [],
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "rimraf out && tsc -p ./",
