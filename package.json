@@ -216,7 +216,7 @@
         "glob": "^10.1.0",
         "mocha": "^10.2.0",
         "rimraf": "^5.0.0",
-        "semver": "^7.3.8",
+        "semver": "^7.5.0",
         "typescript": "^5.0.4"
     },
     "main": "./out/extension"
