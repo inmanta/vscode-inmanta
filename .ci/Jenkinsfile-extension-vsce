@@ -92,6 +92,15 @@ pipeline {
                             sed -i "1s/\\?/${release_date}/" CHANGELOG.md
                             git commit -m "set release date: ${release_date}" CHANGELOG.md
 
+                            # add the requirements.txt file to tie the extenstion to a server version
+                            if [[ "${LS_version}" == "latest" ]]; then
+                                ${WORKSPACE}/env/bin/pip install inmantals
+                            else
+                                ${WORKSPACE}/env/bin/pip install inmantals=="${LS_version}"
+                            fi
+                            ls_version=$(${WORKSPACE}/env/bin/pip freeze | grep inmantals | cut -d'=' -f3
+                            echo "inmantals~=${ls_version}" > requirements.txt
+
                             git push origin issue/version-bump-extension
 
                             # Merge into next
@@ -175,19 +184,9 @@ pipeline {
                     sh '''
                         # install the extension for its vsce dependency, required for building and publishing the extension
                         # and populate vscodeignore with exceptions to node_modules of the needed modules.
-                        # add the requirements.txt file to tie the extenstion to a server version
                         npm ci --omit dev
                         find node_modules/ -mindepth 1 -maxdepth 1 -exec echo '!{}/**' \\; >> .vscodeignore
                         npm i
-
-                        # create the requirements.txt file
-                        if [[ "${LS_version}" == "latest" ]]; then
-                            ${WORKSPACE}/env/bin/pip install inmantals
-                        else
-                            ${WORKSPACE}/env/bin/pip install inmantals=="${LS_version}"
-                        fi
-                        ls_version=$(${WORKSPACE}/env/bin/pip freeze | grep inmantals | cut -d'=' -f3
-                        echo "inmantals~=${ls_version}" > requirements.txt
 
                         node_modules/.bin/vsce package
                         git checkout .
