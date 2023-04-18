@@ -84,9 +84,9 @@ pipeline {
                     usernameVariable: 'DEVPI_USER'
                 )
                 ]) {
-                    dir(env.REPO_NAME){
+                    dir(env.INMANTA_LS_PATH){
                         sh '''
-                        echo "test"
+                        source $INMANTA_LS_TEST_ENV/bin/activate
                         pip install -U devpi-client
                         devpi use https://artifacts.internal.inmanta.com/inmanta/dev
                         devpi login ${DEVPI_USER} --password=${DEVPI_PASS}
