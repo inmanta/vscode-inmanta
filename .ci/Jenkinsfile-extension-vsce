@@ -108,7 +108,7 @@ pipeline {
                             fi
                             ls_version=$(${WORKSPACE}/env/bin/pip freeze | grep inmantals | cut -d'=' -f3
                             echo "inmantals~=${ls_version}" > requirements.txt
-                            git commit -m "add requirements.txt file to tie the inmantals version (${ls_version}) to extension" requirements.txt
+                            git commit -m "add requirements.txt file to tie the inmantals version (${ls_version}) to the extension" requirements.txt
 
                             git push origin next
 
