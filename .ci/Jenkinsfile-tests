@@ -86,6 +86,7 @@ pipeline {
                 ]) {
                     dir(env.REPO_NAME){
                         sh '''
+                        echo "test"
                         pip install -U devpi-client
                         devpi use https://artifacts.internal.inmanta.com/inmanta/dev
                         devpi login ${DEVPI_USER} --password=${DEVPI_PASS}
