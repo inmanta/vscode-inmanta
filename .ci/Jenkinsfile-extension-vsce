@@ -92,7 +92,7 @@ pipeline {
                             sed -i "1s/\\?/${release_date}/" CHANGELOG.md
                             git commit -m "set release date: ${release_date}" CHANGELOG.md
 
-                            # add the requirements.txt file to tie the extenstion to a server version
+                            # add a requirements.txt file to tie the extenstion to a server version
                             if [[ "${LS_version}" == "latest" ]]; then
                                 ${WORKSPACE}/env/bin/pip install inmantals
                             else
