@@ -160,7 +160,7 @@ export class LanguageServer {
 		const inmantaLSLine = requirementTxtContent.match(inmantaLSPattern)[0];
 		if (inmantaLSLine) {
 			operator = inmantaLSLine.match(/(==|~=)/)?.[0] ?? "==";
-			expectedVersion = inmantaLSLine.split(/(==|~=)/)[1];
+			expectedVersion = inmantaLSLine.split(/(==|~=)/)[2];
 		}
 
 		if (!expectedVersion) {
