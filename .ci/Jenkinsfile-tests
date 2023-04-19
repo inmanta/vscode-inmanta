@@ -71,6 +71,36 @@ pipeline {
                 }
             }
         }
+
+        stage("Publish to devpi") {
+            when {
+                expression { BRANCH_NAME == "master" }
+            }
+            steps {
+                withCredentials([
+                usernamePassword(
+                    credentialsId: 'devpi-user',
+                    passwordVariable: 'DEVPI_PASS',
+                    usernameVariable: 'DEVPI_USER'
+                )
+                ]) {
+                    dir(env.INMANTA_LS_PATH){
+                        sh '''
+                        source $INMANTA_LS_TEST_ENV/bin/activate
+                        pip install -U devpi-client
+                        devpi use https://artifacts.internal.inmanta.com/inmanta/dev
+                        devpi login ${DEVPI_USER} --password=${DEVPI_PASS}
+                        rm -f dist/*
+
+                        python3 setup.py egg_info -Db ".dev$(date +'%Y%m%d%H%M%S' --utc)" sdist
+
+                        devpi upload dist/*.dev*
+                        devpi logoff
+                        '''
+                    }
+                }
+            }
+        }
     }
 
     post {
