@@ -74,6 +74,8 @@ export class PythonExtension {
 	}
 
 	async updateInmantaEnvVisibility(document?) {
+		console.log(`updateInmantaEnvVisibility: ${JSON.stringify(document)}`);
+
 		let venvName = this.virtualEnvName;
 		let folderName = "";
 		let lastActiveFolder = getLastActiveFolder();
