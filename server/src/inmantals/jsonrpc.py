@@ -141,7 +141,7 @@ class JsonRpcHandler(object):
         log_file_stream.setLevel(logging.DEBUG)
         log_file_stream.setFormatter(formatter)
         log_stderr = logging.StreamHandler(sys.stderr)
-        log_stderr.setLevel(logging.DEBUG)
+        log_stderr.setLevel(logging.INFO)
         log_stderr.setFormatter(formatter)
 
         logging.root.handlers = [log_file_stream, log_stderr]
@@ -253,7 +253,6 @@ class JsonRpcHandler(object):
                 # if it has no id, it is a notification and we don't send result
                 if id is not None:
                     logger.debug("dispatching result %s", result)
-                    logger.debug("dispatching method %s", method)
                     await self.return_result(id, result)
             except JsonRpcException as e:
                 logger.debug("exception occurred during method handling", exc_info=True)

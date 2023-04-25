@@ -205,9 +205,6 @@ class Folder:
         if os.path.exists(v1_metadata_file):
             mv1 = module.ModuleV1(project=None, path=self.folder_path)
             module_name = mv1.name
-            logger.debug("SYMLINK BS")
-            logger.debug(self.folder_path)
-            logger.debug(os.path.join(libs_folder, module_name))
             os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
             self.kind = module.ModuleV1
 
@@ -261,8 +258,7 @@ class Folder:
             self.install_v2_module_editable_mode()
 
         else:
-            logger.debug("RRJEIJRIEJREIJ")
-            module.Project.get().install_modules(bypass_module_cache=True)
+            module.Project.get().install_modules()
 
     def __str__(self):
         return f"Folder opened at {self.folder_path}" + " with a project at " + self.inmanta_project_dir
@@ -370,6 +366,12 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
+    def replace_tmp_path(self, path: str) -> str:
+        module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
+        pattern = os.path.join(self.tmp_project.name, "libs", module_name)
+        str_output = re.sub(pattern, self.root_folder.folder_path, path)
+        return str_output
+
     async def compile_and_anchor(self) -> None:
         """
         Perform a compile and compute an anchormap for the currently open folder.
@@ -413,68 +415,26 @@ class InmantaLSHandler(JsonRpcHandler):
                     for s, t in scheduler_instance.anchormap(compiler_instance, statements, blocks)
                 ]
             )
-            logger.debug("root folder: %s", self.root_folder)
-            logger.debug("anchormap")
-            logger.debug(anchormap)
             self.types = scheduler_instance.get_types()
 
             def treeify(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
-                    logger.debug("f, t:")
-                    logger.debug(f)
-                    logger.debug(t)
-                    logger.debug("target: %s", t.location)
                     start = self.flatten(f.lnr - 1, f.start_char - 1)
                     end = self.flatten(f.end_lnr - 1, f.end_char - 1)
                     tree[start:end] = t
                 return tree
 
-            def log_anchormap(anchormap):
-                logger.debug("WEEEE")
-                first_el = anchormap[0]
-                logger.debug(first_el)
-                logger.debug(str(first_el[0]))
-                logger.debug(str(first_el[1].location))
-                logger.debug(str(first_el[1].docstring))
 
-            # log_anchormap_keys(anchormap)
-            def replace_tmp_path(path: str) -> str:
-                logger.debug("replacing path...")
-                logger.debug("self.tmp_project: %s", self.tmp_project.name)
-                logger.debug("self.root_folder.folder_path: %s", self.root_folder.folder_path)
-                logger.debug("path: %s", path)
-                module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
-                pattern = os.path.join(self.tmp_project.name, "libs", module_name)
-                str_output = re.sub(pattern, self.root_folder.folder_path, path)
-                # str_output = path
 
-                if path != str_output:
-                    logger.debug("REPLACED:%s -> %s", path, str_output)
-                return str_output
             def compute_anchormap(anchormap):
-
-                logger.debug("compute_anchormap:")
-
                 self.anchormap = {}
                 for k, v in groupby(anchormap, lambda x: x[0].file):
-                    # logger.debug(self.root_folder.folder_path)
-                    # logger.debug(k)
-                    # logger.debug(os.path.commonpath(paths=[k, self.root_folder.folder_path]))
-                    # if self.root_folder.folder_path != os.path.commonpath(paths=[k, self.root_folder.folder_path]):
-                    #     continue
                     if self.tmp_project:
-                        k = replace_tmp_path(k)
-                    # logger.debug("k, v:")
-                    # logger.debug(k)
-                    # logger.debug(v)
+                        k = self.replace_tmp_path(k)
                     self.anchormap[os.path.realpath(k)] = treeify(v)
 
             compute_anchormap(anchormap)
-
-            log_anchormap_keys(self.anchormap, msg="Anchormap keys:")
-            logger.debug("GEEEE")
-            # logger.debug(self.anchormap)
 
             def treeify_reverse(iterator):
                 tree = IntervalTree()
@@ -489,9 +449,7 @@ class InmantaLSHandler(JsonRpcHandler):
             self.reverse_anchormap = {
                 os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].location.file)
             }
-            log_anchormap_keys(self.reverse_anchormap, msg="Rev Anchormap keys:")
 
-            # logger.debug(self.reverse_anchormap)
 
         try:
             if self.shutdown_requested:
@@ -586,9 +544,8 @@ class InmantaLSHandler(JsonRpcHandler):
         prefix = "file:///" if os.name == "nt" else "file://"
         uri = prefix + location.file
         if self.tmp_project:
-            module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
-            pattern = os.path.join(self.tmp_project.name, "libs", module_name)
-            uri = re.sub(pattern, self.root_folder.folder_path, uri)
+            uri = self.replace_tmp_path(uri)
+
         if isinstance(location, Range):
             return {
                 "uri": uri,
@@ -623,17 +580,8 @@ class InmantaLSHandler(JsonRpcHandler):
             return ""
 
     def get_range_from_position(self, textDocument, position, anchormap) -> Optional[Interval]:
-        logger.debug("get_range_from_position")
-        logger.debug("textDocument")
-        logger.debug(textDocument)
-        logger.debug("position")
-        logger.debug(position)
-        log_anchormap_keys(anchormap)
         uri = textDocument["uri"]
-        logger.debug("uri: %s", uri)
-
         url = os.path.realpath(uri.replace("file://", ""))
-        logger.debug("url: %s", url)
 
         if anchormap is None:
             return None
@@ -642,25 +590,18 @@ class InmantaLSHandler(JsonRpcHandler):
             return None
 
         tree = anchormap[url]
-        logger.debug(tree)
 
         range = tree[self.flatten(position["line"], position["character"])]
-        logger.debug("==="*10)
         if range is None or len(range) == 0:
             return None
         return range
 
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
-        logger.debug(textDocument)
-        logger.debug(position)
         range = self.get_range_from_position(textDocument, position, self.anchormap)
         if not range:
             return {}
         target: AnchorTarget = list(range)[0].data
 
-        logger.debug("target in textDocument_definition")
-        logger.debug(target)
-        logger.debug(target.location)
         return self.convert_location(target.location)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
@@ -795,11 +736,4 @@ class InmantaLSHandler(JsonRpcHandler):
                 publish_params = params
             await self.send_notification("textDocument/publishDiagnostics", publish_params.dict())
             self.diagnostics_cache = params
-
-
-def log_anchormap_keys(anchormap, msg="Keys:"):
-    logger.debug(msg)
-    for k in anchormap.keys():
-        logger.debug(k)
-    logger.debug("=="*25)
 

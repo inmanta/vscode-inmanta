@@ -87,7 +87,6 @@ export async function activate(context: ExtensionContext) {
 
 		// We are only interested in .cf files
 		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
-			log("document is not a file or a .cf file");
 			return;
 		}
 
