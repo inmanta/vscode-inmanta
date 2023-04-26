@@ -369,7 +369,11 @@ class InmantaLSHandler(JsonRpcHandler):
     def replace_tmp_path(self, path: str) -> str:
         """
         This method assumes a module is opened as the root folder.
-        Replace path to the module in the temporary project libs folder by the path to the module at the root folder.
+        Check if the path to the module in the temporary project libs folder is present in the provided path.
+        If so, the provided path is returned with the path to the temporary project libs folder being
+        replaced by the path to the module at the root folder.
+
+        :param path: The path in which the replacement should occur.
         """
         module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
         pattern = os.path.join(self.tmp_project.name, "libs", module_name)
