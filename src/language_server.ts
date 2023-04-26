@@ -402,14 +402,10 @@ export class LanguageServer {
 		if (this.lsOutputChannel === null) {
 			this.lsOutputChannel = window.createOutputChannel(`Inmanta Language Server[${this.rootFolder.uri.toString()}]`);
 		}
-		log(`path selector: ${path.join(this.pythonPath, "..", "..",)}/**/*`);
 
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents living under the root folder.
-			documentSelector: [
-				{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`},
-				{ scheme: 'file', language: 'inmanta', pattern: `${path.join(this.pythonPath, "..", "..",)}/**/*`},
-				],
+			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`}],
 			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			errorHandler: this.errorHandler,
@@ -429,7 +425,7 @@ export class LanguageServer {
 	 * @returns {Promise<void>} A Promise that resolves when the server and client are started successfully.
 	 */
 	private async startServerAndClient(): Promise<void> {
-		log("Start server and client..FORREAL");
+		log("Start server and client");
 		let clientOptions;
 		try {
 			clientOptions = await this.getClientOptions();

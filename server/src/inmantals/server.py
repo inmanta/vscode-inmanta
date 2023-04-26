@@ -367,12 +367,14 @@ class InmantaLSHandler(JsonRpcHandler):
         return line * 100000 + char
 
     def replace_tmp_path(self, path: str) -> str:
+        """
+        This method assumes a module is opened as the root folder.
+        Replace path to the module in the temporary project libs folder by the path to the module at the root folder.
+        """
         module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
         pattern = os.path.join(self.tmp_project.name, "libs", module_name)
         str_output = re.sub(pattern, self.root_folder.folder_path, path)
 
-        if path != str_output:
-            logger.debug("replaced %s by %s", path, str_output)
         return str_output
 
     async def compile_and_anchor(self) -> None:
@@ -420,13 +422,6 @@ class InmantaLSHandler(JsonRpcHandler):
             )
             self.types = scheduler_instance.get_types()
 
-            logger.debug("---"*30)
-            logger.debug("anchormap[0]: %s", anchormap[0])
-            logger.debug(f"{str(anchormap[0][0])=}")
-            logger.debug(f"{str(anchormap[0][1].location)=}")
-            logger.debug(f"{str(anchormap[0][1].docstring)=}")
-            logger.debug("---"*30)
-
             def treeify(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
@@ -435,26 +430,14 @@ class InmantaLSHandler(JsonRpcHandler):
                     tree[start:end] = t
                 return tree
 
-
-
             def compute_anchormap(anchormap):
                 self.anchormap = {}
-                logger.debug("Computing anchormap")
-                first = True
                 for k, v in groupby(anchormap, lambda x: x[0].file):
-                    if first:
-                        first=False
-                        logger.debug("---"*30)
-                        logger.debug("k, v: %s %s",k, v)
-                        logger.debug("---"*30)
                     if self.tmp_project:
                         k = self.replace_tmp_path(k)
-                    logger.debug("Anchormap key: %s", k)
                     self.anchormap[os.path.realpath(k)] = treeify(v)
-                logger.debug("="*30)
 
             compute_anchormap(anchormap)
-
 
             def treeify_reverse(iterator):
                 tree = IntervalTree()
@@ -469,23 +452,9 @@ class InmantaLSHandler(JsonRpcHandler):
             def compute_reverse_anchormap(anchormap):
                 self.reverse_anchormap = {}
                 for k, v in groupby(anchormap, lambda x: x[1].location.file):
-                    self.reverse_anchormap[os.path.realpath(k)]=treeify_reverse(v)
+                    self.reverse_anchormap[os.path.realpath(k)] = treeify_reverse(v)
 
             compute_reverse_anchormap(anchormap)
-
-            logger.debug("_"*30)
-            logger.debug("anchormap keys:")
-            for k in self.anchormap.keys():
-                logger.debug(k)
-
-            logger.debug("_"*30)
-            logger.debug("rev anchormap keys:")
-            for k in self.reverse_anchormap.keys():
-                logger.debug(k)
-            logger.debug("_"*30)
-
-            # logger.debug("rev anchormap keys: %s", str(self.reverse_anchormap.keys()))
-
 
         try:
             if self.shutdown_requested:
@@ -772,4 +741,3 @@ class InmantaLSHandler(JsonRpcHandler):
                 publish_params = params
             await self.send_notification("textDocument/publishDiagnostics", publish_params.dict())
             self.diagnostics_cache = params
-
