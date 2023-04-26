@@ -20,6 +20,7 @@ import contextlib
 import json
 import logging
 import os
+import re
 import tempfile
 import textwrap
 import typing
@@ -365,6 +366,21 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
+    def replace_tmp_path(self, path: str) -> str:
+        """
+        This method assumes a module is opened as the root folder.
+        Check if the path to the module in the temporary project libs folder is present in the provided path.
+        If so, the provided path is returned with the path to the temporary project libs folder being
+        replaced by the path to the module at the root folder.
+
+        :param path: The path in which the replacement should occur.
+        """
+        module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
+        pattern = os.path.join(self.tmp_project.name, "libs", module_name)
+        str_output = re.sub(pattern, self.root_folder.folder_path, path)
+
+        return str_output
+
     async def compile_and_anchor(self) -> None:
         """
         Perform a compile and compute an anchormap for the currently open folder.
@@ -418,7 +434,14 @@ class InmantaLSHandler(JsonRpcHandler):
                     tree[start:end] = t
                 return tree
 
-            self.anchormap = {os.path.realpath(k): treeify(v) for k, v in groupby(anchormap, lambda x: x[0].file)}
+            def compute_anchormap(anchormap):
+                self.anchormap = {}
+                for k, v in groupby(anchormap, lambda x: x[0].file):
+                    if self.tmp_project:
+                        k = self.replace_tmp_path(k)
+                    self.anchormap[os.path.realpath(k)] = treeify(v)
+
+            compute_anchormap(anchormap)
 
             def treeify_reverse(iterator):
                 tree = IntervalTree()
@@ -430,9 +453,12 @@ class InmantaLSHandler(JsonRpcHandler):
                             tree[start:end] = f
                 return tree
 
-            self.reverse_anchormap = {
-                os.path.realpath(k): treeify_reverse(v) for k, v in groupby(anchormap, lambda x: x[1].location.file)
-            }
+            def compute_reverse_anchormap(anchormap):
+                self.reverse_anchormap = {}
+                for k, v in groupby(anchormap, lambda x: x[1].location.file):
+                    self.reverse_anchormap[os.path.realpath(k)] = treeify_reverse(v)
+
+            compute_reverse_anchormap(anchormap)
 
         try:
             if self.shutdown_requested:
@@ -525,9 +551,13 @@ class InmantaLSHandler(JsonRpcHandler):
 
     def convert_location(self, location: Location):
         prefix = "file:///" if os.name == "nt" else "file://"
+        uri = prefix + location.file
+        if self.tmp_project:
+            uri = self.replace_tmp_path(uri)
+
         if isinstance(location, Range):
             return {
-                "uri": prefix + location.file,
+                "uri": uri,
                 "range": {
                     "start": {"line": location.lnr - 1, "character": location.start_char - 1},
                     "end": {"line": location.end_lnr - 1, "character": location.end_char - 1},
@@ -535,7 +565,7 @@ class InmantaLSHandler(JsonRpcHandler):
             }
         else:
             return {
-                "uri": prefix + location.file,
+                "uri": uri,
                 "range": {
                     "start": {"line": location.lnr - 1, "character": 0},
                     "end": {"line": location.lnr, "character": 0},
@@ -560,7 +590,6 @@ class InmantaLSHandler(JsonRpcHandler):
 
     def get_range_from_position(self, textDocument, position, anchormap) -> Optional[Interval]:
         uri = textDocument["uri"]
-
         url = os.path.realpath(uri.replace("file://", ""))
 
         if anchormap is None:
@@ -580,7 +609,8 @@ class InmantaLSHandler(JsonRpcHandler):
         range = self.get_range_from_position(textDocument, position, self.anchormap)
         if not range:
             return {}
-        target = list(range)[0].data
+        target: AnchorTarget = list(range)[0].data
+
         return self.convert_location(target.location)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803

@@ -402,6 +402,7 @@ export class LanguageServer {
 		if (this.lsOutputChannel === null) {
 			this.lsOutputChannel = window.createOutputChannel(`Inmanta Language Server[${this.rootFolder.uri.toString()}]`);
 		}
+
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents living under the root folder.
 			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`}],
