@@ -45,30 +45,30 @@ async function main() {
 		stdio: 'inherit'
 		});
 
-		// await runTests({
-		// 	vscodeExecutablePath,
-		// 	extensionDevelopmentPath: extensionDevelopmentPath,
-		// 	extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
-		// 	launchArgs: ["--disable-gpu"],
-		// 	extensionTestsEnv,
-		// 	reuseMachineInstall: true,
-		// });
+		await runTests({
+			vscodeExecutablePath,
+			extensionDevelopmentPath: extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
+			launchArgs: ["--disable-gpu"],
+			extensionTestsEnv,
+			reuseMachineInstall: true,
+		});
 
-		// await runTests({
-		// 	vscodeExecutablePath,
-		// 	launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
-		// 	extensionDevelopmentPath,
-		// 	extensionTestsPath: path.resolve(__dirname, './compile/index'),
-		// 	reuseMachineInstall: true,
-		// });
+		await runTests({
+			vscodeExecutablePath,
+			launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
+			extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './compile/index'),
+			reuseMachineInstall: true,
+		});
 
-		// await runTests({
-		// 	vscodeExecutablePath,
-		// 	extensionDevelopmentPath: extensionDevelopmentPath,
-		// 	extensionTestsPath: path.resolve(__dirname, './navigation/index'),
-		// 	launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
-		// 	reuseMachineInstall: true,
-		// });
+		await runTests({
+			vscodeExecutablePath,
+			extensionDevelopmentPath: extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './navigation/index'),
+			launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
+			reuseMachineInstall: true,
+		});
 
 		await runTests({
 			vscodeExecutablePath,
