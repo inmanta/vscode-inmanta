@@ -7,8 +7,8 @@ import * as path from "path";
 import * as fs from "fs";
 import getPort from 'get-port';
 
-import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder, LocationLink, Location, Definition} from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions, integer, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction} from 'vscode-languageclient';
+import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder, LocationLink, Location, Definition, Position, TextDocument} from 'vscode';
+import { RevealOutputChannelOn, LanguageClientOptions, integer, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction, ProvideDefinitionSignature, CancellationToken} from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
 import { fileOrDirectoryExists, isLocation, log } from './utils';
@@ -382,23 +382,23 @@ export class LanguageServer {
 	 * returned, the locations are filtered to remove any that do not have a valid uri path.
 	 * If the definition has an undefined uri path, returns undefined.
 	 */
-	private	async middlewareProvideDefinition(document, position, token, next){
-		const definition: LocationLink[] | Definition = await next(document, position, token);
+	private async middlewareProvideDefinition(
+		document: TextDocument,
+		position: Position,
+		token: CancellationToken,
+		next: ProvideDefinitionSignature
+	  ): Promise<Location | Location[] | undefined> {
+		const definition: Definition | LocationLink[] = await next(document, position, token);
 		if (Array.isArray(definition)) {
-		  // Filter the definition array to keep only Location objects with defined URIs
-		  const filteredDefinition = (definition as Location[])
-			  .filter(
-				  (loc): loc is Location =>
-				  (isLocation(loc) && loc.uri.path !== "/undefined")
-			  );
-		  return filteredDefinition;
-		} else {
-		  // If the definition is not an array, check if the URI path is undefine
-		  if (definition.uri.path === "/undefined") {
-			  return undefined;
+			const filteredDefinition = (definition as Location[]).filter(
+				(loc): loc is Location => (isLocation(loc) && loc.uri.path !== "/undefined")
+			);
+			return filteredDefinition;
+		  } else if (isLocation(definition) && definition.uri.path !== "/undefined") {
+			return definition;
+		  } else {
+			return undefined;
 		  }
-		  return definition;
-		}
 	  }
 
 
