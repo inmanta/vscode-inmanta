@@ -554,6 +554,7 @@ class InmantaLSHandler(JsonRpcHandler):
         uri = prefix + location.file
         if self.tmp_project:
             uri = self.replace_tmp_path(uri)
+
         if isinstance(location, Range):
             return {
                 "uri": uri,

@@ -63,12 +63,6 @@ This&nbsp;is:
 
 
 &nbsp;&nbsp;&nbsp;&nbsp;my&nbsp;docstring&nbsp;with&nbsp;some&nbsp;keywords&nbsp;like&nbsp;if&nbsp;for&nbsp;entity&nbsp;end&nbsp;0&nbsp;1&nbsp;2`;
-			console.log("-------------------------------");
-			console.log(expectedWeirdDocstringEntity);
-			console.log("-------------------------------");
-			console.log(weirdDocstringEntity[0].contents[0].value);
-			console.log("-------------------------------");
-
 			assert.strictEqual(weirdDocstringEntity[0].contents[0].value, expectedWeirdDocstringEntity, "wrong docstring Plugin");
 
 			resolve();
