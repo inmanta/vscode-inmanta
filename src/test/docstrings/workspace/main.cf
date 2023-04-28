@@ -42,3 +42,4 @@ end
 implement EntityWeirdDoc using std::none
 
 hoho = EntityWeirdDoc()
+

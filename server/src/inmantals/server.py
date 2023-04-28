@@ -554,7 +554,6 @@ class InmantaLSHandler(JsonRpcHandler):
         uri = prefix + location.file
         if self.tmp_project:
             uri = self.replace_tmp_path(uri)
-
         if isinstance(location, Range):
             return {
                 "uri": uri,
@@ -627,7 +626,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
         data = list(range)[0].data
         docstring = textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
-        docstring = docstring.replace(" ", "&nbsp;")
+        docstring = docstring.replace(" ", "&nbsp;").replace("\n", "\n\n").strip()
         definition = self.get_definition(data).strip()
         language = self.get_file_type(data.location.file)
         definition_md = f"""
