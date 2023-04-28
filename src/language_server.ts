@@ -377,10 +377,10 @@ export class LanguageServer {
 	 * @param {Position} position The position within the document to get the definition for.
 	 * @param {CancellationToken} token A cancellation token.
 	 * @param {ProvideDefinitionSignature} next The next provider to call.
-	 * @returns {Promise<Definition | LocationLink[] | undefined>} A Promise that resolves to a
-	 * Definition, an array of LocationLinks, or undefined. If an array of LocationLinks is
-	 * returned, the locations are filtered to remove any that do not have a valid uri path.
-	 * If the definition has an undefined uri path, returns undefined.
+	 * @returns {Promise<Location | Location[] | undefined>} A Promise that resolves to a
+	 * Location, an array of Location, or undefined. If an array of Location is
+	 * returned by 'next', the locations are filtered to remove any that do not have a valid uri path.
+	 * If the Location returned by 'next' has an undefined uri path, returns undefined.
 	 */
 	private async middlewareProvideDefinition(
 		document: TextDocument,
@@ -388,9 +388,9 @@ export class LanguageServer {
 		token: CancellationToken,
 		next: ProvideDefinitionSignature
 	  ): Promise<Location | Location[] | undefined> {
-		const definition: Definition | LocationLink[] = await next(document, position, token);
+		const definition: Location | Location[] = await next(document, position, token) as Definition;
 		if (Array.isArray(definition)) {
-			const filteredDefinition = (definition as Location[]).filter(
+			const filteredDefinition:Location[] = definition.filter(
 				(loc): loc is Location => (isLocation(loc) && loc.uri.path !== "/undefined")
 			);
 			return filteredDefinition;
