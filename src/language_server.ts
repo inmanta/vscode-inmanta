@@ -7,11 +7,11 @@ import * as path from "path";
 import * as fs from "fs";
 import getPort from 'get-port';
 
-import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder} from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions, integer, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction} from 'vscode-languageclient';
+import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder, LocationLink, Location, Definition, Position, TextDocument} from 'vscode';
+import { RevealOutputChannelOn, LanguageClientOptions, integer, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction, ProvideDefinitionSignature, CancellationToken} from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
-import { fileOrDirectoryExists, log } from './utils';
+import { fileOrDirectoryExists, isLocation, log } from './utils';
 import { v4 as uuidv4 } from 'uuid';
 import { getLanguageMap } from './extension';
 
@@ -372,6 +372,37 @@ export class LanguageServer {
 	}
 
 	/**
+	 * Provide the definition of a symbol at a given position in the document.
+	 * @param {TextDocument} document The text document to get the definition from.
+	 * @param {Position} position The position within the document to get the definition for.
+	 * @param {CancellationToken} token A cancellation token.
+	 * @param {ProvideDefinitionSignature} next The next provider to call.
+	 * @returns {Promise<Location | Location[] | undefined>} A Promise that resolves to a
+	 * Location, an array of Location, or undefined. If an array of Location is
+	 * returned by 'next', the locations are filtered to remove any that do not have a valid uri path.
+	 * If the Location returned by 'next' has an undefined uri path, returns undefined.
+	 */
+	private async middlewareProvideDefinition(
+		document: TextDocument,
+		position: Position,
+		token: CancellationToken,
+		next: ProvideDefinitionSignature
+	  ): Promise<Location | Location[] | undefined> {
+		const definition: Location | Location[] = await next(document, position, token) as Definition;
+		if (Array.isArray(definition)) {
+			const filteredDefinition:Location[] = definition.filter(
+				(loc): loc is Location => (isLocation(loc) && loc.uri.path !== "/undefined")
+			);
+			return filteredDefinition;
+		  } else if (isLocation(definition) && definition.uri.path !== "/undefined") {
+			return definition;
+		  } else {
+			return undefined;
+		  }
+	  }
+
+
+	/**
 	 * Get options for initializing the language client.
 	 * @returns {Promise<LanguageClientOptions>} A Promise that resolves to an object containing options for the language client,
 	 * 		including document selector, error handler, output channel settings, and initialization options.
@@ -405,7 +436,10 @@ export class LanguageServer {
 
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents living under the root folder.
-			documentSelector: [{ scheme: 'file', language: 'inmanta', pattern: `${this.rootFolder.uri.fsPath}/**/*`}],
+			documentSelector: [{ scheme: 'file', language: 'inmanta'}],
+			middleware: {
+				provideDefinition: this.middlewareProvideDefinition
+			},
 			outputChannel: this.lsOutputChannel,
 			revealOutputChannelOn: RevealOutputChannelOn.Info,
 			errorHandler: this.errorHandler,

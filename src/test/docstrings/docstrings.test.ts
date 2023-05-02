@@ -25,14 +25,14 @@ describe('Language Server Code docstrings', () => {
 			const succeeded = await waitForCompile(logPath, 25000);
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			const docstringEntity = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(13, 11));
-			const expectedDocstringEntity = `
+
+			let expectedDocstringEntity: string = `
 \`\`\`inmanta
 entity Person:
 \`\`\`
 
 ___
-the&nbsp;entity&nbsp;for&nbsp;a&nbsp;Person
-`;
+the&nbsp;entity&nbsp;for&nbsp;a&nbsp;Person`;
 			assert.strictEqual(docstringEntity[0].contents[0].value, expectedDocstringEntity, "wrong docstring Entity");
 
 			const docstringPlugin = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(21, 14));
@@ -42,11 +42,29 @@ def noop(message: "any"):
 \`\`\`
 
 ___
-returns&nbsp;the&nbsp;input
+blablabla&nbsp;nononop
 
-:param&nbsp;message:&nbsp;a&nbsp;message&nbsp;as&nbsp;input
-`;
-			assert.strictEqual(docstringPlugin[0].contents[0].value, expectedDocstringPlugin, "wrong docstring Entity");
+:param&nbsp;message:a&nbsp;message
+
+:return:&nbsp;nothing`;
+
+			assert.strictEqual(docstringPlugin[0].contents[0].value, expectedDocstringPlugin, "wrong docstring Plugin");
+
+
+			const weirdDocstringEntity = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(43, 14));
+			const expectedWeirdDocstringEntity = `
+\`\`\`inmanta
+entity EntityWeirdDoc:
+\`\`\`
+
+___
+This&nbsp;is:
+
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;my&nbsp;docstring&nbsp;with&nbsp;some&nbsp;keywords&nbsp;like&nbsp;if&nbsp;for&nbsp;entity&nbsp;end&nbsp;0&nbsp;1&nbsp;2`;
+			assert.strictEqual(weirdDocstringEntity[0].contents[0].value, expectedWeirdDocstringEntity, "wrong docstring Plugin");
+
 			resolve();
 		});
 	}).timeout(0);
