@@ -582,11 +582,11 @@ class InmantaLSHandler(JsonRpcHandler):
             range = self.get_plugin_range_from_location(location.file, location.lnr)
             if range:
                 return {
-                "uri": uri,
-                "range": {
-                    "start": {"line": range.lnr - 1, "character": range.start_char},
-                    "end": {"line": range.end_lnr- 1, "character": range.end_char},
-                },
+                    "uri": uri,
+                    "range": {
+                        "start": {"line": range.lnr - 1, "character": range.start_char},
+                        "end": {"line": range.end_lnr- 1, "character": range.end_char},
+                    },
                 }
             return {
                 "uri": uri,
