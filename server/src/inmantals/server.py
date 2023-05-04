@@ -559,8 +559,7 @@ class InmantaLSHandler(JsonRpcHandler):
             start_pos = match.start(1)
             end_pos = match.end(1)
             return Range(file=filename, start_lnr=line_number,end_lnr=line_number, start_char=start_pos, end_char=end_pos)
-        else:
-            return None
+        return None
 
 
     def convert_location(self, location: Location):
