@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { workspace, WorkspaceFolder, Uri } from 'vscode';
+import { workspace, WorkspaceFolder, Uri, Location } from 'vscode';
 import { LanguageServer } from './language_server';
 import {getSortedWorkspaceFolders} from './extension';
 
@@ -59,7 +59,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 */
 
 function sortedWorkspaceFolders(): string[] {
-	let _sortedWorkspaceFolders = getSortedWorkspaceFolders(); 
+	let _sortedWorkspaceFolders = getSortedWorkspaceFolders();
 	if (_sortedWorkspaceFolders === void 0) {
 		_sortedWorkspaceFolders = workspace.workspaceFolders ? workspace.workspaceFolders.map(folder => {
 			let result = folder.uri.toString();
@@ -89,4 +89,9 @@ export function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceF
 		}
 	}
 	return folder;
+}
+
+
+export function isLocation(loc: any): loc is Location {
+	return loc.uri !== undefined;
 }
