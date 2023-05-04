@@ -215,12 +215,30 @@ export class LanguageServer {
 	 * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
 	 */
 	async canServerStart(pythonPath?: string):Promise<LanguageServerDiagnoseResult>{
+		console.log("canServerStart");
+	
+		console.log(pythonPath);
+		console.log(this.pythonPath);
+
 		if (pythonPath === undefined) {
 			pythonPath = this.pythonPath;
 		}
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
+
+
+		// // This check makes sure the active interpreter is part of a venv so we don't install anything in a global env.
+		// // Inspired by: https://stackoverflow.com/questions/1871549/determine-if-python-is-running-inside-virtualenv/42580137#42580137
+		// const script = "import sys\n" +
+		// 	"real_prefix = getattr(sys, 'real_prefix', None)\n" +
+		// 	"base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
+		// 	"running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
+		// 	"if not running_in_virtualenv:\n" +
+		// 	"  sys.exit(1)";
+
+
+
 		const script = "import sys\n" +
 			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
 			"  sys.exit(4)\n" +
@@ -228,18 +246,26 @@ export class LanguageServer {
 			"  import inmantals\n" +
 			"  sys.exit(0)\n" +
 			"except ModuleNotFoundError:\n" +
+			"  real_prefix = getattr(sys, 'real_prefix', None)\n" +
+			"  base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
+			"  running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
+			"  if not running_in_virtualenv:\n" +
+			"    sys.exit(5)\n" + 
 			"  sys.exit(3)";
-			"except ModuleNotFoundError:\n" +
-			"  print(e)\n" +
-			"  sys.exit(5)";
 
 		let spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
 		if (spawnResult.status === 4) {
+			console.log("status === ", spawnResult.status);
 			return LanguageServerDiagnoseResult.wrongPythonVersion;
 		} else if (spawnResult.status === 3) {
+			console.log("status === ", spawnResult.status);
 			return LanguageServerDiagnoseResult.languageServerNotInstalled;
+		} else if (spawnResult.status === 5) {
+			console.log("status === ", spawnResult.status);
+			return LanguageServerDiagnoseResult.wrongInterpreter;
 		} else if (spawnResult.status !== 0) {
+			console.log("status === ", spawnResult.status);
 			log("can not start server due to: "+stdout);
 			return LanguageServerDiagnoseResult.unknown;
 		}
@@ -260,9 +286,11 @@ export class LanguageServer {
 	 */
 	async proposeSolution(error:LanguageServerDiagnoseResult, diagnoseId: string){
 		let response;
+		console.log("Proposing solution...");
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
-				return this.selectInterpreter(diagnoseId);
+				await this.selectInterpreter(diagnoseId);
+				break;
 			case LanguageServerDiagnoseResult.wrongPythonVersion:
 				response = await window.showErrorMessage(`The Inmanta Language Server requires at least Python 3.6, but the provided interpreter (${this.pythonPath}) is an older version.`,  "Setup assistant");
 				if(response === "Setup assistant"){
@@ -602,7 +630,7 @@ export class LanguageServer {
 		}
 
 		if(start){
-			log("starting Language Server");
+			log("starting Language Server NOW");
 		} else {
 			log("restarting Language Server");
 		}

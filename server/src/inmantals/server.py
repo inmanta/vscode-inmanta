@@ -241,8 +241,16 @@ class Folder:
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
 
+        extras: List[str] = []
+        if module_name == "junos_qfx":
+            extras = [
+                "access::address_assignment::pool",
+                "jsrc",
+            ]
         with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
             fd.write(f"import {module_name}\n")
+            for extra in extras:
+                fd.write(f"import {extra}\n")
 
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
         self.handler.register_tmp_project(tmp_dir)

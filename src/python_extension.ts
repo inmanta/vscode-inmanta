@@ -39,6 +39,7 @@ export class PythonExtension {
 	}
 
 	pythonPathToEnvName(path: string) : string {
+		console.log("pythonPathToEnvName");
 		/**
 		 *  Match the virtual environment name using a regular expression to transform 
 		 *  it to an Environment name if a match is found. If no match is found, return the pythonpath
@@ -56,6 +57,7 @@ export class PythonExtension {
 
 
 	async updatePythonVersion(): Promise<string> {
+		console.log("updatePythonVersion");
 		return new Promise<string>((resolve, reject) => {
 			exec(`${this.pythonPath} --version`, (err, stdout, stderr) => {
 				if (err || stderr) {
@@ -73,22 +75,35 @@ export class PythonExtension {
 		});
 	}
 
-	async updateInmantaEnvVisibility(document?) {
+	async updateInmantaEnvVisibility(documentURI?) {
+		console.log("updateInmantaEnvVisibility");
 		let venvName = this.virtualEnvName;
 		let folderName = "";
 		let lastActiveFolder = getLastActiveFolder();
 		if (lastActiveFolder) {
 			folderName = lastActiveFolder.name;
 		}
-		if (document) {
-			const uri = document.uri;
-			let folder = workspace.getWorkspaceFolder(uri);
-			if (!folder) {
-				// not clicking on a cf file -> do nothing
-				return;
+		if (documentURI) {
+			console.log("document", documentURI);
+			try{
+				let folder = workspace.getWorkspaceFolder(documentURI);
+			
+
+				console.log("folder", folder);
+				if (!folder) {
+					// not clicking on a cf file -> do nothing
+					console.log(`updateInmantaEnvVisibility returning early last folder${JSON.stringify(lastActiveFolder)}`);
+					console.log("URI:", documentURI);
+					// return;
+				}
+				folderName = folder.name;
+				venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
 			}
-			folderName = folder.name;
-			venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
+
+			catch (error){
+				console.error(`Failed to get Python version:` + error);
+			}
+			
 		}
 
 		let version ="";
@@ -98,6 +113,7 @@ export class PythonExtension {
 			console.error(`Failed to get Python version:` + error);
 		}
 		let text = "$(alert) Select Interpreter";
+		console.log("this.pythonPath:", this.pythonPath);
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
 			this.inmantaEnvSelector.backgroundColor = new ThemeColor('statusBarItem.warningBackground');
 		} else {
@@ -107,8 +123,15 @@ export class PythonExtension {
 		const editor = window.activeTextEditor;
 		this.inmantaEnvSelector.text = text;
 		if (editor && ['inmanta','log','pip-requirements','properties'].includes(editor.document.languageId)) {
+			console.log("updateInmantaEnvVisibility -> showing");
+
 			this.inmantaEnvSelector.show();
 		} else {
+			console.log("updateInmantaEnvVisibility -> hiding");
+			// console.log("editor", editor);
+			// console.log("editor.document.languageId in list", ['inmanta','log','pip-requirements','properties'].includes(editor.document.languageId));
+
+
 			this.inmantaEnvSelector.hide();
 		}
 	}
@@ -116,6 +139,7 @@ export class PythonExtension {
 
 	addEnvSelector():void {
 		// Add the EnvSelectorWindow
+		console.log("Adding env selector");
 		this.inmantaEnvSelector = window.createStatusBarItem(StatusBarAlignment.Right);
 		this.inmantaEnvSelector.command = "python.setInterpreter";
 		this.inmantaEnvSelector.tooltip = "Select a virtual environment";
@@ -136,6 +160,7 @@ export class PythonExtension {
 
 	getPathForResource(resource) {
 		try{
+			console.log(`getPathForResource ${JSON.stringify(resource)}`);
 			return this.pythonApi.settings.getExecutionDetails(resource).execCommand[0];
 		} catch (error){
 			console.error(`Failed to getPathForResource   :` + error.name + error.message);

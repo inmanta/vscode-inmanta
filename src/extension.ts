@@ -51,15 +51,21 @@ export async function activate(context: ExtensionContext) {
 	});
 
 	function changeActiveTextEditor(event: TextEditor) {
+		console.log("changeActiveTextEditor");
+		
 		// Any time we select a .cf file from another folder in the workspace we have to override the already registered commands
 		// so that they operate on the desired folders, with the correct virtual environment.
 		if (event === undefined) {
 			return;
 		}
+		if (event.document.languageId !== 'inmanta' || (event.document.uri.scheme !== 'file')) {
+			return;
+		}
 		const uri = event.document.uri;
 		let folder = workspace.getWorkspaceFolder(uri);
 		folder = getOuterMostWorkspaceFolder(folder);
-
+		// Update the button visibility when the active editor changes
+		pythonExtensionInstance.updateInmantaEnvVisibility(folder.uri);
 		if (folder === lastActiveFolder) {
 			return;
 		}
@@ -67,11 +73,13 @@ export async function activate(context: ExtensionContext) {
 		const languageServer = languageServers.get(folder.uri.toString());
 
 		// Update the button visibility when the active editor changes
-		pythonExtensionInstance.updateInmantaEnvVisibility(folder);
+		pythonExtensionInstance.updateInmantaEnvVisibility(folder.uri);
 		inmantaCommands.registerCommands(languageServer);
 	}
 
 	async function didOpenTextDocument(document: TextDocument): Promise<void> {
+		console.debug(`didOpenTextDocument ${JSON.stringify(document)}`);
+		pythonExtensionInstance.updateInmantaEnvVisibility(document.uri)
 
 		const uri = document.uri;
 
@@ -113,11 +121,19 @@ export async function activate(context: ExtensionContext) {
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.
-			pythonExtensionInstance.registerCallbackOnChange((updatedPath, outermost) => {
-				languageserver.updatePythonPath(updatedPath, outermost).then( (res) =>
-					pythonExtensionInstance.updateInmantaEnvVisibility(document)
-				);
-			});
+			pythonExtensionInstance.registerCallbackOnChange(
+				(updatedPath, outermost) => {
+					languageserver.updatePythonPath(updatedPath, outermost).then(
+						res => {
+							pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
+						}
+					).then(
+						undefined, err => {
+					   		console.error('I am error');
+					})
+					;
+				}
+			);
 
 
 			inmantaCommands.registerCommands(languageserver);
@@ -133,13 +149,14 @@ export async function activate(context: ExtensionContext) {
 
 			languageServers.set(folder.uri.toString(), languageserver);
 			logMap(languageServers);
-			pythonExtensionInstance.updateInmantaEnvVisibility(document);
+			pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
 
 		}
 
 
 	}
 
+	// console.debug(`Workspace???? ${JSON.stringify(workspace)}`);
 	workspace.onDidOpenTextDocument(didOpenTextDocument);
 	workspace.textDocuments.forEach(didOpenTextDocument);
 	window.onDidChangeActiveTextEditor((event: TextEditor) => changeActiveTextEditor(event));
