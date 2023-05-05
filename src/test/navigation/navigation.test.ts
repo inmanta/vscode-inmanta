@@ -40,6 +40,7 @@ describe('Language Server Code navigation', () => {
 			assert.strictEqual((pluginLocation as Location[]).length, 1);
 			assert.strictEqual(pluginLocation[0].uri.fsPath, path.resolve(libsPath, "testmodule", "plugins", "__init__.py"));
 			console.log("-----------------2-------------------")
+			console.log(pluginLocation[0].uri.fsPath)
 			console.log(pluginLocation[0].range.start.line)
 			console.log(pluginLocation[0].range.start.character)
 			console.log(pluginLocation[0].range.end.line)
