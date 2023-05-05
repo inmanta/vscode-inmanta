@@ -12,6 +12,15 @@ const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
+function wait(ms){
+	var start = new Date().getTime();
+	var end = start;
+	while(end < start + ms) {
+	  end = new Date().getTime();
+   }
+ }
+
+
 describe('Language Server Code navigation', () => {
 
 	beforeEach(async () => {
@@ -45,6 +54,10 @@ describe('Language Server Code navigation', () => {
 			console.log(pluginLocation[0].range.start.character)
 			console.log(pluginLocation[0].range.end.line)
 			console.log(pluginLocation[0].range.end.character)
+
+			console.log('before');
+			wait(7000);  //7 seconds in milliseconds
+			console.log('after');
 
 			assert.deepStrictEqual(pluginLocation[0].range, new Range(new Position(4, 4), new Position(4, 22)), "Plugin location doesn't match");
 			resolve();
