@@ -35,18 +35,12 @@ describe('Language Server Code navigation', () => {
 			assert.strictEqual((typeInDifferentFile as Location[]).length, 1);
 			assert.strictEqual(typeInDifferentFile[0].uri.fsPath, path.resolve(libsPath, "testmodule", "model", "_init.cf"));
 			assert.deepStrictEqual(typeInDifferentFile[0].range, new Range(new Position(0, 8), new Position(0, 11)), "Attribute location in different file doesn't match");
-			console.log("-----------------1-------------------")
-			console.log(typeInDifferentFile[0].uri.fsPath)
-			console.log("1:" + JSON.stringify(typeInDifferentFile[0].range))
 
 
 			const pluginLocation = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(17, 15));
 			assert.strictEqual((pluginLocation as Location[]).length, 1);
 			assert.strictEqual(pluginLocation[0].uri.fsPath, path.resolve(libsPath, "testmodule", "plugins", "__init__.py"));
-			console.log("-----------------2-------------------")
-			console.log(pluginLocation[0].uri.fsPath)
-			console.log("2: "+ JSON.stringify(pluginLocation[0].range))
-			//assert.deepStrictEqual(pluginLocation[0].range, new Range(new Position(4, 4), new Position(4, 22)), "Plugin location doesn't match");
+			assert.deepStrictEqual(pluginLocation[0].range, new Range(new Position(4, 4), new Position(4, 8)), "Plugin location doesn't match");
 			resolve();
 		});
 	}).timeout(0);
