@@ -12,15 +12,6 @@ const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 
-function wait(ms){
-	var start = new Date().getTime();
-	var end = start;
-	while(end < start + ms) {
-	  end = new Date().getTime();
-   }
- }
-
-
 describe('Language Server Code navigation', () => {
 
 	beforeEach(async () => {
@@ -44,6 +35,13 @@ describe('Language Server Code navigation', () => {
 			assert.strictEqual((typeInDifferentFile as Location[]).length, 1);
 			assert.strictEqual(typeInDifferentFile[0].uri.fsPath, path.resolve(libsPath, "testmodule", "model", "_init.cf"));
 			assert.deepStrictEqual(typeInDifferentFile[0].range, new Range(new Position(0, 8), new Position(0, 11)), "Attribute location in different file doesn't match");
+			console.log("-----------------1-------------------")
+			console.log(typeInDifferentFile[0].uri.fsPath)
+			console.log(typeInDifferentFile[0].range.start.line)
+			console.log(typeInDifferentFile[0].range.start.character)
+			console.log(typeInDifferentFile[0].range.end.line)
+			console.log(typeInDifferentFile[0].range.end.character)
+
 
 			const pluginLocation = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(17, 15));
 			assert.strictEqual((pluginLocation as Location[]).length, 1);
@@ -54,11 +52,6 @@ describe('Language Server Code navigation', () => {
 			console.log(pluginLocation[0].range.start.character)
 			console.log(pluginLocation[0].range.end.line)
 			console.log(pluginLocation[0].range.end.character)
-
-			console.log('before');
-			wait(7000);  //7 seconds in milliseconds
-			console.log('after');
-
 			//assert.deepStrictEqual(pluginLocation[0].range, new Range(new Position(4, 4), new Position(4, 22)), "Plugin location doesn't match");
 			resolve();
 		});
