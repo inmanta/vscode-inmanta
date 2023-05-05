@@ -477,8 +477,8 @@ async def test_symbol_provider(client: JsonRPC) -> None:
                 uri=uri_testmodule_plugins,
                 range=(
                     lsp_types.Range(
-                        start=lsp_types.Position(line=4, character=0),
-                        end=lsp_types.Position(line=5, character=0),
+                        start=lsp_types.Position(line=4, character=4),
+                        end=lsp_types.Position(line=4, character=22),
                     )
                 ),
             ),
