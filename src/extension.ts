@@ -23,21 +23,22 @@ export var languageServers: Map<string, LanguageServer> = new Map();
 let sortedWorkspaceFolders: string[] | undefined;
 workspace.onDidChangeWorkspaceFolders(() => sortedWorkspaceFolders = undefined);
 
-
+var pythonExtensionInstance ;
 
 export async function activate(context: ExtensionContext) {
-	// Get and activate the Python extension instance
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
+	
+	// Get and activate the Python extension instance
 	if (pythonExtension === undefined) {
 		throw Error("Python extension not found");
 	}
 
 	log("Activate Python extension");
 	await pythonExtension.activate();
-
 	// Start a new instance of the python extension
-	let pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
+	pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
 	//add the EnvSelector button
+	await pythonExtensionInstance.hidePythonButtonCfg();
 	pythonExtensionInstance.addEnvSelector();
 
 	//adds the SetupAssistantButton Button
@@ -78,7 +79,13 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function didOpenTextDocument(document: TextDocument): Promise<void> {
-		console.debug(`didOpenTextDocument ${JSON.stringify(document)}`);
+		console.log(`didOpenTextDocument ${JSON.stringify(document.uri)}`);
+		// We are only interested in .cf files
+		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
+			console.log("didOpenTextDocument return: not a file or not inmanta file");
+			return;
+		}
+		
 		pythonExtensionInstance.updateInmantaEnvVisibility(document.uri)
 
 		const uri = document.uri;
@@ -93,10 +100,6 @@ export async function activate(context: ExtensionContext) {
 		lastActiveFolder = folder;
 		let folderURI = folder.uri.toString();
 
-		// We are only interested in .cf files
-		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
-			return;
-		}
 
 
 		if (!languageServers.has(folderURI)) {
@@ -149,7 +152,7 @@ export async function activate(context: ExtensionContext) {
 
 			languageServers.set(folder.uri.toString(), languageserver);
 			logMap(languageServers);
-			pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
+			// pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
 
 		}
 
@@ -188,6 +191,7 @@ export async function activate(context: ExtensionContext) {
 
 export async function deactivate(): Promise<void> {
 	const promises: Thenable<void>[] = [];
+	promises.push(pythonExtensionInstance.restorePythonCfg());
 	for (const ls of languageServers.values()) {
 		promises.push(ls.stopServerAndClient());
 	}
