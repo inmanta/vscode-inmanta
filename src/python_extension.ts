@@ -1,6 +1,6 @@
 'use strict';
 import { exec } from 'child_process';
-import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, WorkspaceFolder, StatusBarItem} from 'vscode';
+import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, WorkspaceFolder, StatusBarItem, ConfigurationTarget} from 'vscode';
 import { IExtensionApi, Resource } from './types';
 import { fileOrDirectoryExists, log, getOuterMostWorkspaceFolder, logMap} from './utils';
 import { getLanguageMap, getLastActiveFolder} from './extension';
@@ -14,6 +14,7 @@ export class PythonExtension {
 	inmantaEnvSelector: StatusBarItem;
 	pythonApi : IExtensionApi;
 	lastOpenedFolder: WorkspaceFolder;
+	cfgBefore: string = null;
 	/**
 	 * Creates an instance of PythonExtension.
 	 * @param {IExtensionApi} pythonApi The Python extension API.
@@ -23,8 +24,30 @@ export class PythonExtension {
 		this.executionDetails = pythonApi.settings.getExecutionDetails(workspace.workspaceFolders?.[0].uri);
 		this.pythonApi = pythonApi;
 		this.onChange(pythonApi);
+
 	}
 
+	async hidePythonButtonCfg(): Promise<void> {
+		const configuration = workspace.getConfiguration();
+
+		var config = workspace.getConfiguration("python.interpreter");
+
+		var configName = "infoVisibility";
+		var setAsGlobal = config.inspect(configName).workspaceValue == undefined;
+		if (this.cfgBefore == null) {
+			this.cfgBefore = config.get(configName);
+		}
+		let res = await config.update(configName, "never", true);
+		config = workspace.getConfiguration("python.interpreter");
+	}
+	async restorePythonCfg() : Promise<void> {
+
+		var config = workspace.getConfiguration("python.interpreter");
+		var configName = "infoVisibility";
+
+		let res =  await config.update(configName, this.cfgBefore.toString(), true);
+
+	}
 
 	/**
 	 * Gets the path to the Python interpreter being used by the extension.
@@ -76,7 +99,6 @@ export class PythonExtension {
 	}
 
 	async updateInmantaEnvVisibility(documentURI?) {
-		console.log("updateInmantaEnvVisibility");
 		let venvName = this.virtualEnvName;
 		let folderName = "";
 		let lastActiveFolder = getLastActiveFolder();
@@ -87,17 +109,12 @@ export class PythonExtension {
 			console.log("document", documentURI);
 			try{
 				let folder = workspace.getWorkspaceFolder(documentURI);
-			
-
 				console.log("folder", folder);
-				if (!folder) {
-					// not clicking on a cf file -> do nothing
-					console.log(`updateInmantaEnvVisibility returning early last folder${JSON.stringify(lastActiveFolder)}`);
-					console.log("URI:", documentURI);
-					// return;
+				if (folder) {
+					folderName = folder.name;
+					venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
 				}
-				folderName = folder.name;
-				venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
+
 			}
 
 			catch (error){
@@ -122,12 +139,15 @@ export class PythonExtension {
 		}
 		const editor = window.activeTextEditor;
 		this.inmantaEnvSelector.text = text;
-		if (editor && ['inmanta','log','pip-requirements','properties'].includes(editor.document.languageId)) {
+		if (editor && ['inmanta','log','pip-requirements','properties', 'python'].includes(editor.document.languageId)) {
 			console.log("updateInmantaEnvVisibility -> showing");
 
 			this.inmantaEnvSelector.show();
+			this.hidePythonButtonCfg();
 		} else {
 			console.log("updateInmantaEnvVisibility -> hiding");
+			console.log(`updateInmantaEnvVisibility doc lang id  ${editor.document.languageId}`);
+			this.restorePythonCfg();
 			// console.log("editor", editor);
 			// console.log("editor.document.languageId in list", ['inmanta','log','pip-requirements','properties'].includes(editor.document.languageId));
 
@@ -144,7 +164,7 @@ export class PythonExtension {
 		this.inmantaEnvSelector.command = "python.setInterpreter";
 		this.inmantaEnvSelector.tooltip = "Select a virtual environment";
 		// Update the button visibility when the extension is activated
-		this.updateInmantaEnvVisibility();
+		// this.updateInmantaEnvVisibility();
 		this.registerCallbackOnChange(()=>this.updateInmantaEnvVisibility());
 
 	}
