@@ -351,7 +351,7 @@ export class LanguageServer {
 		}
 		const msg = reason === LanguageServerDiagnoseResult.wrongLanguageServer
 		? "A new version of the Inmanta Language Server is available. Do you want to update? "
-		: "Inmanta Language Server not installed. Install the Language server? ";
+		: `Inmanta Language Server not installed. Install the Language server in ${this.pythonPath}? `;
 		const response = await window.showErrorMessage(msg, 'Yes', 'No');
 		if(response === 'Yes'){
 			await this.installLanguageServer();
