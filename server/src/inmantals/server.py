@@ -30,6 +30,7 @@ from itertools import chain
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type
 from urllib.parse import urlparse
 
+from inmanta.module import Module
 from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
@@ -241,16 +242,28 @@ class Folder:
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
 
-        extras: List[str] = []
-        if module_name == "junos_qfx":
-            extras = [
-                "access::address_assignment::pool",
-                "jsrc",
-            ]
+        def _get_name_spaces(curdir: str, prefix: str) -> List[str]:  # TODO rename
+            """
+            Returns a list of all inmanta namespaces living under a root directory
+            """
+            files: List[str] = []
+            init_cf = os.path.join(curdir, "_init.cf")
+            if not os.path.exists(init_cf):
+                return files
+
+            files.append(prefix)
+            for entry in os.listdir(curdir):
+                sub_path = os.path.join(curdir, entry)
+                if os.path.isdir(sub_path):
+                    # if entry[0] == 'a': # TODO remove this temporary test with fewer files
+                    files.extend(_get_name_spaces(sub_path, prefix + "::" + entry))
+
+            return files
+
+        name_spaces = _get_name_spaces(os.path.join(self.folder_path, "model"), module_name)
         with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
-            fd.write(f"import {module_name}\n")
-            for extra in extras:
-                fd.write(f"import {extra}\n")
+            for name in name_spaces:
+                fd.write(f"import {name}\n")
 
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
         self.handler.register_tmp_project(tmp_dir)
