@@ -30,7 +30,6 @@ from itertools import chain
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type
 from urllib.parse import urlparse
 
-from inmanta.module import Module
 from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
