@@ -148,8 +148,6 @@ export class PythonExtension {
 		this.inmantaEnvSelector = window.createStatusBarItem(StatusBarAlignment.Right);
 		this.inmantaEnvSelector.command = "python.setInterpreter";
 		this.inmantaEnvSelector.tooltip = "Select a virtual environment";
-		// Update the button visibility when the extension is activated
-		// this.updateInmantaEnvVisibility();
 		this.registerCallbackOnChange(()=>this.updateInmantaEnvVisibility());
 
 	}
