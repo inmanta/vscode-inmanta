@@ -222,8 +222,6 @@ export class LanguageServer {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
 
-
-
 		const script = "import sys\n" +
 			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
 			"  sys.exit(4)\n" +
