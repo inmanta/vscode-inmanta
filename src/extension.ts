@@ -52,8 +52,6 @@ export async function activate(context: ExtensionContext) {
 	});
 
 	function changeActiveTextEditor(event: TextEditor) {
-		console.log("changeActiveTextEditor");
-		
 		// Any time we select a .cf file from another folder in the workspace we have to override the already registered commands
 		// so that they operate on the desired folders, with the correct virtual environment.
 		if (event === undefined) {
@@ -132,7 +130,7 @@ export async function activate(context: ExtensionContext) {
 						}
 					).then(
 						undefined, err => {
-					   		console.error('I am error');
+					   		console.error(`Error updating python path to ${updatedPath}`);
 					})
 					;
 				}
@@ -152,14 +150,12 @@ export async function activate(context: ExtensionContext) {
 
 			languageServers.set(folder.uri.toString(), languageserver);
 			logMap(languageServers);
-			// pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
 
 		}
 
 
 	}
 
-	// console.debug(`Workspace???? ${JSON.stringify(workspace)}`);
 	workspace.onDidOpenTextDocument(didOpenTextDocument);
 	workspace.textDocuments.forEach(didOpenTextDocument);
 	window.onDidChangeActiveTextEditor((event: TextEditor) => changeActiveTextEditor(event));

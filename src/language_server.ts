@@ -223,16 +223,6 @@ export class LanguageServer {
 		}
 
 
-		// // This check makes sure the active interpreter is part of a venv so we don't install anything in a global env.
-		// // Inspired by: https://stackoverflow.com/questions/1871549/determine-if-python-is-running-inside-virtualenv/42580137#42580137
-		// const script = "import sys\n" +
-		// 	"real_prefix = getattr(sys, 'real_prefix', None)\n" +
-		// 	"base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
-		// 	"running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
-		// 	"if not running_in_virtualenv:\n" +
-		// 	"  sys.exit(1)";
-
-
 
 		const script = "import sys\n" +
 			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
@@ -251,16 +241,14 @@ export class LanguageServer {
 		let spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
 		if (spawnResult.status === 4) {
-			console.log("status === ", spawnResult.status);
 			return LanguageServerDiagnoseResult.wrongPythonVersion;
 		} else if (spawnResult.status === 3) {
-			console.log("status === ", spawnResult.status);
 			return LanguageServerDiagnoseResult.languageServerNotInstalled;
 		} else if (spawnResult.status === 5) {
-			console.log("status === ", spawnResult.status);
+			// This happens when no venv is set (e.g. opening a folder for the first time, a default global env might be selected)
+			// The check itself is nspired by: https://stackoverflow.com/questions/1871549/determine-if-python-is-running-inside-virtualenv/42580137#42580137
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		} else if (spawnResult.status !== 0) {
-			console.log("status === ", spawnResult.status);
 			log("can not start server due to: "+stdout);
 			return LanguageServerDiagnoseResult.unknown;
 		}
@@ -281,7 +269,6 @@ export class LanguageServer {
 	 */
 	async proposeSolution(error:LanguageServerDiagnoseResult, diagnoseId: string){
 		let response;
-		console.log(`Proposing solution... for errror ${error}`);
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
 				await this.selectInterpreter(diagnoseId);
@@ -625,7 +612,7 @@ export class LanguageServer {
 		}
 
 		if(start){
-			log("starting Language Server NOW");
+			log("starting Language Server");
 		} else {
 			log("restarting Language Server");
 		}
