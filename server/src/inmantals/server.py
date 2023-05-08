@@ -241,7 +241,7 @@ class Folder:
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
 
-        def _get_name_spaces(curdir: str, prefix: str) -> List[str]:  # TODO rename
+        def _get_name_spaces(curdir: str, prefix: str) -> List[str]:
             """
             Returns a list of all inmanta namespaces living under a root directory
             """
@@ -254,7 +254,6 @@ class Folder:
             for entry in os.listdir(curdir):
                 sub_path = os.path.join(curdir, entry)
                 if os.path.isdir(sub_path):
-                    # if entry[0] == 'a': # TODO remove this temporary test with fewer files
                     files.extend(_get_name_spaces(sub_path, prefix + "::" + entry))
 
             return files
