@@ -189,12 +189,12 @@ export class LanguageServer {
 		log(`Comparing outermost: ${outermost} to rooturi: ${this.rootFolder.uri.toString()}`);
 
 		if (outermost === this.rootFolder.uri) {
+			this.pythonPath = newPath;
+			log(`Language server python path changed to ${newPath}`);
 			const canStart = await this.canServerStart(newPath);
 
 			if (canStart === LanguageServerDiagnoseResult.ok) {
-				this.pythonPath = newPath;
-				log(`Language server python path changed to ${newPath}`);
-				this.startOrRestartLS(false, canStart);
+				await this.startOrRestartLS(false, canStart);
 			}
 			else {
 				log(`Language server can't start with interpreter ${newPath}`);
@@ -215,11 +215,6 @@ export class LanguageServer {
 	 * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
 	 */
 	async canServerStart(pythonPath?: string):Promise<LanguageServerDiagnoseResult>{
-		console.log("canServerStart");
-	
-		console.log(pythonPath);
-		console.log(this.pythonPath);
-
 		if (pythonPath === undefined) {
 			pythonPath = this.pythonPath;
 		}
@@ -286,7 +281,7 @@ export class LanguageServer {
 	 */
 	async proposeSolution(error:LanguageServerDiagnoseResult, diagnoseId: string){
 		let response;
-		console.log("Proposing solution...");
+		console.log(`Proposing solution... for errror ${error}`);
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
 				await this.selectInterpreter(diagnoseId);
@@ -375,7 +370,7 @@ export class LanguageServer {
 	 * @returns {Promise<void>}
 	 */
 	async installLanguageServer(): Promise<void> {
-		log(`LS install requested for root folder ${this.rootFolder}`);
+		log(`LS install requested for root folder ${JSON.stringify(this.rootFolder)}`);
 
 		this.diagnoseId = uuidv4();
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
@@ -383,7 +378,7 @@ export class LanguageServer {
 		}
 		const cmdArgs: string[] = ["-m", "pip", "install"];
 		cmdArgs.push(...this.languageServerVersionToInstall());
-		window.showInformationMessage("Installing Inmanta Language server. This may take a few seconds");
+		window.showInformationMessage(`Installing Inmanta Language server in ${this.pythonPath}. This may take a few seconds`);
 		log("installing LS  with: "+ cmdArgs.join(' '));
 		const child = cp.spawnSync(this.pythonPath, cmdArgs);
 		if (child.status !== 0) {

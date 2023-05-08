@@ -192,6 +192,7 @@ export async function activate(context: ExtensionContext) {
 export async function deactivate(): Promise<void> {
 	const promises: Thenable<void>[] = [];
 	promises.push(pythonExtensionInstance.restorePythonCfg());
+	promises.push(pythonExtensionInstance.deactivate());
 	for (const ls of languageServers.values()) {
 		promises.push(ls.stopServerAndClient());
 	}
