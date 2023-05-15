@@ -573,6 +573,17 @@ class InmantaLSHandler(JsonRpcHandler):
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass
 
+    def get_plugin_range_from_location(self, filename, line_number) -> Optional[Range]:
+        with open(filename, "r") as f:
+            contents = f.read().splitlines()[line_number - 1]
+        pattern = r"def\s+(\w+)\s*\("
+        match = re.search(pattern, contents)
+        if match:
+            start_pos = match.start(1)
+            end_pos = match.end(1)
+            return Range(file=filename, start_lnr=line_number, end_lnr=line_number, start_char=start_pos, end_char=end_pos)
+        return None
+
     def convert_location(self, location: Location):
         prefix = "file:///" if os.name == "nt" else "file://"
         uri = prefix + location.file
@@ -587,7 +598,17 @@ class InmantaLSHandler(JsonRpcHandler):
                     "end": {"line": location.end_lnr - 1, "character": location.end_char - 1},
                 },
             }
+
         else:
+            range = self.get_plugin_range_from_location(location.file, location.lnr)
+            if range:
+                return {
+                    "uri": uri,
+                    "range": {
+                        "start": {"line": range.lnr - 1, "character": range.start_char},
+                        "end": {"line": range.end_lnr - 1, "character": range.end_char},
+                    },
+                }
             return {
                 "uri": uri,
                 "range": {
