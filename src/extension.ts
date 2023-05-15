@@ -125,8 +125,8 @@ export async function activate(context: ExtensionContext) {
 						res => {
 							pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
 						}
-					).then(
-						undefined, err => {
+					).catch(
+						err => {
 					   		console.error(`Error updating python path to ${updatedPath}`);
 					})
 					;
