@@ -23,7 +23,7 @@ export var languageServers: Map<string, LanguageServer> = new Map();
 let sortedWorkspaceFolders: string[] | undefined;
 workspace.onDidChangeWorkspaceFolders(() => sortedWorkspaceFolders = undefined);
 
-var pythonExtensionInstance ;
+let pythonExtensionInstance ;
 
 export async function activate(context: ExtensionContext) {
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);

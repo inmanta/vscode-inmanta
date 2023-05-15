@@ -264,7 +264,7 @@ class Folder:
                 fd.write(f"import {name}\n")
 
         pattern = os.path.join(inmanta_project_dir, "libs", module_name)
-        compiled_pattern = re.compile(pattern)
+        compiled_pattern = re.compile(re.escape(pattern))
 
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
         self.handler.register_tmp_project(tmp_dir, compiled_pattern)
@@ -397,9 +397,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
         :param path: The path in which the replacement should occur.
         """
-        str_output = re.sub(self.module_name_pattern, self.root_folder.folder_path, path)
-
-        return str_output
+        return re.sub(pattern=self.module_name_pattern, repl=self.root_folder.folder_path, string=path)
 
     async def compile_and_anchor(self) -> None:
         """
@@ -553,7 +551,7 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory, pattern: re.Pattern):
+    def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory, pattern: typing.Pattern):
         self.tmp_project = tmp_dir
         self.module_name_pattern = pattern
 
