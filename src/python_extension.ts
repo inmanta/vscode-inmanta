@@ -76,7 +76,6 @@ export class PythonExtension {
 
 
 	async updatePythonVersion(): Promise<string> {
-		console.log("updatePythonVersion");
 		return new Promise<string>((resolve, reject) => {
 			exec(`${this.pythonPath} --version`, (err, stdout, stderr) => {
 				if (err || stderr) {
@@ -104,7 +103,6 @@ export class PythonExtension {
 		if (documentURI) {
 			try{
 				let folder = workspace.getWorkspaceFolder(documentURI);
-				console.log("folder", folder);
 				if (folder) {
 					folderName = folder.name;
 					venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
@@ -144,7 +142,6 @@ export class PythonExtension {
 
 	addEnvSelector():void {
 		// Add the EnvSelectorWindow
-		console.log("Adding env selector");
 		this.inmantaEnvSelector = window.createStatusBarItem(StatusBarAlignment.Right);
 		this.inmantaEnvSelector.command = "python.setInterpreter";
 		this.inmantaEnvSelector.tooltip = "Select a virtual environment";

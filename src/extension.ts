@@ -77,10 +77,8 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function didOpenTextDocument(document: TextDocument): Promise<void> {
-		console.log(`didOpenTextDocument ${JSON.stringify(document.uri)}`);
 		// We are only interested in .cf files
 		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
-			console.log("didOpenTextDocument return: not a file or not inmanta file");
 			return;
 		}
 		

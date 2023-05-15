@@ -263,8 +263,12 @@ class Folder:
             for name in name_spaces:
                 fd.write(f"import {name}\n")
 
+        pattern = os.path.join(inmanta_project_dir, "libs", module_name)
+        compiled_pattern = re.compile(pattern)
+
+
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
-        self.handler.register_tmp_project(tmp_dir)
+        self.handler.register_tmp_project(tmp_dir, compiled_pattern)
         return inmanta_project_dir
 
     def install_project(self, attach_cf_cache: bool):
@@ -394,9 +398,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
         :param path: The path in which the replacement should occur.
         """
-        module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
-        pattern = os.path.join(self.tmp_project.name, "libs", module_name)
-        str_output = re.sub(pattern, self.root_folder.folder_path, path)
+        str_output = re.sub(self.module_name_pattern, self.root_folder.folder_path, path)
 
         return str_output
 
@@ -475,6 +477,8 @@ class InmantaLSHandler(JsonRpcHandler):
             def compute_reverse_anchormap(anchormap):
                 self.reverse_anchormap = {}
                 for k, v in groupby(anchormap, lambda x: x[1].location.file):
+                    if self.tmp_project:
+                        k = self.replace_tmp_path(k)
                     self.reverse_anchormap[os.path.realpath(k)] = treeify_reverse(v)
 
             compute_reverse_anchormap(anchormap)
@@ -550,8 +554,9 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory):
+    def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory, pattern: re.Pattern):
         self.tmp_project = tmp_dir
+        self.module_name_pattern = pattern
 
     async def exit(self, **kwargs):
         self.running = False
@@ -625,6 +630,8 @@ class InmantaLSHandler(JsonRpcHandler):
         return range
 
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
+        logger.debug("textDocument_definition")
+
         range = self.get_range_from_position(textDocument, position, self.anchormap)
         if not range:
             return {}
@@ -633,6 +640,7 @@ class InmantaLSHandler(JsonRpcHandler):
         return self.convert_location(target.location)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
+        logger.debug("textDocument_references")
         range = self.get_range_from_position(textDocument, position, self.reverse_anchormap)
         if not range:
             return {}
@@ -640,6 +648,8 @@ class InmantaLSHandler(JsonRpcHandler):
         return [self.convert_location(location.data) for location in range]
 
     async def textDocument_hover(self, textDocument, position):
+        logger.debug("textDocument_hover")
+
         range = self.get_range_from_position(textDocument, position, self.anchormap)
         if not range:
             return {}
