@@ -14,7 +14,6 @@ export class PythonExtension {
 	inmantaEnvSelector: StatusBarItem;
 	pythonApi : IExtensionApi;
 	lastOpenedFolder: WorkspaceFolder;
-	cfgBefore: string = null;
 	/**
 	 * Creates an instance of PythonExtension.
 	 * @param {IExtensionApi} pythonApi The Python extension API.
@@ -125,6 +124,8 @@ export class PythonExtension {
 		this.inmantaEnvSelector = window.createStatusBarItem(StatusBarAlignment.Right);
 		this.inmantaEnvSelector.command = "python.setInterpreter";
 		this.inmantaEnvSelector.tooltip = "Select a virtual environment";
+		// Update the button visibility when the extension is activated
+		this.updateInmantaEnvVisibility();
 		this.registerCallbackOnChange(()=>this.updateInmantaEnvVisibility());
 
 	}

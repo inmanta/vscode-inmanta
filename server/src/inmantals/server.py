@@ -650,8 +650,6 @@ class InmantaLSHandler(JsonRpcHandler):
         return range
 
     async def textDocument_definition(self, textDocument, position):  # noqa: N802, N803
-        logger.debug("textDocument_definition")
-
         range = self.get_range_from_position(textDocument, position, self.anchormap)
         if not range:
             return {}
@@ -660,7 +658,6 @@ class InmantaLSHandler(JsonRpcHandler):
         return self.convert_location(target.location)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
-        logger.debug("textDocument_references")
         range = self.get_range_from_position(textDocument, position, self.reverse_anchormap)
         if not range:
             return {}
@@ -668,8 +665,6 @@ class InmantaLSHandler(JsonRpcHandler):
         return [self.convert_location(location.data) for location in range]
 
     async def textDocument_hover(self, textDocument, position):
-        logger.debug("textDocument_hover")
-
         range = self.get_range_from_position(textDocument, position, self.anchormap)
         if not range:
             return {}
