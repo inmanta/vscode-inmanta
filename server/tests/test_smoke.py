@@ -15,14 +15,12 @@
 
     Contact: code@inmanta.com
 """
-import asyncio
 import json
 import logging
 import os
 import shutil
 import socket
 from typing import AsyncIterator, Dict, List, Optional
-import yappi
 
 import pytest
 from tornado.iostream import IOStream
@@ -510,80 +508,3 @@ async def test_unspecified_workspace_folder(client: JsonRPC) -> None:
     """
     await client.call("initialize", workspaceFolders=None, capabilities={})
     await client.assert_error(message="No workspace folder or rootUri specified.")
-
-
-
-
-
-
-@pytest.mark.timeout(1200)
-@pytest.mark.asyncio
-async def test_profiling_junos(client, caplog):
-    """
-    Test profiling to fix performance issues on bigger modules
-    """
-    if CORE_VERSION < version.Version("5"):
-        pytest.skip("Feature not supported below iso5")
-
-    caplog.set_level(logging.DEBUG)
-    # yappi.set_clock_type("cpu")  # Use set_clock_type("wall") for wall time
-
-    module_name = "junos-qfx"
-    path_to_module = os.path.join(os.path.dirname(__file__), "modules", module_name)
-
-    env_path = os.path.join(path_to_module, ".env")
-    if os.path.isdir(env_path):
-        shutil.rmtree(env_path)
-        os.makedirs(env_path)
-
-    venv = env.VirtualEnv(env_path)
-    venv.use_virtual_env()
-
-    assert "inmanta-module-junos-qfx" not in env.PythonWorkingSet.get_packages_in_working_set()
-
-    options = {
-        "repos": [
-            {"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},
-        ]
-    }
-
-    path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
-    ret = await client.call(
-        "initialize",
-        workspaceFolders=[path_uri],
-        rootUri=f"file://{path_to_module}",
-        capabilities={},
-        initializationOptions=options,
-    )
-    result = await client.assert_one(ret)
-    assert result == {
-        "capabilities": {
-            "textDocumentSync": {
-                "openClose": True,
-                "change": 1,
-                "willSave": False,
-                "willSaveWaitUntil": False,
-                "save": {"includeText": False},
-            },
-            "hoverProvider": True,
-            "definitionProvider": True,
-            "referencesProvider": True,
-            "workspaceSymbolProvider": {"workDoneProgress": False},
-        }
-    }
-
-    ret = await client.call("initialized")
-    result = await client.assert_one(ret)
-    assert "inmanta-module-junos-qfx" in env.PythonWorkingSet.get_packages_in_working_set()
-
-    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
-    assert "Anchormap took" in caplog.text
-    caplog.clear()
-
-
-
-
-@pytest.mark.timeout(100)
-@pytest.mark.asyncio
-async def test_profiling_sanity():
-    await asyncio.sleep(1)

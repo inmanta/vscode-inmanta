@@ -30,7 +30,6 @@ from itertools import chain
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type
 from urllib.parse import urlparse
 
-# import yappi
 from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
@@ -264,12 +263,8 @@ class Folder:
             for name in name_spaces:
                 fd.write(f"import {name}\n")
 
-
-        pattern = os.path.join(inmanta_project_dir, "libs", module_name)
-        compiled_pattern = re.compile(pattern)
-
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
-        self.handler.register_tmp_project(tmp_dir, compiled_pattern)
+        self.handler.register_tmp_project(tmp_dir)
         return inmanta_project_dir
 
     def install_project(self, attach_cf_cache: bool):
@@ -399,14 +394,9 @@ class InmantaLSHandler(JsonRpcHandler):
 
         :param path: The path in which the replacement should occur.
         """
-        # module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
-        # pattern = os.path.join(self.tmp_project.name, "libs", module_name)
-
-
-        # self.ref_regex = re.compile(self.ref_prefix + r"(.*)")
-
-        # logger.debug(f"replacing tmp path...patter: {self.module_name_pattern} in path: {path}")
-        str_output = re.sub(self.module_name_pattern, self.root_folder.folder_path, path)
+        module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
+        pattern = os.path.join(self.tmp_project.name, "libs", module_name)
+        str_output = re.sub(pattern, self.root_folder.folder_path, path)
 
         return str_output
 
@@ -455,10 +445,6 @@ class InmantaLSHandler(JsonRpcHandler):
             )
             self.types = scheduler_instance.get_types()
 
-            # yappi.set_clock_type("WALL")
-            # logger.info(f"starting yappi...")
-            # yappi.start()
-
             def treeify(iterator):
                 tree = IntervalTree()
                 for f, t in iterator:
@@ -468,15 +454,11 @@ class InmantaLSHandler(JsonRpcHandler):
                 return tree
 
             def compute_anchormap(anchormap):
-                logger.info(f"computing anchormap...")
                 self.anchormap = {}
-                n_keys = 0
                 for k, v in groupby(anchormap, lambda x: x[0].file):
                     if self.tmp_project:
                         k = self.replace_tmp_path(k)
                     self.anchormap[os.path.realpath(k)] = treeify(v)
-                    n_keys += 1
-                logger.info(f"compute_anchormap {n_keys=}")
 
             compute_anchormap(anchormap)
 
@@ -491,23 +473,12 @@ class InmantaLSHandler(JsonRpcHandler):
                 return tree
 
             def compute_reverse_anchormap(anchormap):
-                logger.info(f"computing reverse anchormap...")
                 self.reverse_anchormap = {}
-                n_keys = 0
-                # yappi.get_func_stats().print_all()
                 for k, v in groupby(anchormap, lambda x: x[1].location.file):
-                    # logger.info(f"{k=}")
-                    # yappi.get_func_stats().print_all()
-
-                    if self.tmp_project:
-                        k = self.replace_tmp_path(k)
                     self.reverse_anchormap[os.path.realpath(k)] = treeify_reverse(v)
-                    n_keys  += 1
-                logger.info(f"compute_reverse_anchormap {n_keys=}")
+
             compute_reverse_anchormap(anchormap)
 
-            # yappi.get_func_stats().print_all()
-            # yappi.get_thread_stats().print_all()
         try:
             if self.shutdown_requested:
                 return
@@ -579,10 +550,8 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory, pattern: re.Pattern):
+    def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory):
         self.tmp_project = tmp_dir
-        self.module_name_pattern = pattern
-
 
     async def exit(self, **kwargs):
         self.running = False
@@ -664,8 +633,6 @@ class InmantaLSHandler(JsonRpcHandler):
         return self.convert_location(target.location)
 
     async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
-        logger.debug("textDocument_references")
-
         range = self.get_range_from_position(textDocument, position, self.reverse_anchormap)
         if not range:
             return {}
