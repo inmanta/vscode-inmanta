@@ -27,25 +27,6 @@ export class PythonExtension {
 
 	}
 
-	async hidePythonButtonCfg(): Promise<void> {
-		var config = workspace.getConfiguration("python.interpreter");
-
-		var configName = "infoVisibility";
-		if (this.cfgBefore == null) {
-			this.cfgBefore = config.get(configName);
-		}
-		await config.update(configName, "never", true);
-		config = workspace.getConfiguration("python.interpreter");
-	}
-	async restorePythonCfg() : Promise<void> {
-
-		var config = workspace.getConfiguration("python.interpreter");
-		var configName = "infoVisibility";
-
-		let res =  await config.update(configName, this.cfgBefore.toString(), true);
-
-	}
-
 	/**
 	 * Gets the path to the Python interpreter being used by the extension.
 	 * @returns {string} A string representing the path to the Python interpreter.
@@ -130,13 +111,12 @@ export class PythonExtension {
 		}
 		const editor = window.activeTextEditor;
 		this.inmantaEnvSelector.text = text;
-		if (editor && ['inmanta','log','pip-requirements','properties', 'python'].includes(editor.document.languageId)) {
+		if (editor && ['inmanta','log','pip-requirements','properties'].includes(editor.document.languageId)) {
 			this.inmantaEnvSelector.show();
-			this.hidePythonButtonCfg();
 		} else {
-			this.restorePythonCfg();
 			this.inmantaEnvSelector.hide();
 		}
+
 	}
 
 

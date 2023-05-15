@@ -38,7 +38,6 @@ export async function activate(context: ExtensionContext) {
 	// Start a new instance of the python extension
 	pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
 	//add the EnvSelector button
-	await pythonExtensionInstance.hidePythonButtonCfg();
 	pythonExtensionInstance.addEnvSelector();
 
 	//adds the SetupAssistantButton Button
@@ -57,32 +56,32 @@ export async function activate(context: ExtensionContext) {
 		if (event === undefined) {
 			return;
 		}
-		if (event.document.languageId !== 'inmanta' || (event.document.uri.scheme !== 'file')) {
-			return;
-		}
+
 		const uri = event.document.uri;
 		let folder = workspace.getWorkspaceFolder(uri);
 		folder = getOuterMostWorkspaceFolder(folder);
 		// Update the button visibility when the active editor changes
 		pythonExtensionInstance.updateInmantaEnvVisibility(folder.uri);
+		if (event.document.languageId !== 'inmanta' || (event.document.uri.scheme !== 'file')) {
+			return;
+		}
 		if (folder === lastActiveFolder) {
 			return;
 		}
 		lastActiveFolder = folder;
 		const languageServer = languageServers.get(folder.uri.toString());
 
-		// Update the button visibility when the active editor changes
-		pythonExtensionInstance.updateInmantaEnvVisibility(folder.uri);
 		inmantaCommands.registerCommands(languageServer);
 	}
 
 	async function didOpenTextDocument(document: TextDocument): Promise<void> {
+		pythonExtensionInstance.updateInmantaEnvVisibility(document.uri)
 		// We are only interested in .cf files
+
 		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
 			return;
 		}
 		
-		pythonExtensionInstance.updateInmantaEnvVisibility(document.uri)
 
 		const uri = document.uri;
 

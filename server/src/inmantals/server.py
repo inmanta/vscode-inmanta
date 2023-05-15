@@ -266,7 +266,6 @@ class Folder:
         pattern = os.path.join(inmanta_project_dir, "libs", module_name)
         compiled_pattern = re.compile(pattern)
 
-
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
         self.handler.register_tmp_project(tmp_dir, compiled_pattern)
         return inmanta_project_dir
