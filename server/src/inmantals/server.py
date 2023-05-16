@@ -241,7 +241,31 @@ class Folder:
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
 
-        self.rewrite_main_file(module_name, project_dir=inmanta_project_dir)
+        def _get_name_spaces(curdir: str, prefix: str) -> List[str]:
+            """
+            Returns a list of all inmanta namespaces living under a root directory
+            """
+            files: List[str] = []
+            init_cf = os.path.join(curdir, "_init.cf")
+            if not os.path.exists(init_cf):
+                return files
+
+            for entry in os.listdir(curdir):
+                sub_path = os.path.join(curdir, entry)
+                if os.path.isdir(sub_path):
+                    files.extend(_get_name_spaces(sub_path, prefix + "::" + entry))
+                elif os.path.splitext(sub_path)[1] == ".cf":
+                    if entry != "_init.cf":
+                        files.append(prefix + "::" + os.path.splitext(entry)[0])
+                    else:
+                        files.append(prefix)
+            return files
+
+        name_spaces = _get_name_spaces(os.path.join(self.folder_path, "model"), module_name)
+
+        with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
+            for name in name_spaces:
+                fd.write(f"import {name}\n")
 
         pattern = os.path.join(inmanta_project_dir, "libs", module_name)
         compiled_pattern = re.compile(re.escape(pattern))
@@ -249,20 +273,6 @@ class Folder:
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
         self.handler.register_tmp_project(tmp_project=tmp_dir, module_in_tmp_libs=compiled_pattern, top_module_name=module_name)
         return inmanta_project_dir
-
-    def rewrite_main_file(self, module_name: str, project_dir: Optional[str] = None):
-        """
-        This method assumes a module is opened as the root folder. This method overwrites
-        the main.cf file of an inmanta project with a single module import.
-
-        :param module_name: the module to import in the main.cf file
-        :param project_dir: The inmanta project in which to (re)write the main.cf file
-        """
-        if not project_dir:
-            project_dir = self.inmanta_project_dir
-
-        with open(os.path.join(project_dir, "main.cf"), "w+") as fd:
-            fd.write(f"import {module_name}\n")
 
     def install_project(self, attach_cf_cache: bool):
         module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
@@ -301,7 +311,6 @@ class InmantaLSHandler(JsonRpcHandler):
         self.repos: Optional[str] = None
         # When working on a module, this keeps track of the topmost module's name
         self.top_module_name: Optional[str] = None
-        self.last_compiled_submodule: Optional[str] = None
 
     async def initialize(
         self,
@@ -440,7 +449,7 @@ class InmantaLSHandler(JsonRpcHandler):
         """
         return re.sub(pattern=self.module_in_tmp_libs, repl=self.root_folder.folder_path, string=path)
 
-    async def compile_and_anchor(self, module_name: Optional[str] = None) -> None:
+    async def compile_and_anchor(self) -> None:
         """
         Perform a compile and compute an anchormap for the currently open folder.
         """
@@ -460,9 +469,6 @@ class InmantaLSHandler(JsonRpcHandler):
                     else:
                         module.Project.set(module.Project(folder.inmanta_project_dir))
                 else:
-                    if module_name:
-                        self.last_compiled_submodule = module_name
-                        folder.rewrite_main_file(module_name)
                     folder.install_project(attach_cf_cache=useCache)
 
             # reset all
@@ -620,15 +626,7 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
-        """
-        When saving a sub-module, we will compute the anchormap only for this sub-module.
-        """
-        module_name: Optional[str] = None
-        uri: Optional[str] = kwargs.get("textDocument", {}).get("uri", None)
-        if uri:
-            module_name = self._get_module_fq_name(kwargs["textDocument"]["uri"])
-
-        await self.compile_and_anchor(module_name)
+        await self.compile_and_anchor()
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass
