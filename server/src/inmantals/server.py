@@ -241,34 +241,28 @@ class Folder:
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
 
-        def _get_name_spaces(curdir: str, prefix: str) -> List[str]:
-            """
-            Returns a list of all inmanta namespaces living under a root directory
-            """
-            files: List[str] = []
-            init_cf = os.path.join(curdir, "_init.cf")
-            if not os.path.exists(init_cf):
-                return files
-
-            files.append(prefix)
-            for entry in os.listdir(curdir):
-                sub_path = os.path.join(curdir, entry)
-                if os.path.isdir(sub_path):
-                    files.extend(_get_name_spaces(sub_path, prefix + "::" + entry))
-
-            return files
-
-        name_spaces = _get_name_spaces(os.path.join(self.folder_path, "model"), module_name)
-        with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
-            for name in name_spaces:
-                fd.write(f"import {name}\n")
+        self.rewrite_main_file(module_name, project_dir=inmanta_project_dir)
 
         pattern = os.path.join(inmanta_project_dir, "libs", module_name)
         compiled_pattern = re.compile(re.escape(pattern))
 
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
-        self.handler.register_tmp_project(tmp_dir, compiled_pattern)
+        self.handler.register_tmp_project(tmp_project=tmp_dir, module_in_tmp_libs=compiled_pattern, top_module_name=module_name)
         return inmanta_project_dir
+
+    def rewrite_main_file(self, module_name: str, project_dir: Optional[str] = None):
+        """
+        This method assumes a module is opened as the root folder. This method overwrites
+        the main.cf file of an inmanta project with a single module import.
+
+        :param module_name: the module to import in the main.cf file
+        :param project_dir: The inmanta project in which to (re)write the main.cf file
+        """
+        if not project_dir:
+            project_dir = self.inmanta_project_dir
+
+        with open(os.path.join(project_dir, "main.cf"), "w+") as fd:
+            fd.write(f"import {module_name}\n")
 
     def install_project(self, attach_cf_cache: bool):
         module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
@@ -305,6 +299,9 @@ class InmantaLSHandler(JsonRpcHandler):
         # The scope for the 'compilerVenv' and 'repos' settings in the package.json are set to 'resource' to allow different
         # values for each folder in the workspace. See https://github.com/Microsoft/vscode/wiki/Adopting-Multi-Root-Workspace-APIs#settings  # NOQA E501
         self.repos: Optional[str] = None
+        # When working on a module, this keeps track of the topmost module's name
+        self.top_module_name: Optional[str] = None
+        self.last_compiled_submodule: Optional[str] = None
 
     async def initialize(
         self,
@@ -388,18 +385,64 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
+
+    def _get_module_fq_name(self, path: str) -> Optional[str]:
+        """
+        This method takes a path to an inmanta file assumed to live in an
+        Inmanta module namespace and returns the corresponding fully qualified
+        Inmanta module name, valid as an import statement.
+
+        E.G:
+            In: path = "file:///home/workdir/module_name/model/_init.cf"
+            Out: fqn_name = "module_name"
+
+            In: path = "file:///home/workdir/module_name/model/sub_mod1/sub_mod2/_init.cf"
+            Out: fqn_name = "module_name::sub_mod1::sub_mod2"
+
+            In: path = "file:///home/workdir/module_name/model/sub_mod1/sub_mod2/other.cf"
+            Out: fqn_name = "module_name::sub_mod1::sub_mod2::other"
+
+
+        """
+        if not self.top_module_name:
+            # A project is open, not a module
+            return None
+
+        url = os.path.abspath(path.replace("file://", ""))
+        head, tail = os.path.split(url)
+        top_module_name_hyphens = str.replace(self.top_module_name, "_", "-")
+        subparts: List[str] = url.split(top_module_name_hyphens+"/model/")
+        if len(subparts) != 2:
+            # This happens when we save a .cf file that doesn't live under the current workspace (e.g. in a virtual environment)
+            return self.last_compiled_submodule
+        left, right = subparts
+
+        if tail == "_init.cf":
+            # Import the containing directory
+            fqn_name = self.top_module_name
+            sub_module_ns = str.replace(os.path.dirname(right), "/", "::")
+            if sub_module_ns:
+                fqn_name += "::" + sub_module_ns
+        else:
+            # Import the .cf file itself
+            fqn_name = "::".join([self.top_module_name, str.replace(os.path.splitext(right)[0], "/", "::")])
+
+        return fqn_name
+
+
     def replace_tmp_path(self, path: str) -> str:
         """
-        This method assumes a module is opened as the root folder.
-        Check if the path to the module in the temporary project libs folder is present in the provided path.
-        If so, the provided path is returned with the path to the temporary project libs folder being
-        replaced by the path to the module at the root folder.
+        This method assumes a module is opened as the root folder. This method makes
+        code navigation transparent to the user by replacing
+            - The path to the module in the temporary project's libs folder
+            by
+            - The path to the module opened as the root folder
 
         :param path: The path in which the replacement should occur.
         """
-        return re.sub(pattern=self.module_name_pattern, repl=self.root_folder.folder_path, string=path)
+        return re.sub(pattern=self.module_in_tmp_libs, repl=self.root_folder.folder_path, string=path)
 
-    async def compile_and_anchor(self) -> None:
+    async def compile_and_anchor(self, module_name: Optional[str]=None) -> None:
         """
         Perform a compile and compute an anchormap for the currently open folder.
         """
@@ -419,6 +462,9 @@ class InmantaLSHandler(JsonRpcHandler):
                     else:
                         module.Project.set(module.Project(folder.inmanta_project_dir))
                 else:
+                    if module_name:
+                        self.last_compiled_submodule = module_name
+                        folder.rewrite_main_file(module_name)
                     folder.install_project(attach_cf_cache=useCache)
 
             # reset all
@@ -551,9 +597,18 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory, pattern: typing.Pattern):
-        self.tmp_project = tmp_dir
-        self.module_name_pattern = pattern
+    def register_tmp_project(self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern, top_module_name: str):
+        """
+        Bookkeeping method to keep track of things related to the currently opened module
+
+        :param tmp_project: Temporary Inmanta project used to compile the opened module
+        :param module_in_tmp_libs: Compiled regex pattern used in the replace_tmp_path method
+        :param top_module_name: Top-most Inmanta module name
+
+        """
+        self.tmp_project = tmp_project
+        self.module_in_tmp_libs = module_in_tmp_libs
+        self.top_module_name = top_module_name
 
     async def exit(self, **kwargs):
         self.running = False
@@ -565,7 +620,14 @@ class InmantaLSHandler(JsonRpcHandler):
         pass
 
     async def textDocument_didSave(self, **kwargs):  # noqa: N802
-        await self.compile_and_anchor()
+        """
+        When saving a sub-module, we will compute the anchormap only for this sub-module.
+        """
+        module_name: Optional[str] = None
+        if kwargs["textDocument"]["uri"]:
+            module_name = self._get_module_fq_name(kwargs["textDocument"]["uri"])
+
+        await self.compile_and_anchor(module_name)
 
     async def textDocument_didClose(self, **kwargs):  # noqa: N802
         pass

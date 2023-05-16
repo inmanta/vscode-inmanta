@@ -58,10 +58,19 @@ export async function activate(context: ExtensionContext) {
 		}
 
 		const uri = event.document.uri;
+
 		let folder = workspace.getWorkspaceFolder(uri);
+
+		if (folder === undefined ){
+			pythonExtensionInstance.updateInmantaEnvVisibility();
+			return;
+		}
+
 		folder = getOuterMostWorkspaceFolder(folder);
+
 		// Update the button visibility when the active editor changes
 		pythonExtensionInstance.updateInmantaEnvVisibility(folder.uri);
+
 		if (event.document.languageId !== 'inmanta' || (event.document.uri.scheme !== 'file')) {
 			return;
 		}
