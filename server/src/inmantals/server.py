@@ -624,7 +624,8 @@ class InmantaLSHandler(JsonRpcHandler):
         When saving a sub-module, we will compute the anchormap only for this sub-module.
         """
         module_name: Optional[str] = None
-        if kwargs["textDocument"]["uri"]:
+        uri: Optional[str] = kwargs.get("textDocument", {}).get("uri", None)
+        if uri:
             module_name = self._get_module_fq_name(kwargs["textDocument"]["uri"])
 
         await self.compile_and_anchor(module_name)
