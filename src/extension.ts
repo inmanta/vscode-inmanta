@@ -62,6 +62,7 @@ export async function activate(context: ExtensionContext) {
 		let folder = workspace.getWorkspaceFolder(uri);
 
 		if (folder === undefined ){
+			// This happens for example when looking at a .py file living in a venv outside of the current workspace, in which case we must hide our button
 			pythonExtensionInstance.updateInmantaEnvVisibility();
 			return;
 		}

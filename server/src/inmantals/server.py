@@ -271,7 +271,7 @@ class Folder:
         compiled_pattern = re.compile(re.escape(pattern))
 
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
-        self.handler.register_tmp_project(tmp_project=tmp_dir, module_in_tmp_libs=compiled_pattern, top_module_name=module_name)
+        self.handler.register_tmp_project(tmp_project=tmp_dir, module_in_tmp_libs=compiled_pattern)
         return inmanta_project_dir
 
     def install_project(self, attach_cf_cache: bool):
@@ -309,8 +309,6 @@ class InmantaLSHandler(JsonRpcHandler):
         # The scope for the 'compilerVenv' and 'repos' settings in the package.json are set to 'resource' to allow different
         # values for each folder in the workspace. See https://github.com/Microsoft/vscode/wiki/Adopting-Multi-Root-Workspace-APIs#settings  # NOQA E501
         self.repos: Optional[str] = None
-        # When working on a module, this keeps track of the topmost module's name
-        self.top_module_name: Optional[str] = None
 
     async def initialize(
         self,
@@ -393,49 +391,6 @@ class InmantaLSHandler(JsonRpcHandler):
         """convert linenr char combination into a single number"""
         assert char < 100000
         return line * 100000 + char
-
-    def _get_module_fq_name(self, path: str) -> Optional[str]:
-        """
-        This method takes a path to an inmanta file assumed to live in an
-        Inmanta module namespace and returns the corresponding fully qualified
-        Inmanta module name, valid as an import statement.
-
-        E.G:
-            In: path = "file:///home/workdir/module_name/model/_init.cf"
-            Out: fqn_name = "module_name"
-
-            In: path = "file:///home/workdir/module_name/model/sub_mod1/sub_mod2/_init.cf"
-            Out: fqn_name = "module_name::sub_mod1::sub_mod2"
-
-            In: path = "file:///home/workdir/module_name/model/sub_mod1/sub_mod2/other.cf"
-            Out: fqn_name = "module_name::sub_mod1::sub_mod2::other"
-
-
-        """
-        if not self.top_module_name:
-            # A project is open, not a module
-            return None
-
-        url = os.path.abspath(path.replace("file://", ""))
-        head, tail = os.path.split(url)
-        top_module_name_hyphens = str.replace(self.top_module_name, "_", "-")
-        subparts: List[str] = url.split(top_module_name_hyphens + "/model/")
-        if len(subparts) != 2:
-            # This happens when we save a .cf file that doesn't live under the current workspace (e.g. in a virtual environment)
-            return self.last_compiled_submodule
-        left, right = subparts
-
-        if tail == "_init.cf":
-            # Import the containing directory
-            fqn_name = self.top_module_name
-            sub_module_ns = str.replace(os.path.dirname(right), "/", "::")
-            if sub_module_ns:
-                fqn_name += "::" + sub_module_ns
-        else:
-            # Import the .cf file itself
-            fqn_name = "::".join([self.top_module_name, str.replace(os.path.splitext(right)[0], "/", "::")])
-
-        return fqn_name
 
     def replace_tmp_path(self, path: str) -> str:
         """
@@ -601,20 +556,16 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(
-        self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern, top_module_name: str
-    ):
+    def register_tmp_project(self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern):
         """
         Bookkeeping method to keep track of things related to the currently opened module
 
         :param tmp_project: Temporary Inmanta project used to compile the opened module
         :param module_in_tmp_libs: Compiled regex pattern used in the replace_tmp_path method
-        :param top_module_name: Top-most Inmanta module name
 
         """
         self.tmp_project = tmp_project
         self.module_in_tmp_libs = module_in_tmp_libs
-        self.top_module_name = top_module_name
 
     async def exit(self, **kwargs):
         self.running = False
