@@ -385,7 +385,6 @@ class InmantaLSHandler(JsonRpcHandler):
         assert char < 100000
         return line * 100000 + char
 
-
     def _get_module_fq_name(self, path: str) -> Optional[str]:
         """
         This method takes a path to an inmanta file assumed to live in an
@@ -411,7 +410,7 @@ class InmantaLSHandler(JsonRpcHandler):
         url = os.path.abspath(path.replace("file://", ""))
         head, tail = os.path.split(url)
         top_module_name_hyphens = str.replace(self.top_module_name, "_", "-")
-        subparts: List[str] = url.split(top_module_name_hyphens+"/model/")
+        subparts: List[str] = url.split(top_module_name_hyphens + "/model/")
         if len(subparts) != 2:
             # This happens when we save a .cf file that doesn't live under the current workspace (e.g. in a virtual environment)
             return self.last_compiled_submodule
@@ -429,7 +428,6 @@ class InmantaLSHandler(JsonRpcHandler):
 
         return fqn_name
 
-
     def replace_tmp_path(self, path: str) -> str:
         """
         This method assumes a module is opened as the root folder. This method makes
@@ -442,7 +440,7 @@ class InmantaLSHandler(JsonRpcHandler):
         """
         return re.sub(pattern=self.module_in_tmp_libs, repl=self.root_folder.folder_path, string=path)
 
-    async def compile_and_anchor(self, module_name: Optional[str]=None) -> None:
+    async def compile_and_anchor(self, module_name: Optional[str] = None) -> None:
         """
         Perform a compile and compute an anchormap for the currently open folder.
         """
@@ -597,7 +595,9 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern, top_module_name: str):
+    def register_tmp_project(
+        self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern, top_module_name: str
+    ):
         """
         Bookkeeping method to keep track of things related to the currently opened module
 
