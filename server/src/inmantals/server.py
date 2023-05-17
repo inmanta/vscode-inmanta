@@ -196,22 +196,34 @@ class Folder:
 
         install_mode = module.InstallMode.master
 
-        v2_metadata_file: str = os.path.join(self.folder_path, module.ModuleV2.MODULE_FILE)
-        v1_metadata_file: str = os.path.join(self.folder_path, module.ModuleV1.MODULE_FILE)
+        def _get_module_name():
+            module_name: Optional[str] = None
+            libs_folder = os.path.join(inmanta_project_dir, "libs")
+            if CORE_VERSION < version.Version("5"):
+                v1_metadata_file: str = os.path.join(self.folder_path, module.Module.MODULE_FILE)
 
-        module_name: Optional[str] = None
-        libs_folder = os.path.join(inmanta_project_dir, "libs")
+                if os.path.exists(v1_metadata_file):
+                    mv1 = module.Module(project=None, path=self.folder_path)
+                    module_name = mv1.name
+                    os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
+                    self.kind = module.Module
+            else:
+                v2_metadata_file: str = os.path.join(self.folder_path, module.ModuleV2.MODULE_FILE)
+                v1_metadata_file: str = os.path.join(self.folder_path, module.ModuleV1.MODULE_FILE)
 
-        if os.path.exists(v1_metadata_file):
-            mv1 = module.ModuleV1(project=None, path=self.folder_path)
-            module_name = mv1.name
-            os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
-            self.kind = module.ModuleV1
+                if os.path.exists(v1_metadata_file):
+                    mv1 = module.ModuleV1(project=None, path=self.folder_path)
+                    module_name = mv1.name
+                    os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
+                    self.kind = module.ModuleV1
 
-        elif os.path.exists(v2_metadata_file):
-            mv2 = module.ModuleV2(project=None, path=self.folder_path, is_editable_install=True)
-            module_name = mv2.name
-            self.kind = module.ModuleV2
+                elif os.path.exists(v2_metadata_file):
+                    mv2 = module.ModuleV2(project=None, path=self.folder_path, is_editable_install=True)
+                    module_name = mv2.name
+                    self.kind = module.ModuleV2
+            return module_name
+
+        module_name = _get_module_name()
 
         if not module_name:
             error_message: str = (
@@ -278,7 +290,7 @@ class Folder:
         module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
         env_path = module.Project.get().virtualenv.env_path
         logger.info("Installing project at %s in env %s.", self.inmanta_project_dir, env_path)
-        if self.kind == module.ModuleV2:
+        if CORE_VERSION >= version.Version("5.dev") and self.kind == module.ModuleV2:
             # If the open folder is a v2 module we must install it in editable mode in the temporary project using the pip
             # indexes set in the "repos" extension setting for its dependencies.
             self.install_v2_module_editable_mode()
@@ -553,7 +565,10 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("shutdown requested...")
         if self.tmp_project:
             self.tmp_project.cleanup()
-        self.threadpool.shutdown(cancel_futures=True)
+        if CORE_VERSION < version.Version("5"):
+            self.threadpool.shutdown()
+        else:
+            self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
     def register_tmp_project(self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern):
@@ -629,7 +644,7 @@ class InmantaLSHandler(JsonRpcHandler):
     def get_definition(self, target: AnchorTarget) -> str:
         file_path = target.location.file
         start_line = target.location.lnr - 1
-        with open(file_path, "r") as f:
+        with open(file_path, "r", encoding="utf8") as f:
             line = f.readlines()[start_line]
         return line
 
@@ -682,7 +697,11 @@ class InmantaLSHandler(JsonRpcHandler):
         data = list(range)[0].data
         docstring = textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
         docstring = docstring.replace(" ", "&nbsp;").replace("\n", "\n\n").strip()
-        definition = self.get_definition(data).strip()
+        try:
+            definition = self.get_definition(data).strip()
+        except FileNotFoundError:
+            return {}
+
         language = self.get_file_type(data.location.file)
         definition_md = f"""
         ```{language}
