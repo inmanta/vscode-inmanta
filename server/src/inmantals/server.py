@@ -199,7 +199,7 @@ class Folder:
         def _get_module_name():
             module_name: Optional[str] = None
             libs_folder = os.path.join(inmanta_project_dir, "libs")
-            if CORE_VERSION < version.Version("5"):
+            if CORE_VERSION < version.Version("5.dev"):
                 v1_metadata_file: str = os.path.join(self.folder_path, module.Module.MODULE_FILE)
 
                 if os.path.exists(v1_metadata_file):
@@ -546,7 +546,7 @@ class InmantaLSHandler(JsonRpcHandler):
         """
         Send a suggestion to the user to run the inmanta project install command when a module install failure is detected.
         """
-        if CORE_VERSION < version.Version("5"):
+        if CORE_VERSION < version.Version("5.dev"):
             # ModuleLoadingException doesn't exist in iso4, use ModuleNotFoundException instead.
             module_loading_exception = module.ModuleNotFoundException
         else:
@@ -565,7 +565,7 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("shutdown requested...")
         if self.tmp_project:
             self.tmp_project.cleanup()
-        if CORE_VERSION < version.Version("5"):
+        if CORE_VERSION < version.Version("5.dev"):
             self.threadpool.shutdown()
         else:
             self.threadpool.shutdown(cancel_futures=True)
