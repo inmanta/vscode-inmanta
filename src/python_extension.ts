@@ -23,8 +23,8 @@ export class PythonExtension {
 		this.executionDetails = pythonApi.settings.getExecutionDetails(workspace.workspaceFolders?.[0].uri);
 		this.pythonApi = pythonApi;
 		this.onChange(pythonApi);
-	}
 
+	}
 
 	/**
 	 * Gets the path to the Python interpreter being used by the extension.
@@ -73,22 +73,26 @@ export class PythonExtension {
 		});
 	}
 
-	async updateInmantaEnvVisibility(document?) {
+	async updateInmantaEnvVisibility(documentURI?) {
 		let venvName = this.virtualEnvName;
 		let folderName = "";
 		let lastActiveFolder = getLastActiveFolder();
 		if (lastActiveFolder) {
 			folderName = lastActiveFolder.name;
 		}
-		if (document) {
-			const uri = document.uri;
-			let folder = workspace.getWorkspaceFolder(uri);
-			if (!folder) {
-				// not clicking on a cf file -> do nothing
-				return;
+		if (documentURI) {
+			try{
+				let folder = workspace.getWorkspaceFolder(documentURI);
+				if (folder) {
+					folderName = folder.name;
+					venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
+				}
 			}
-			folderName = folder.name;
-			venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
+
+			catch (error){
+				console.error(`Failed to get Python version:` + error);
+			}
+			
 		}
 
 		let version ="";
@@ -111,6 +115,7 @@ export class PythonExtension {
 		} else {
 			this.inmantaEnvSelector.hide();
 		}
+
 	}
 
 

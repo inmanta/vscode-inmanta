@@ -241,11 +241,37 @@ class Folder:
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
 
+        def _get_name_spaces(curdir: str, prefix: str) -> List[str]:
+            """
+            Returns a list of all inmanta namespaces living under a root directory
+            """
+            files: List[str] = []
+            init_cf = os.path.join(curdir, "_init.cf")
+            if not os.path.exists(init_cf):
+                return files
+
+            for entry in os.listdir(curdir):
+                sub_path = os.path.join(curdir, entry)
+                if os.path.isdir(sub_path):
+                    files.extend(_get_name_spaces(sub_path, prefix + "::" + entry))
+                elif os.path.splitext(sub_path)[1] == ".cf":
+                    if entry != "_init.cf":
+                        files.append(prefix + "::" + os.path.splitext(entry)[0])
+                    else:
+                        files.append(prefix)
+            return files
+
+        name_spaces = _get_name_spaces(os.path.join(self.folder_path, "model"), module_name)
+
         with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
-            fd.write(f"import {module_name}\n")
+            for name in name_spaces:
+                fd.write(f"import {name}\n")
+
+        pattern = os.path.join(inmanta_project_dir, "libs", module_name)
+        compiled_pattern = re.compile(re.escape(pattern))
 
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
-        self.handler.register_tmp_project(tmp_dir)
+        self.handler.register_tmp_project(tmp_project=tmp_dir, module_in_tmp_libs=compiled_pattern)
         return inmanta_project_dir
 
     def install_project(self, attach_cf_cache: bool):
@@ -368,18 +394,15 @@ class InmantaLSHandler(JsonRpcHandler):
 
     def replace_tmp_path(self, path: str) -> str:
         """
-        This method assumes a module is opened as the root folder.
-        Check if the path to the module in the temporary project libs folder is present in the provided path.
-        If so, the provided path is returned with the path to the temporary project libs folder being
-        replaced by the path to the module at the root folder.
+        This method assumes a module is opened as the root folder. This method makes
+        code navigation transparent to the user by replacing
+            - The path to the module in the temporary project's libs folder
+            by
+            - The path to the module opened as the root folder
 
         :param path: The path in which the replacement should occur.
         """
-        module_name = os.path.basename(os.path.normpath(self.root_folder.folder_path))
-        pattern = os.path.join(self.tmp_project.name, "libs", module_name)
-        str_output = re.sub(pattern, self.root_folder.folder_path, path)
-
-        return str_output
+        return re.sub(pattern=self.module_in_tmp_libs, repl=self.root_folder.folder_path, string=path)
 
     async def compile_and_anchor(self) -> None:
         """
@@ -456,6 +479,8 @@ class InmantaLSHandler(JsonRpcHandler):
             def compute_reverse_anchormap(anchormap):
                 self.reverse_anchormap = {}
                 for k, v in groupby(anchormap, lambda x: x[1].location.file):
+                    if self.tmp_project:
+                        k = self.replace_tmp_path(k)
                     self.reverse_anchormap[os.path.realpath(k)] = treeify_reverse(v)
 
             compute_reverse_anchormap(anchormap)
@@ -531,8 +556,16 @@ class InmantaLSHandler(JsonRpcHandler):
         self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(self, tmp_dir: tempfile.TemporaryDirectory):
-        self.tmp_project = tmp_dir
+    def register_tmp_project(self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern):
+        """
+        Bookkeeping method to keep track of things related to the currently opened module
+
+        :param tmp_project: Temporary Inmanta project used to compile the opened module
+        :param module_in_tmp_libs: Compiled regex pattern used in the replace_tmp_path method
+
+        """
+        self.tmp_project = tmp_project
+        self.module_in_tmp_libs = module_in_tmp_libs
 
     async def exit(self, **kwargs):
         self.running = False

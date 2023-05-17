@@ -23,20 +23,20 @@ export var languageServers: Map<string, LanguageServer> = new Map();
 let sortedWorkspaceFolders: string[] | undefined;
 workspace.onDidChangeWorkspaceFolders(() => sortedWorkspaceFolders = undefined);
 
-
+let pythonExtensionInstance ;
 
 export async function activate(context: ExtensionContext) {
-	// Get and activate the Python extension instance
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
+	
+	// Get and activate the Python extension instance
 	if (pythonExtension === undefined) {
 		throw Error("Python extension not found");
 	}
 
 	log("Activate Python extension");
 	await pythonExtension.activate();
-
 	// Start a new instance of the python extension
-	let pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
+	pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
 	//add the EnvSelector button
 	pythonExtensionInstance.addEnvSelector();
 
@@ -56,22 +56,42 @@ export async function activate(context: ExtensionContext) {
 		if (event === undefined) {
 			return;
 		}
+
 		const uri = event.document.uri;
+
 		let folder = workspace.getWorkspaceFolder(uri);
+
+		if (folder === undefined ){
+			// This happens for example when looking at a .py file living in a venv outside of the current workspace, in which case we must hide our button
+			pythonExtensionInstance.updateInmantaEnvVisibility();
+			return;
+		}
+
 		folder = getOuterMostWorkspaceFolder(folder);
 
+		// Update the button visibility when the active editor changes
+		pythonExtensionInstance.updateInmantaEnvVisibility(folder.uri);
+
+		if (event.document.languageId !== 'inmanta' || (event.document.uri.scheme !== 'file')) {
+			return;
+		}
 		if (folder === lastActiveFolder) {
 			return;
 		}
 		lastActiveFolder = folder;
 		const languageServer = languageServers.get(folder.uri.toString());
 
-		// Update the button visibility when the active editor changes
-		pythonExtensionInstance.updateInmantaEnvVisibility(folder);
 		inmantaCommands.registerCommands(languageServer);
 	}
 
 	async function didOpenTextDocument(document: TextDocument): Promise<void> {
+		pythonExtensionInstance.updateInmantaEnvVisibility(document.uri)
+		// We are only interested in .cf files
+
+		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
+			return;
+		}
+		
 
 		const uri = document.uri;
 
@@ -85,10 +105,6 @@ export async function activate(context: ExtensionContext) {
 		lastActiveFolder = folder;
 		let folderURI = folder.uri.toString();
 
-		// We are only interested in .cf files
-		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
-			return;
-		}
 
 
 		if (!languageServers.has(folderURI)) {
@@ -113,11 +129,19 @@ export async function activate(context: ExtensionContext) {
 			log("created LanguageServer");
 
 			//register listener to restart the LS if the python interpreter changes.
-			pythonExtensionInstance.registerCallbackOnChange((updatedPath, outermost) => {
-				languageserver.updatePythonPath(updatedPath, outermost).then( (res) =>
-					pythonExtensionInstance.updateInmantaEnvVisibility(document)
-				);
-			});
+			pythonExtensionInstance.registerCallbackOnChange(
+				(updatedPath, outermost) => {
+					languageserver.updatePythonPath(updatedPath, outermost).then(
+						res => {
+							pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
+						}
+					).catch(
+						err => {
+					   		console.error(`Error updating python path to ${updatedPath}`);
+					})
+					;
+				}
+			);
 
 
 			inmantaCommands.registerCommands(languageserver);
@@ -133,7 +157,6 @@ export async function activate(context: ExtensionContext) {
 
 			languageServers.set(folder.uri.toString(), languageserver);
 			logMap(languageServers);
-			pythonExtensionInstance.updateInmantaEnvVisibility(document);
 
 		}
 
@@ -171,6 +194,7 @@ export async function activate(context: ExtensionContext) {
 
 export async function deactivate(): Promise<void> {
 	const promises: Thenable<void>[] = [];
+	promises.push(pythonExtensionInstance.deactivate());
 	for (const ls of languageServers.values()) {
 		promises.push(ls.stopServerAndClient());
 	}

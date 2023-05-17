@@ -189,12 +189,12 @@ export class LanguageServer {
 		log(`Comparing outermost: ${outermost} to rooturi: ${this.rootFolder.uri.toString()}`);
 
 		if (outermost === this.rootFolder.uri) {
+			this.pythonPath = newPath;
+			log(`Language server python path changed to ${newPath}`);
 			const canStart = await this.canServerStart(newPath);
 
 			if (canStart === LanguageServerDiagnoseResult.ok) {
-				this.pythonPath = newPath;
-				log(`Language server python path changed to ${newPath}`);
-				this.startOrRestartLS(false, canStart);
+				await this.startOrRestartLS(false, canStart);
 			}
 			else {
 				log(`Language server can't start with interpreter ${newPath}`);
@@ -221,6 +221,7 @@ export class LanguageServer {
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
+
 		const script = "import sys\n" +
 			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
 			"  sys.exit(4)\n" +
@@ -228,10 +229,12 @@ export class LanguageServer {
 			"  import inmantals\n" +
 			"  sys.exit(0)\n" +
 			"except ModuleNotFoundError:\n" +
+			"  real_prefix = getattr(sys, 'real_prefix', None)\n" +
+			"  base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
+			"  running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
+			"  if not running_in_virtualenv:\n" +
+			"    sys.exit(5)\n" + 
 			"  sys.exit(3)";
-			"except ModuleNotFoundError:\n" +
-			"  print(e)\n" +
-			"  sys.exit(5)";
 
 		let spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
@@ -239,6 +242,10 @@ export class LanguageServer {
 			return LanguageServerDiagnoseResult.wrongPythonVersion;
 		} else if (spawnResult.status === 3) {
 			return LanguageServerDiagnoseResult.languageServerNotInstalled;
+		} else if (spawnResult.status === 5) {
+			// This happens when no venv is set (e.g. opening a folder for the first time, a default global env might be selected)
+			// The check itself is nspired by: https://stackoverflow.com/questions/1871549/determine-if-python-is-running-inside-virtualenv/42580137#42580137
+			return LanguageServerDiagnoseResult.wrongInterpreter;
 		} else if (spawnResult.status !== 0) {
 			log("can not start server due to: "+stdout);
 			return LanguageServerDiagnoseResult.unknown;
@@ -262,7 +269,8 @@ export class LanguageServer {
 		let response;
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
-				return this.selectInterpreter(diagnoseId);
+				await this.selectInterpreter(diagnoseId);
+				break;
 			case LanguageServerDiagnoseResult.wrongPythonVersion:
 				response = await window.showErrorMessage(`The Inmanta Language Server requires at least Python 3.6, but the provided interpreter (${this.pythonPath}) is an older version.`,  "Setup assistant");
 				if(response === "Setup assistant"){
@@ -323,7 +331,7 @@ export class LanguageServer {
 		}
 		const msg = reason === LanguageServerDiagnoseResult.wrongLanguageServer
 		? "A new version of the Inmanta Language Server is available. Do you want to update? "
-		: "Inmanta Language Server not installed. Install the Language server? ";
+		: `Inmanta Language Server not installed. Install the Language server in ${this.pythonPath}? `;
 		const response = await window.showErrorMessage(msg, 'Yes', 'No');
 		if(response === 'Yes'){
 			await this.installLanguageServer();
@@ -347,7 +355,7 @@ export class LanguageServer {
 	 * @returns {Promise<void>}
 	 */
 	async installLanguageServer(): Promise<void> {
-		log(`LS install requested for root folder ${this.rootFolder}`);
+		log(`LS install requested for root folder ${JSON.stringify(this.rootFolder)}`);
 
 		this.diagnoseId = uuidv4();
 		if (!this.pythonPath || !fileOrDirectoryExists(this.pythonPath)) {
@@ -355,7 +363,7 @@ export class LanguageServer {
 		}
 		const cmdArgs: string[] = ["-m", "pip", "install"];
 		cmdArgs.push(...this.languageServerVersionToInstall());
-		window.showInformationMessage("Installing Inmanta Language server. This may take a few seconds");
+		window.showInformationMessage(`Installing Inmanta Language server in ${this.pythonPath}. This may take a few seconds`);
 		log("installing LS  with: "+ cmdArgs.join(' '));
 		const child = cp.spawnSync(this.pythonPath, cmdArgs);
 		if (child.status !== 0) {
