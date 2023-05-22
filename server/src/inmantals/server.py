@@ -287,10 +287,13 @@ class Folder:
         return inmanta_project_dir
 
     def install_project(self, attach_cf_cache: bool):
+        """
+        This method is assumed to be called in an iso6+ context
+        """
         module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
         env_path = module.Project.get().virtualenv.env_path
         logger.info("Installing project at %s in env %s.", self.inmanta_project_dir, env_path)
-        if CORE_VERSION >= version.Version("5.dev") and self.kind == module.ModuleV2:
+        if self.kind == module.ModuleV2:
             # If the open folder is a v2 module we must install it in editable mode in the temporary project using the pip
             # indexes set in the "repos" extension setting for its dependencies.
             self.install_v2_module_editable_mode()
@@ -566,6 +569,8 @@ class InmantaLSHandler(JsonRpcHandler):
         if self.tmp_project:
             self.tmp_project.cleanup()
         if CORE_VERSION < version.Version("5.dev"):
+            # The cancel_futures argument doesn't exist for python < 3.9 see:
+            # https://docs.python.org/3.6/library/concurrent.futures.html#concurrent.futures.Executor.shutdown
             self.threadpool.shutdown()
         else:
             self.threadpool.shutdown(cancel_futures=True)
@@ -700,6 +705,8 @@ class InmantaLSHandler(JsonRpcHandler):
         try:
             definition = self.get_definition(data).strip()
         except FileNotFoundError:
+            # Certain keywords e.g. "Entity" are defined internally in virtual files (e.g. 'internal').
+            # Display nothing on hover if the hovered symbol is defined in a file that doesn't exist:
             return {}
 
         language = self.get_file_type(data.location.file)
