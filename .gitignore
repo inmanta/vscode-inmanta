@@ -22,3 +22,5 @@ junit-*
 !.vscode/settings.json.example
 !.vscode/launch.json
 !.vscode/tasks.json
+inmanta-1.3.0.vsix
+requirements.txt
