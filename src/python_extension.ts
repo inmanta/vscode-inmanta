@@ -157,6 +157,9 @@ export class PythonExtension {
 				let newExecutionDetails = pythonApi.settings.getExecutionDetails(resource);
 				let folder = workspace.getWorkspaceFolder(resource);
 				let outermost = getOuterMostWorkspaceFolder(folder).uri;
+				log(`   this.executionDetails ${this.executionDetails.execCommand[0]}`);
+				log(`   newExecutionDetails ${newExecutionDetails.execCommand[0]}`);
+
 				if(this.executionDetails.execCommand[0] !== newExecutionDetails.execCommand[0]){
 					this.executionDetails = newExecutionDetails;
 					for (const callback of this.callBacksOnchange) {
