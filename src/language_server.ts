@@ -66,6 +66,8 @@ export class LanguageServer {
 	pythonPath: string;
 	rootFolder: WorkspaceFolder;
 	diagnoseId: string;
+	starting: boolean;
+	updating_interpreter: boolean;
 	errorHandler: LsErrorHandler;
 	/**
 	 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
@@ -75,6 +77,9 @@ export class LanguageServer {
 	 */
 	constructor(context: ExtensionContext, pythonPath: string, rootFolder: WorkspaceFolder, errorHandler: LsErrorHandler) {
 		log("Creating new language server...");
+		log(`context ${context}`);
+		log(`pythonPath ${pythonPath}`);
+		log(`rootFolder ${JSON.stringify(rootFolder)}`);
 
 		this.context = context;
 		this.pythonPath = pythonPath;
@@ -187,10 +192,17 @@ export class LanguageServer {
 	 */
 	async updatePythonPath(newPath: string, outermost: Uri): Promise<void> {
 		log(`Comparing outermost: ${outermost} to rooturi: ${this.rootFolder.uri.toString()}`);
+		log(`  updatePythonPath: ${this.starting}`);
 
 		if (outermost === this.rootFolder.uri) {
 			this.pythonPath = newPath;
 			log(`Language server python path changed to ${newPath}`);
+			// this.updating_interpreter = false;
+
+			// if (this.starting) {
+			// 	log(`don't respond to updatePythonPath when ls is being started`);
+			// 	return Promise.resolve();
+			// }
 			const canStart = await this.canServerStart(newPath);
 
 			if (canStart === LanguageServerDiagnoseResult.ok) {
@@ -218,6 +230,8 @@ export class LanguageServer {
 		if (pythonPath === undefined) {
 			pythonPath = this.pythonPath;
 		}
+		log(`canServerStart with pythonPath ${pythonPath} `);
+
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
@@ -233,7 +247,7 @@ export class LanguageServer {
 			"  base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
 			"  running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
 			"  if not running_in_virtualenv:\n" +
-			"    sys.exit(5)\n" + 
+			"    sys.exit(5)\n" +
 			"  sys.exit(3)";
 
 		let spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
@@ -267,8 +281,14 @@ export class LanguageServer {
 	 */
 	async proposeSolution(error:LanguageServerDiagnoseResult, diagnoseId: string){
 		let response;
+		log(`proposing solution for ${error}`);
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
+				// if (this.updating_interpreter === true) {
+				// 	log(`interpreter is being updated...`);
+				// 	await Promise.resolve();
+				// }
+				// this.updating_interpreter = true;
 				await this.selectInterpreter(diagnoseId);
 				break;
 			case LanguageServerDiagnoseResult.wrongPythonVersion:
@@ -300,21 +320,30 @@ export class LanguageServer {
 	*    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
 	*/
 	async selectInterpreter(diagnoseId: string):Promise<any>{
-		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
-		if(response === 'Select interpreter'){
-			return await commands.executeCommand('python.setInterpreter');
-		}
+
+		// TODO fix this
+		// if (this.updating_interpreter === true) {
+		// 	log(`interpreter is being updated...`);
+		// 	return Promise.resolve();
+		// }
+		log(`  called selectInterpreter diagnoseId:${diagnoseId} this.diagnoseId ${this.diagnoseId}`);
 		if(this.diagnoseId!==diagnoseId){
 			//another diagnose has been run in the mean time
 			return Promise.resolve();
 		}
-		else{
-			window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
-			if(response === "Setup assistant"){
-				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
-			}
-			return Promise.reject("No Interpreter Selected");
+		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
+		
+		if(response === 'Select interpreter'){
+			await commands.executeCommand('python.setInterpreter');
+			return Promise.resolve();
+			// return commands.executeCommand('python.setInterpreter');
 		}
+	
+		const response2 =  await window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
+		if(response2 === "Setup assistant"){
+			return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
+		}
+		return Promise.reject("No Interpreter Selected");
 	}
 
 	/**
@@ -475,7 +504,7 @@ export class LanguageServer {
 			log(`${JSON.stringify(clientOptions.initializationOptions)}`);
 		} catch (err) {
 			log("Error occured while retrieving client options:" + err);
-			return;
+			return Promise.reject("failed to start LS");
 		}
 		try{
 			if (os.platform() === "win32") {
@@ -600,13 +629,20 @@ export class LanguageServer {
 	 * @param {boolean} start Whether to start the server or restart it.
 	 * @returns {Promise<void>}
 	 */
-	async startOrRestartLS(start: boolean = false, canStart?: LanguageServerDiagnoseResult): Promise<void>{
-		this.diagnoseId = uuidv4();
+	async startOrRestartLS(start: boolean = false, canStart?: LanguageServerDiagnoseResult, diagnoseId?: string): Promise<void>{
+		if (diagnoseId === undefined) {
+			diagnoseId = uuidv4();
+			this.diagnoseId = diagnoseId;
+		}
+		// this.starting = true;
 		if (canStart === undefined) {
 			canStart = await this.canServerStart();
 		}
+		log(`  startOrRestartLS canstart:${canStart}`)
 		if (canStart !== LanguageServerDiagnoseResult.ok){
-			return this.proposeSolution(canStart, this.diagnoseId);
+			await this.proposeSolution(canStart, diagnoseId);
+			// canStart = await this.canServerStart();
+			return await this.startOrRestartLS(start,undefined,diagnoseId);
 		}
 
 		if(start){
@@ -619,6 +655,8 @@ export class LanguageServer {
 		if (enable) {
 			await this.startServerAndClient();
 			window.showInformationMessage(`The Language server has been enabled for folder ${this.rootFolder.name}`);
+			// this.starting = false;
+			
 		}
 
 	}
