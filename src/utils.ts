@@ -26,7 +26,10 @@ export function log(message: string) {
 }
 
 
-export function logMap(map: Map<string, LanguageServer>) {
+export function logMap(map: Map<string, LanguageServer>, msg?: string) {
+	if (msg) {
+		log(msg);
+	}
 	for (let key of map.keys()) {
 		console.log(key);
 	}
