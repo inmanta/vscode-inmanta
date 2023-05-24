@@ -75,9 +75,6 @@ export class LanguageServer {
 	 */
 	constructor(context: ExtensionContext, pythonPath: string, rootFolder: WorkspaceFolder, errorHandler: LsErrorHandler) {
 		log("Creating new language server...");
-		log(`context ${context}`);
-		log(`pythonPath ${pythonPath}`);
-		log(`rootFolder ${JSON.stringify(rootFolder)}`);
 
 		this.context = context;
 		this.pythonPath = pythonPath;
@@ -193,6 +190,7 @@ export class LanguageServer {
 
 		if (outermost === this.rootFolder.uri) {
 			this.pythonPath = newPath;
+			this.diagnoseId = uuidv4();
 			log(`Language server python path changed to ${newPath}`);
 			const canStart = await this.canServerStart(newPath);
 
@@ -202,7 +200,6 @@ export class LanguageServer {
 			else {
 				log(`Language server can't start with interpreter ${newPath}`);
 
-				this.diagnoseId = uuidv4();
 				return this.proposeSolution(canStart, this.diagnoseId);
 			}
 		}
@@ -221,8 +218,6 @@ export class LanguageServer {
 		if (pythonPath === undefined) {
 			pythonPath = this.pythonPath;
 		}
-		log(`canServerStart with pythonPath ${pythonPath} `);
-
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
@@ -272,7 +267,6 @@ export class LanguageServer {
 	 */
 	async proposeSolution(error:LanguageServerDiagnoseResult, diagnoseId: string){
 		let response;
-		log(`proposing solution for ${error}`);
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
 				await this.selectInterpreter(diagnoseId);
@@ -306,30 +300,22 @@ export class LanguageServer {
 	*    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
 	*/
 	async selectInterpreter(diagnoseId: string):Promise<any>{
-
-		// TODO fix this
-		// if (this.updating_interpreter === true) {
-		// 	log(`interpreter is being updated...`);
-		// 	return Promise.resolve();
-		// }
-		log(`  called selectInterpreter diagnoseId:${diagnoseId} this.diagnoseId ${this.diagnoseId}`);
-		if(this.diagnoseId!==diagnoseId){
-			//another diagnose has been run in the mean time
-			return Promise.resolve();
-		}
 		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
 
 		if(response === 'Select interpreter'){
 			await commands.executeCommand('python.setInterpreter');
 			return Promise.resolve();
-			// return commands.executeCommand('python.setInterpreter');
 		}
-
-		const response2 =  await window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
-		if(response2 === "Setup assistant"){
-			return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
+		if(this.diagnoseId!==diagnoseId){
+			//another diagnose has been run in the mean time
+			return Promise.resolve();
+		} else {
+			const response2 =  await window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
+			if(response2 === "Setup assistant"){
+				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
+			}
+			return Promise.reject("No Interpreter Selected");
 		}
-		return Promise.reject("No Interpreter Selected");
 	}
 
 	/**
@@ -490,7 +476,7 @@ export class LanguageServer {
 			log(`${JSON.stringify(clientOptions.initializationOptions)}`);
 		} catch (err) {
 			log("Error occured while retrieving client options:" + err);
-			return Promise.reject("failed to start LS");
+			return Promise.reject("failed retrieving client options");
 		}
 		try{
 			if (os.platform() === "win32") {
@@ -620,7 +606,6 @@ export class LanguageServer {
 		if (canStart === undefined) {
 			canStart = await this.canServerStart();
 		}
-		log(`  startOrRestartLS canstart:${canStart}`)
 		if (canStart !== LanguageServerDiagnoseResult.ok){
 			return this.proposeSolution(canStart, this.diagnoseId);
 		}

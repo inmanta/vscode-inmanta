@@ -24,7 +24,6 @@ export var languageServers: Map<string, LanguageServer> = new Map();
 let pythonExtensionInstance ;
 
 export async function activate(context: ExtensionContext) {
-	log("Activate Inmanta extension");
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
 
 	// Get and activate the Python extension instance
@@ -84,7 +83,6 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function didOpenTextDocument(document: TextDocument): Promise<void> {
-		log(`didOpenTextDocument ${JSON.stringify(document)}`);
 		pythonExtensionInstance.updateInmantaEnvVisibility(document.uri)
 		// We are only interested in .cf files
 
@@ -105,10 +103,6 @@ export async function activate(context: ExtensionContext) {
 		lastActiveFolder = folder;
 		let folderURI = folder.uri.toString();
 
-
-		log(`didOpenTextDocument folderURI ${folderURI}`);
-		log(`didOpenTextDocument languageServers:`);
-		logMap(languageServers, "languageServers");
 		if (!languageServers.has(folderURI)) {
 			/*
 				The document that was just opened is not living inside a folder that has a language server responsible for it.
@@ -127,7 +121,6 @@ export async function activate(context: ExtensionContext) {
 			let newPath = pythonExtensionInstance.getPathForResource(folder.uri);
 
 			let errorHandler = new LsErrorHandler(folder);
-			log("    cstructor call LanguageServer");
 
 			let languageserver = new LanguageServer(context, newPath, folder, errorHandler);
 			log("created LanguageServer");
@@ -142,8 +135,7 @@ export async function activate(context: ExtensionContext) {
 						() => {
 							inmantaCommands.registerCommands(languageserver);
 						}
-					).
-					catch(
+					).catch(
 						err => {
 							console.error(`Error updating python path to ${updatedPath}`);
 					})
@@ -156,17 +148,14 @@ export async function activate(context: ExtensionContext) {
 			// Start the language server if enabled in the workspace configuration
 			const enable: boolean = workspace.getConfiguration('inmanta', folder).ls.enabled;
 			if (enable) {
-
-
 				await languageserver.startOrRestartLS(true);
-
 			}
 
 			log(`adding ${folder.uri.toString()} to languageServers`);
 
 
 			languageServers.set(folder.uri.toString(), languageserver);
-			logMap(languageServers, "languageServers");
+			logMap(languageServers, "languageServers:");
 
 		}
 

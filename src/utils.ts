@@ -30,7 +30,7 @@ export function logMap(map: Map<string, LanguageServer>, msg?: string) {
 		log(msg);
 	}
 	for (let key of map.keys()) {
-		console.log(key);
+		log(key);
 	}
 }
 
