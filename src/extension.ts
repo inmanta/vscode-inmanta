@@ -24,8 +24,10 @@ let sortedWorkspaceFolders: string[] | undefined;
 workspace.onDidChangeWorkspaceFolders(() => sortedWorkspaceFolders = undefined);
 
 let pythonExtensionInstance ;
+log("outer log test");
 
 export async function activate(context: ExtensionContext) {
+	log("Activate Inmanta extension");
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
 
 	// Get and activate the Python extension instance
@@ -201,7 +203,6 @@ export async function activate(context: ExtensionContext) {
 
 export async function deactivate(): Promise<void> {
 	const promises: Thenable<void>[] = [];
-	promises.push(pythonExtensionInstance.deactivate());
 	for (const ls of languageServers.values()) {
 		promises.push(ls.stopServerAndClient());
 	}
