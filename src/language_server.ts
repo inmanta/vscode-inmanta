@@ -190,7 +190,6 @@ export class LanguageServer {
 
 		if (outermost === this.rootFolder.uri) {
 			this.pythonPath = newPath;
-			this.diagnoseId = uuidv4();
 			log(`Language server python path changed to ${newPath}`);
 			const canStart = await this.canServerStart(newPath);
 
@@ -200,6 +199,7 @@ export class LanguageServer {
 			else {
 				log(`Language server can't start with interpreter ${newPath}`);
 
+				this.diagnoseId = uuidv4();
 				return this.proposeSolution(canStart, this.diagnoseId);
 			}
 		}
@@ -303,8 +303,7 @@ export class LanguageServer {
 		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
 
 		if(response === 'Select interpreter'){
-			await commands.executeCommand('python.setInterpreter');
-			return Promise.resolve();
+			return await commands.executeCommand('python.setInterpreter');
 		}
 		if(this.diagnoseId!==diagnoseId){
 			//another diagnose has been run in the mean time
