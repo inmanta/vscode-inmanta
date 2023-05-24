@@ -28,7 +28,7 @@ from collections import abc
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type
-from urllib.parse import urlparse, unquote
+from urllib.parse import unquote, urlparse
 
 from tornado.iostream import BaseIOStream
 
@@ -195,7 +195,7 @@ class Folder:
         os.mkdir(os.path.join(inmanta_project_dir, "libs"))
 
         install_mode = module.InstallMode.master
-        folder_path= unquote(self.folder_path)
+        folder_path = unquote(self.folder_path)
 
         def _get_module_name():
             module_name: Optional[str] = None
