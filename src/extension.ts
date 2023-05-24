@@ -22,7 +22,6 @@ export var languageServers: Map<string, LanguageServer> = new Map();
 
 
 let pythonExtensionInstance ;
-log("outer log test");
 
 export async function activate(context: ExtensionContext) {
 	log("Activate Inmanta extension");
@@ -132,35 +131,35 @@ export async function activate(context: ExtensionContext) {
 
 			let languageserver = new LanguageServer(context, newPath, folder, errorHandler);
 			log("created LanguageServer");
-
+			//register listener to restart the LS if the python interpreter changes.
+			pythonExtensionInstance.registerCallbackOnChange(
+				(updatedPath, outermost) => {
+					languageserver.updatePythonPath(updatedPath, outermost).then(
+						() => {
+							pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
+						}
+					).then(
+						() => {
+							inmantaCommands.registerCommands(languageserver);
+						}
+					).
+					catch(
+						err => {
+							console.error(`Error updating python path to ${updatedPath}`);
+					})
+					;
+				}
+			);
+			inmantaCommands.registerCommands(languageserver);
 
 
 			// Start the language server if enabled in the workspace configuration
 			const enable: boolean = workspace.getConfiguration('inmanta', folder).ls.enabled;
 			if (enable) {
 
-				//register listener to restart the LS if the python interpreter changes.
-				pythonExtensionInstance.registerCallbackOnChange(
-					(updatedPath, outermost) => {
-						languageserver.updatePythonPath(updatedPath, outermost).then(
-							() => {
-								pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
-							}
-						).then(
-							() => {
-								inmantaCommands.registerCommands(languageserver);
-							}
-						).
-						catch(
-							err => {
-								console.error(`Error updating python path to ${updatedPath}`);
-						})
-						;
-					}
-				);
+
 				await languageserver.startOrRestartLS(true);
 
-				inmantaCommands.registerCommands(languageserver);
 			}
 
 			log(`adding ${folder.uri.toString()} to languageServers`);

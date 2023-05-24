@@ -66,8 +66,6 @@ export class LanguageServer {
 	pythonPath: string;
 	rootFolder: WorkspaceFolder;
 	diagnoseId: string;
-	starting: boolean;
-	updating_interpreter: boolean;
 	errorHandler: LsErrorHandler;
 	/**
 	 * Initialize a LanguageServer instance with the given context and PythonExtension instance.
@@ -192,17 +190,10 @@ export class LanguageServer {
 	 */
 	async updatePythonPath(newPath: string, outermost: Uri): Promise<void> {
 		log(`Comparing outermost: ${outermost} to rooturi: ${this.rootFolder.uri.toString()}`);
-		log(`  updatePythonPath: ${this.starting}`);
 
 		if (outermost === this.rootFolder.uri) {
 			this.pythonPath = newPath;
 			log(`Language server python path changed to ${newPath}`);
-			// this.updating_interpreter = false;
-
-			// if (this.starting) {
-			// 	log(`don't respond to updatePythonPath when ls is being started`);
-			// 	return Promise.resolve();
-			// }
 			const canStart = await this.canServerStart(newPath);
 
 			if (canStart === LanguageServerDiagnoseResult.ok) {
@@ -284,11 +275,6 @@ export class LanguageServer {
 		log(`proposing solution for ${error}`);
 		switch (error){
 			case LanguageServerDiagnoseResult.wrongInterpreter:
-				// if (this.updating_interpreter === true) {
-				// 	log(`interpreter is being updated...`);
-				// 	await Promise.resolve();
-				// }
-				// this.updating_interpreter = true;
 				await this.selectInterpreter(diagnoseId);
 				break;
 			case LanguageServerDiagnoseResult.wrongPythonVersion:
@@ -332,13 +318,13 @@ export class LanguageServer {
 			return Promise.resolve();
 		}
 		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
-		
+
 		if(response === 'Select interpreter'){
 			await commands.executeCommand('python.setInterpreter');
 			return Promise.resolve();
 			// return commands.executeCommand('python.setInterpreter');
 		}
-	
+
 		const response2 =  await window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
 		if(response2 === "Setup assistant"){
 			return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
@@ -630,12 +616,12 @@ export class LanguageServer {
 	 * @returns {Promise<void>}
 	 */
 	async startOrRestartLS(start: boolean = false, canStart?: LanguageServerDiagnoseResult): Promise<void>{
+		this.diagnoseId = uuidv4();
 		if (canStart === undefined) {
 			canStart = await this.canServerStart();
 		}
 		log(`  startOrRestartLS canstart:${canStart}`)
 		if (canStart !== LanguageServerDiagnoseResult.ok){
-			this.diagnoseId = uuidv4();
 			return this.proposeSolution(canStart, this.diagnoseId);
 		}
 
@@ -649,7 +635,6 @@ export class LanguageServer {
 		if (enable) {
 			await this.startServerAndClient();
 			window.showInformationMessage(`The Language server has been enabled for folder ${this.rootFolder.name}`);
-			
 		}
 
 	}
