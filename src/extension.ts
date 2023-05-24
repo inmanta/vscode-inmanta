@@ -20,8 +20,6 @@ let lastActiveFolder: WorkspaceFolder = undefined;
 
 export var languageServers: Map<string, LanguageServer> = new Map();
 
-let sortedWorkspaceFolders: string[] | undefined;
-workspace.onDidChangeWorkspaceFolders(() => sortedWorkspaceFolders = undefined);
 
 let pythonExtensionInstance ;
 log("outer log test");
@@ -145,10 +143,15 @@ export async function activate(context: ExtensionContext) {
 				pythonExtensionInstance.registerCallbackOnChange(
 					(updatedPath, outermost) => {
 						languageserver.updatePythonPath(updatedPath, outermost).then(
-							res => {
+							() => {
 								pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
 							}
-						).catch(
+						).then(
+							() => {
+								inmantaCommands.registerCommands(languageserver);
+							}
+						).
+						catch(
 							err => {
 								console.error(`Error updating python path to ${updatedPath}`);
 						})
@@ -156,7 +159,6 @@ export async function activate(context: ExtensionContext) {
 					}
 				);
 				await languageserver.startOrRestartLS(true);
-
 
 				inmantaCommands.registerCommands(languageserver);
 			}
@@ -218,6 +220,3 @@ export function getLastActiveFolder(): WorkspaceFolder {
 	return lastActiveFolder;
 }
 
-export function getSortedWorkspaceFolders(): string[] | undefined {
-	return sortedWorkspaceFolders;
-}

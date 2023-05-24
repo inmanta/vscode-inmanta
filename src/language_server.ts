@@ -629,20 +629,14 @@ export class LanguageServer {
 	 * @param {boolean} start Whether to start the server or restart it.
 	 * @returns {Promise<void>}
 	 */
-	async startOrRestartLS(start: boolean = false, canStart?: LanguageServerDiagnoseResult, diagnoseId?: string): Promise<void>{
-		if (diagnoseId === undefined) {
-			diagnoseId = uuidv4();
-			this.diagnoseId = diagnoseId;
-		}
-		// this.starting = true;
+	async startOrRestartLS(start: boolean = false, canStart?: LanguageServerDiagnoseResult): Promise<void>{
 		if (canStart === undefined) {
 			canStart = await this.canServerStart();
 		}
 		log(`  startOrRestartLS canstart:${canStart}`)
 		if (canStart !== LanguageServerDiagnoseResult.ok){
-			await this.proposeSolution(canStart, diagnoseId);
-			// canStart = await this.canServerStart();
-			return await this.startOrRestartLS(start,undefined,diagnoseId);
+			this.diagnoseId = uuidv4();
+			return this.proposeSolution(canStart, this.diagnoseId);
 		}
 
 		if(start){
@@ -655,7 +649,6 @@ export class LanguageServer {
 		if (enable) {
 			await this.startServerAndClient();
 			window.showInformationMessage(`The Language server has been enabled for folder ${this.rootFolder.name}`);
-			// this.starting = false;
 			
 		}
 
