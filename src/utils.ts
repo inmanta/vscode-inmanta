@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import { workspace, WorkspaceFolder, Uri, Location } from 'vscode';
 import { LanguageServer } from './language_server';
-import {getSortedWorkspaceFolders} from './extension';
 
 /**
  * Checks if a file or directory exists at the specified path.
@@ -26,9 +25,12 @@ export function log(message: string) {
 }
 
 
-export function logMap(map: Map<string, LanguageServer>) {
+export function logMap(map: Map<string, LanguageServer>, msg?: string) {
+	if (msg) {
+		log(msg);
+	}
 	for (let key of map.keys()) {
-		console.log(key);
+		log(key);
 	}
 }
 
@@ -58,8 +60,11 @@ BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CON
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+workspace.onDidChangeWorkspaceFolders(() => _sortedWorkspaceFolders = undefined);
+
+let _sortedWorkspaceFolders: string[] | undefined;
+
 function sortedWorkspaceFolders(): string[] {
-	let _sortedWorkspaceFolders = getSortedWorkspaceFolders();
 	if (_sortedWorkspaceFolders === void 0) {
 		_sortedWorkspaceFolders = workspace.workspaceFolders ? workspace.workspaceFolders.map(folder => {
 			let result = folder.uri.toString();

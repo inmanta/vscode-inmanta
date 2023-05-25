@@ -20,14 +20,12 @@ let lastActiveFolder: WorkspaceFolder = undefined;
 
 export var languageServers: Map<string, LanguageServer> = new Map();
 
-let sortedWorkspaceFolders: string[] | undefined;
-workspace.onDidChangeWorkspaceFolders(() => sortedWorkspaceFolders = undefined);
 
 let pythonExtensionInstance ;
 
 export async function activate(context: ExtensionContext) {
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
-	
+
 	// Get and activate the Python extension instance
 	if (pythonExtension === undefined) {
 		throw Error("Python extension not found");
@@ -91,7 +89,7 @@ export async function activate(context: ExtensionContext) {
 		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
 			return;
 		}
-		
+
 
 		const uri = document.uri;
 
@@ -104,8 +102,6 @@ export async function activate(context: ExtensionContext) {
 		folder = getOuterMostWorkspaceFolder(folder);
 		lastActiveFolder = folder;
 		let folderURI = folder.uri.toString();
-
-
 
 		if (!languageServers.has(folderURI)) {
 			/*
@@ -125,26 +121,29 @@ export async function activate(context: ExtensionContext) {
 			let newPath = pythonExtensionInstance.getPathForResource(folder.uri);
 
 			let errorHandler = new LsErrorHandler(folder);
+
 			let languageserver = new LanguageServer(context, newPath, folder, errorHandler);
 			log("created LanguageServer");
-
 			//register listener to restart the LS if the python interpreter changes.
 			pythonExtensionInstance.registerCallbackOnChange(
 				(updatedPath, outermost) => {
 					languageserver.updatePythonPath(updatedPath, outermost).then(
-						res => {
+						() => {
 							pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
+						}
+					).then(
+						() => {
+							inmantaCommands.registerCommands(languageserver);
 						}
 					).catch(
 						err => {
-					   		console.error(`Error updating python path to ${updatedPath}`);
+							console.error(`Error updating python path to ${updatedPath}`);
 					})
 					;
 				}
 			);
-
-
 			inmantaCommands.registerCommands(languageserver);
+
 
 			// Start the language server if enabled in the workspace configuration
 			const enable: boolean = workspace.getConfiguration('inmanta', folder).ls.enabled;
@@ -156,7 +155,7 @@ export async function activate(context: ExtensionContext) {
 
 
 			languageServers.set(folder.uri.toString(), languageserver);
-			logMap(languageServers);
+			logMap(languageServers, "languageServers:");
 
 		}
 
@@ -180,7 +179,7 @@ export async function activate(context: ExtensionContext) {
 
 	// Subscribe to workspace configuration changes and restart the affected language server(s) if necessary
 	context.subscriptions.push(workspace.onDidChangeConfiguration(async event => {
-		log("config changed" + String(event));
+		log(`config changed ${JSON.stringify(event)}`);
 		const promises: Thenable<void>[] = [];
 		for (const ls of languageServers.values()) {
 			if (event.affectsConfiguration('inmanta', ls.rootFolder)) {
@@ -194,7 +193,6 @@ export async function activate(context: ExtensionContext) {
 
 export async function deactivate(): Promise<void> {
 	const promises: Thenable<void>[] = [];
-	promises.push(pythonExtensionInstance.deactivate());
 	for (const ls of languageServers.values()) {
 		promises.push(ls.stopServerAndClient());
 	}
@@ -210,6 +208,3 @@ export function getLastActiveFolder(): WorkspaceFolder {
 	return lastActiveFolder;
 }
 
-export function getSortedWorkspaceFolders(): string[] | undefined {
-	return sortedWorkspaceFolders;
-}

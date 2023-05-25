@@ -233,7 +233,7 @@ export class LanguageServer {
 			"  base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
 			"  running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
 			"  if not running_in_virtualenv:\n" +
-			"    sys.exit(5)\n" + 
+			"    sys.exit(5)\n" +
 			"  sys.exit(3)";
 
 		let spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
@@ -301,16 +301,16 @@ export class LanguageServer {
 	*/
 	async selectInterpreter(diagnoseId: string):Promise<any>{
 		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
+
 		if(response === 'Select interpreter'){
 			return await commands.executeCommand('python.setInterpreter');
 		}
 		if(this.diagnoseId!==diagnoseId){
 			//another diagnose has been run in the mean time
 			return Promise.resolve();
-		}
-		else{
-			window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
-			if(response === "Setup assistant"){
+		} else {
+			const response2 =  await window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
+			if(response2 === "Setup assistant"){
 				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 			}
 			return Promise.reject("No Interpreter Selected");
@@ -475,7 +475,7 @@ export class LanguageServer {
 			log(`${JSON.stringify(clientOptions.initializationOptions)}`);
 		} catch (err) {
 			log("Error occured while retrieving client options:" + err);
-			return;
+			return Promise.reject("failed retrieving client options");
 		}
 		try{
 			if (os.platform() === "win32") {
