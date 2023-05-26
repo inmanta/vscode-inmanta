@@ -83,7 +83,7 @@ export async function activate(context: ExtensionContext) {
 	}
 
 	async function didOpenTextDocument(document: TextDocument): Promise<void> {
-		pythonExtensionInstance.updateInmantaEnvVisibility(document.uri)
+		pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
 		// We are only interested in .cf files
 
 		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
