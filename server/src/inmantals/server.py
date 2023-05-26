@@ -28,7 +28,7 @@ from collections import abc
 from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from tornado.iostream import BaseIOStream
 
@@ -195,6 +195,7 @@ class Folder:
         os.mkdir(os.path.join(inmanta_project_dir, "libs"))
 
         install_mode = module.InstallMode.master
+        folder_path = unquote(self.folder_path)
 
         def _get_module_name():
             module_name: Optional[str] = None
@@ -208,17 +209,17 @@ class Folder:
                     os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
                     self.kind = module.Module
             else:
-                v2_metadata_file: str = os.path.join(self.folder_path, module.ModuleV2.MODULE_FILE)
-                v1_metadata_file: str = os.path.join(self.folder_path, module.ModuleV1.MODULE_FILE)
+                v2_metadata_file: str = os.path.join(folder_path, module.ModuleV2.MODULE_FILE)
+                v1_metadata_file: str = os.path.join(folder_path, module.ModuleV1.MODULE_FILE)
 
-                if os.path.exists(v1_metadata_file):
-                    mv1 = module.ModuleV1(project=None, path=self.folder_path)
+                if os.path.exists(unquote(v1_metadata_file)):
+                    mv1 = module.ModuleV1(project=None, path=folder_path)
                     module_name = mv1.name
-                    os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
+                    os.symlink(folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
                     self.kind = module.ModuleV1
 
-                elif os.path.exists(v2_metadata_file):
-                    mv2 = module.ModuleV2(project=None, path=self.folder_path, is_editable_install=True)
+                elif os.path.exists(unquote(v2_metadata_file)):
+                    mv2 = module.ModuleV2(project=None, path=folder_path, is_editable_install=True)
                     module_name = mv2.name
                     self.kind = module.ModuleV2
             return module_name
@@ -228,7 +229,7 @@ class Folder:
         if not module_name:
             error_message: str = (
                 "The Inmanta extension only works on projects and modules. "
-                f"Please make sure the folder opened at {self.folder_path} is a valid "
+                f"Please make sure the folder opened at {folder_path} is a valid "
                 "[project](https://docs.inmanta.com/community/latest/model_developers/project_creation.html)"
                 " or "
                 "[module](https://docs.inmanta.com/community/latest/model_developers/module_creation.html)"
@@ -273,7 +274,7 @@ class Folder:
                         files.append(prefix)
             return files
 
-        name_spaces = _get_name_spaces(os.path.join(self.folder_path, "model"), module_name)
+        name_spaces = _get_name_spaces(os.path.join(folder_path, "model"), module_name)
 
         with open(os.path.join(inmanta_project_dir, "main.cf"), "w+") as fd:
             for name in name_spaces:

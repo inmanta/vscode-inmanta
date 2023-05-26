@@ -7,8 +7,8 @@ import * as path from "path";
 import * as fs from "fs";
 import getPort from 'get-port';
 
-import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder, LocationLink, Location, Definition, Position, TextDocument} from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions, integer, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction, ProvideDefinitionSignature, CancellationToken} from 'vscode-languageclient';
+import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder, Location, Definition, Position, TextDocument} from 'vscode';
+import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction, ProvideDefinitionSignature, CancellationToken} from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
 import { fileOrDirectoryExists, isLocation, log } from './utils';
