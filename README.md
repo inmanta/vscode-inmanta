@@ -82,7 +82,7 @@ The selected Python environment will be used to install the Inmanta Language ser
 
 ## Known Issues
 
-None ATM
+The Python extension sometimes crashes when opening an untrusted workspace for the first time. A workaround to this issue is to restart VS Code. See related discussion [here](https://github.com/microsoft/vscode-python/issues/20367).
 
 ## Troubleshooting
 
