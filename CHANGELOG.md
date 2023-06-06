@@ -1,3 +1,6 @@
+# v 1.4.0 (?)
+Changes in this release:
+
 # v 1.3.0 (2023-06-06)
 Changes in this release:
 - Tie the version of the language server to the version of the extension to make sure everything stays compatible and up to date.(#1099)
