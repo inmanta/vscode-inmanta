@@ -1,1 +1,1 @@
-inmantals~=
+inmantals~=1.4.0
