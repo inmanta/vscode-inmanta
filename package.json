@@ -2,7 +2,7 @@
     "name": "inmanta",
     "displayName": "inmanta",
     "description": "Inmanta",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "publisher": "Inmanta",
     "icon": "images/inmanta.ico",
     "license": "Apache-2.0",
@@ -72,12 +72,15 @@
                                 "description": "Dependency module location url.",
                                 "order": 1
                             },
-                            "type":{
+                            "type": {
                                 "type": "string",
-                                "enum": ["git", "package"],
+                                "enum": [
+                                    "git",
+                                    "package"
+                                ],
                                 "markdownEnumDescriptions": [
-                                  "URI of the parent location for a v1 module. (Organization url for github, Group url for gitlab, parent folder for a local repository...)",
-                                  "Pip index url in which to look for v2 modules. ⚠️Be mindful of potential security risks when using more than one index. Please refer to the [documentation](https://docs.inmanta.com/community/latest/reference/projectyml.html#inmanta.module.ProjectMetadata) for more information."
+                                    "URI of the parent location for a v1 module. (Organization url for github, Group url for gitlab, parent folder for a local repository...)",
+                                    "Pip index url in which to look for v2 modules. ⚠️Be mindful of potential security risks when using more than one index. Please refer to the [documentation](https://docs.inmanta.com/community/latest/reference/projectyml.html#inmanta.module.ProjectMetadata) for more information."
                                 ],
                                 "description": "Type of this Dependency module location, one of: [\"git\", \"package\"].",
                                 "order": 2
@@ -86,7 +89,10 @@
                         "markdownDescription": "Dependency module location."
                     },
                     "default": [
-                        {"url": "https://github.com/inmanta/", "type": "git"}
+                        {
+                            "url": "https://github.com/inmanta/",
+                            "type": "git"
+                        }
                     ],
                     "markdownDescription": "List of dependency module locations to indicate the Inmanta extension where to look for dependency modules when working on an individual module.\nWhen working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories and pip indexes defined in the repo section of the [project.yml](https://docs.inmanta.com/community/latest/reference/projectyml.html#project-yml) file.",
                     "scope": "resource"
