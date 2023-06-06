@@ -1,0 +1,8 @@
+author: Inmanta
+author_email: code@inmanta.com
+description: Test module used to check the vs-code extension works fine on a standalone v1 module.
+license: ASL 2.0
+copyright: 2023 Inmanta
+name: module_v1
+version: 0.0.1
+compiler_version: 2019.3

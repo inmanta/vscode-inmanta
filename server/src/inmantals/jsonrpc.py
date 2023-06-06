@@ -43,7 +43,9 @@ def generate_safe_log_file():
     file_name = "vscode-inmanta-%08x.log" % round(time.time() * 1000000)
     while os.path.exists(os.path.join(tempfile.gettempdir(), file_name)):
         file_name = "vscode-inmanta-%08x.log" % round(time.time() * 1000000)
-    return os.path.join(tempfile.gettempdir(), file_name)
+    log_file_path = os.path.join(tempfile.gettempdir(), file_name)
+    logger.debug("generating log file at %s", log_file_path)
+    return log_file_path
 
 
 class ErrorCodes(Enum):
@@ -132,6 +134,7 @@ class JsonRpcHandler(object):
         self.writelock = Semaphore(1)
 
         # Setting up logging for the LServer
+        logging.basicConfig(level=logging.DEBUG)
         self.log_file = generate_safe_log_file()
         formatter = logging.Formatter(fmt="%(asctime)s %(name)-25s%(levelname)-8s%(message)s")
         log_file_stream = logging.FileHandler(self.log_file)
@@ -140,8 +143,6 @@ class JsonRpcHandler(object):
         log_stderr = logging.StreamHandler(sys.stderr)
         log_stderr.setLevel(logging.INFO)
         log_stderr.setFormatter(formatter)
-
-        logging.basicConfig(level=logging.DEBUG)
 
         logging.root.handlers = [log_file_stream, log_stderr]
 
@@ -178,7 +179,7 @@ class JsonRpcHandler(object):
         return contentlength
 
     async def send(self, body: str):
-        with (await self.writelock.acquire()):
+        with await self.writelock.acquire():
             body = body.encode("utf-8")
             length = len(body)
             header = "Content-Length: %d\r\n\r\n" % length

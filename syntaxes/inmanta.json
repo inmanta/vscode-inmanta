@@ -16,8 +16,56 @@
     {
       "include": "#docstrings"
     },
+      {
+      "comment": "Multi line string",
+      "begin": "[\"]{3,5}",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.inmanta"
+        }
+      },
+      "end": "[\"]{3,5}",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.inmanta"
+        }
+      },
+      "name": "string.quoted.triple.inmanta",
+      "patterns": [
+        {
+          "include": "#string_escaped_char"
+        },
+        {
+          "include": "#string_placeholder"
+        }
+      ]
+    },
     {
-      "comment": "Interpreted string literals",
+      "comment": "Interpreted string literals in single quotes",
+      "begin": "'",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.inmanta"
+        }
+      },
+      "end": "'",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.inmanta"
+        }
+      },
+      "name": "string.quoted.simple.inmanta",
+      "patterns": [
+        {
+          "include": "#string_escaped_char"
+        },
+        {
+          "include": "#string_placeholder"
+        }
+      ]
+    },
+    {
+      "comment": "Interpreted string literals in double quotes",
       "begin": "\"",
       "beginCaptures": {
         "0": {

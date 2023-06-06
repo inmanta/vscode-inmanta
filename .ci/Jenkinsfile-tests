@@ -24,6 +24,7 @@ pipeline {
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
       INMANTA_STYLE_CHECK_ENV="${env.WORKSPACE}/style-check-venv"
+      INMANTA_COMPILER_CACHE=0
     }
 
     stages {
@@ -49,7 +50,7 @@ pipeline {
                     python3 -m venv $INMANTA_EXTENSION_TEST_ENV
                     source $INMANTA_EXTENSION_TEST_ENV/bin/activate
                     pip install --upgrade pip
-                    pip install inmantals
+                    pip install --pre ./server
                     deactivate
                     rm -rf node_modules
                     npm i --also=dev
@@ -67,6 +68,36 @@ pipeline {
                         pip install --upgrade pip
                         make pep8
                     '''
+                }
+            }
+        }
+
+        stage("Publish to devpi") {
+            when {
+                expression { BRANCH_NAME == "master" }
+            }
+            steps {
+                withCredentials([
+                usernamePassword(
+                    credentialsId: 'devpi-user',
+                    passwordVariable: 'DEVPI_PASS',
+                    usernameVariable: 'DEVPI_USER'
+                )
+                ]) {
+                    dir(env.INMANTA_LS_PATH){
+                        sh '''
+                        source $INMANTA_LS_TEST_ENV/bin/activate
+                        pip install -U devpi-client
+                        devpi use https://artifacts.internal.inmanta.com/inmanta/dev
+                        devpi login ${DEVPI_USER} --password=${DEVPI_PASS}
+                        rm -f dist/*
+
+                        python3 setup.py egg_info -Db ".dev$(date +'%Y%m%d%H%M%S' --utc)" sdist
+
+                        devpi upload dist/*.dev*
+                        devpi logoff
+                        '''
+                    }
                 }
             }
         }

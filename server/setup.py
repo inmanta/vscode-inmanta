@@ -15,17 +15,15 @@
 
     Contact: code@inmanta.com
 """
-from setuptools import setup, find_packages
 from os import path
 
-requires = [
-    'inmanta-core',
-    'intervaltree'
-]
+from setuptools import find_packages, setup
+
+requires = ["inmanta-core", "intervaltree"]
 
 # read the contents of your README file
 this_directory = path.abspath(path.dirname(__file__))
-with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+with open(path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
@@ -33,28 +31,27 @@ setup(
     package_dir={"": "src"},
     packages=find_packages("src"),
     install_requires=requires,
-
-    version="1.3.1",
-
+    version="1.4.0",
     description="Inmanta Language Server",
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     author="Inmanta",
     author_email="code@inmanta.com",
     license="Apache Software License",
     url="https://github.com/inmanta/vscode-inmanta",
     keywords=["ide", "language-server", "vscode", "inmanta"],
-    classifiers=["Development Status :: 5 - Production/Stable",
-                 "Intended Audience :: Developers",
-                 "Intended Audience :: Telecommunications Industry",
-                 "License :: OSI Approved :: Apache Software License",
-                 "Operating System :: OS Independent",
-                 "Topic :: System :: Systems Administration",
-                 "Topic :: Utilities"],
-
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Telecommunications Industry",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        "Topic :: System :: Systems Administration",
+        "Topic :: Utilities",
+    ],
     entry_points={
-        'console_scripts': [
-            'inmanta-language-server-tcp = inmantals.tcpserver:main',
+        "console_scripts": [
+            "inmanta-language-server-tcp = inmantals.tcpserver:main",
         ],
     },
 )

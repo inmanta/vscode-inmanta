@@ -37,9 +37,10 @@ def main():
     try:
         IOLoop.current().run_sync(handler.start)
     except Exception as e:
-        logging.error(e)
+        logger.error(e)
 
     logger.info("Language server stopped")
+    logger.info("---------------------------------------------")
 
 
 if __name__ == "__main__":

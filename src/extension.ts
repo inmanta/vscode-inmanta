@@ -1,325 +1,210 @@
 'use strict';
 
-import * as net from 'net';
-
-import * as cp from 'child_process';
-import * as path from 'path';
-import * as os from 'os';
-import * as getPort from 'get-port';
-
-import { workspace, ExtensionContext, window, Uri, commands, OutputChannel, extensions } from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorAction, CloseAction, ErrorHandlerResult, CloseHandlerResult } from 'vscode-languageclient';
-import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
+import { workspace, ExtensionContext, extensions, window, commands, WorkspaceFolder, TextDocument, TextEditor } from 'vscode';
 import { PythonExtension, PYTHONEXTENSIONID } from './python_extension';
-import { Mutex } from 'async-mutex';
+import { log, getOuterMostWorkspaceFolder, logMap } from './utils';
+import { LanguageServer, LsErrorHandler } from './language_server';
+import { InmantaCommands } from './commands';
+import { addSetupAssistantButton } from './walkthrough_button';
+
+let inmantaCommands;
+let lastActiveFolder: WorkspaceFolder = undefined;
+
+/*
+	Keep track of active language servers per independant top-most folder in the workspace.
+	We lazily spin up a new language server any time a .cf file living inside a folder is opened for the first time.
+	Once the language server is up, it is added to the languageServers map with the uri of the top-most folder it is
+	responsible for as a key. This allows the servers to be properly stopped if/when the folder is removed from the
+	workspace
+*/
+
+export var languageServers: Map<string, LanguageServer> = new Map();
 
 
-export function log(message: string) {
-	console.log(`[${new Date().toUTCString()}][vscode-inmanta] ${message}`);
-}
-
-// Make sure starting and stopping the server is protected by a mutex
-// To avoid a potential race condition when changing the active venv leading to multiple running language servers
-const mutex = new Mutex();
-let client: LanguageClient;
-let serverProcess: cp.ChildProcess;
+let pythonExtensionInstance ;
 
 export async function activate(context: ExtensionContext) {
-	//use Python extension
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
+
+	// Get and activate the Python extension instance
 	if (pythonExtension === undefined) {
 		throw Error("Python extension not found");
 	}
+
 	log("Activate Python extension");
 	await pythonExtension.activate();
-	const pythonExtentionApi = new PythonExtension(pythonExtension.exports, startOrRestartLS);
+	// Start a new instance of the python extension
+	pythonExtensionInstance = new PythonExtension(pythonExtension.exports);
+	//add the EnvSelector button
+	pythonExtensionInstance.addEnvSelector();
 
-	let lsOutputChannel = null;
+	//adds the SetupAssistantButton Button
+	addSetupAssistantButton();
 
-	async function startServerAndClient() {
-		/**
-		 * Should always run under `mutex` lock.
-		 */
-		log("Start server and client");
-		let clientOptions;
-		try {
-			clientOptions = await getClientOptions();
-			log("Retrieved client options");
-		} catch (err) {
+	// Create a new instance of InmantaCommands to register commands
+	inmantaCommands = new InmantaCommands(context);
+
+	inmantaCommands.registerCommand(`inmanta.openWalkthrough`, () => {
+		commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
+	});
+
+	function changeActiveTextEditor(event: TextEditor) {
+		// Any time we select a .cf file from another folder in the workspace we have to override the already registered commands
+		// so that they operate on the desired folders, with the correct virtual environment.
+		if (event === undefined) {
 			return;
 		}
-		try{
-			if (os.platform() === "win32") {
-				await startTcp(clientOptions);
-			} else {
-				await startPipe(clientOptions);
-			}
-		} catch (err) {
-			log(`Could not start Language Server: ${err.message}`);
-			window.showErrorMessage('Inmanta Language Server: rejected to start' + err.message);
+
+		const uri = event.document.uri;
+
+		let folder = workspace.getWorkspaceFolder(uri);
+
+		if (folder === undefined ){
+			// This happens for example when looking at a .py file living in a venv outside of the current workspace, in which case we must hide our button
+			pythonExtensionInstance.updateInmantaEnvVisibility();
+			return;
 		}
+
+		folder = getOuterMostWorkspaceFolder(folder);
+
+		// Update the button visibility when the active editor changes
+		pythonExtensionInstance.updateInmantaEnvVisibility(folder.uri);
+
+		if (event.document.languageId !== 'inmanta' || (event.document.uri.scheme !== 'file')) {
+			return;
+		}
+		if (folder === lastActiveFolder) {
+			return;
+		}
+		lastActiveFolder = folder;
+		const languageServer = languageServers.get(folder.uri.toString());
+
+		inmantaCommands.registerCommands(languageServer);
 	}
 
-	async function getClientOptions(): Promise<LanguageClientOptions> {
-		let compilerVenv: string = workspace.getConfiguration('inmanta').compilerVenv;
-		if (context.storageUri === undefined) {
-			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
-			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
-		}
-		const errorhandler = new LsErrorHandler();
+	async function didOpenTextDocument(document: TextDocument): Promise<void> {
+		pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
+		// We are only interested in .cf files
 
-		const clientOptions: LanguageClientOptions = {
-			// Register the server for inmanta documents
-			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
-			errorHandler: errorhandler,
-			revealOutputChannelOn: RevealOutputChannelOn.Info,
-			initializationOptions: {
-				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
-			}
-		};
-		return clientOptions;
-	}
-
-	async function startTcp(clientOptions: LanguageClientOptions) {
-		const host = "127.0.0.1";
-		// Get a random free port on 127.0.0.1
-		const serverPort = await getPort({ host: host });
-
-		const options: cp.SpawnOptionsWithoutStdio = {};
-		if (process.env.INMANTA_LS_LOG_PATH) {
-			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`);
-			options.env = {
-				"LOG_PATH": process.env.INMANTA_LS_LOG_PATH  // eslint-disable-line @typescript-eslint/naming-convention
-			};
+		if (document.languageId !== 'inmanta' || (document.uri.scheme !== 'file')) {
+			return;
 		}
 
-		serverProcess = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmantals.tcpserver", serverPort.toString()], options);
-		let started = false;
-		serverProcess.stdout.on('data', (data) => {
-			lsOutputChannel.appendLine(`stdout: ${data}`);
-			if (data.includes("starting")) {
-				started = true;
-			}
-		});
 
-		if (lsOutputChannel === null) {
-			lsOutputChannel = window.createOutputChannel("Inmanta Language Server");
+		const uri = document.uri;
+
+		let folder = workspace.getWorkspaceFolder(uri);
+		// Files outside a folder can't be handled.
+		if (!folder) {
+			return;
 		}
-		serverProcess.stderr.on('data', (data) => {
-			lsOutputChannel.appendLine(`stderr: ${data}`);
-		});
+		// If we have nested workspace folders we only start a language server on the outer most workspace folder.
+		folder = getOuterMostWorkspaceFolder(folder);
+		lastActiveFolder = folder;
+		let folderURI = folder.uri.toString();
 
-		const timeout: number = 10000;
-		const start = Date.now();
-		// Wait for server to start
-		await new Promise<void>((resolve, reject) =>  {
-			const interval = setInterval(() => {
-				if (Date.now() - start > timeout) {
-					window.showErrorMessage("Couldn't start language server");
-					clearInterval(interval);
-					reject();
-				}
-				if (started) {
-					clearInterval(interval);
-					resolve();
-				}
-			}, 500);
-		});
+		if (!languageServers.has(folderURI)) {
+			/*
+				The document that was just opened is not living inside a folder that has a language server responsible for it.
+				We need to start a new language server for this folder. For a seamless user experience, we mimick the behaviour
+				of the pylance extension:
 
-		let serverOptions: ServerOptions = function () {
-			let socket = net.connect({ port: serverPort, host: host});
-			const streamInfo = {
-				reader: socket,
-				writer: socket
-			};
-			return Promise.resolve(streamInfo);
-		};
+				- Case 1: a venv for this folder has already been selected in the past and persisted by vs code in the persistent
+				storage ==> we simply use this venv and start a new language server. see https://github.com/microsoft/vscode-python/wiki/Setting-descriptions#pythondefaultinterpreterpath)
 
-		client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
-		// Create the language client and start the client.
-		await client.start();
-	}
+				- Case 2: this is a fresh folder with no pre-selected venv
+					* if a workspace-wide venv has been selected -> use this one
+					* use the default environment used by the python extension (https://code.visualstudio.com/docs/python/environments#_where-the-extension-looks-for-environments)
 
-	function installLanguageServer(pythonPath: string, startServer?: boolean): void {
-		const args = ["-m", "pip", "install"];
-		if (process.env.INMANTA_LS_PATH) {
-			args.push("-e", process.env.INMANTA_LS_PATH);
-			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
-		} else {
-			args.push("inmantals");
-		}
-		const child = cp.spawnSync(pythonPath, args);
-		if (child.status !== 0) {
-			log(`Can not start server and client`);
-			window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`);
-		} else if (startServer) {
-			log(`Starting server and client`);
-			startOrRestartLS(true);
-		}
-	}
+			*/
 
-	class LsErrorHandler implements ErrorHandler {
+			let newPath = pythonExtensionInstance.getPathForResource(folder.uri);
 
-		_child: cp.ChildProcess;
+			let errorHandler = new LsErrorHandler(folder);
 
-		notInstalled() {
-			window.showErrorMessage(`Inmanta Language Server not installed, run "${pythonExtentionApi.pythonPath} -m pip install inmantals" ?`, 'Yes', 'No').then(
-				(answer) => {
-					if (answer === 'Yes') {
-						installLanguageServer(pythonExtentionApi.pythonPath, true);
-					}
+			let languageserver = new LanguageServer(context, newPath, folder, errorHandler);
+			log("created LanguageServer");
+			//register listener to restart the LS if the python interpreter changes.
+			pythonExtensionInstance.registerCallbackOnChange(
+				(updatedPath, outermost) => {
+					languageserver.updatePythonPath(updatedPath, outermost).then(
+						() => {
+							pythonExtensionInstance.updateInmantaEnvVisibility(document.uri);
+						}
+					).then(
+						() => {
+							inmantaCommands.registerCommands(languageserver);
+						}
+					).catch(
+						err => {
+							console.error(`Error updating python path to ${updatedPath}`);
+					})
+					;
 				}
 			);
-		}
+			inmantaCommands.registerCommands(languageserver);
 
-		async diagnose() {
-			if (this._child !== undefined) {
-				return;
-			}
 
-			const script = "import sys\n" +
-				"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
-				"  exit(4)\n" +
-				"try:\n" +
-				"  import inmantals.pipeserver\n" +
-				"  sys.exit(0)\n" +
-				"except:\n" +
-				"  sys.exit(3)";
-
-			let spawn_result = cp.spawnSync(pythonExtentionApi.pythonPath, ["-c", script]);
-			if (spawn_result.status === 4) {
-				window.showErrorMessage(`Inmanta Language Server requires at least python 3.6, the python binary provided at ${pythonExtentionApi.pythonPath} is an older version`);
-			} else if (spawn_result.status === 3) {
-				this.notInstalled();
-			} else {
-				const data = this._child.stdout.read();
-				window.showErrorMessage("Inmanta Language Server could not start, could not determined cause of failure" + data);
-			}
-		}
-
-		error(error: Error, message: Message | undefined, count: number | undefined): ErrorHandlerResult {
-			this.diagnose();
-			return {action: ErrorAction.Shutdown};
-		}
-
-		closed(): CloseHandlerResult{
-			this.diagnose();
-			return {action: CloseAction.DoNotRestart};
-		}
-
-	}
-
-	async function startPipe(clientOptions: LanguageClientOptions) {
-		log(`Python path is ${pythonExtentionApi.pythonPath}`);
-
-		const serverOptions: ServerOptions = {
-			command: pythonExtentionApi.pythonPath,
-			args: ["-m", "inmantals.pipeserver"],
-			options: {
-				env: {}
-			}
-		};
-
-		if (process.env.INMANTA_LS_LOG_PATH) {
-			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`);
-			serverOptions.options.env["LOG_PATH"] = process.env.INMANTA_LS_LOG_PATH;
-		}
-
-		// Create the language client and start the client.
-		client = new LanguageClient('inmanta-ls', 'Inmanta Language Server', serverOptions, clientOptions);
-		log(`Starting Language Client with options: ${JSON.stringify({
-			serverOptions: serverOptions,
-			clientOptions: clientOptions
-		}, null, 2)}`);
-		await client.start();
-	}
-
-	function registerExportCommand() {
-		const commandId = 'inmanta.exportToServer';
-
-		const commandHandler = (openedFileObj: object) => {
-			const pathOpenedFile: string = String(openedFileObj);
-			const cwdCommand: string = path.dirname(Uri.parse(pathOpenedFile).fsPath);
-			const child = cp.spawn(pythonExtentionApi.pythonPath, ["-m", "inmanta.app", "-vv", "export"], {cwd: `${cwdCommand}`});
-
-			if (exportToServerChannel === null) {
-				exportToServerChannel = window.createOutputChannel("export to inmanta server");
-			}
-
-			// Clear the log and show the `export to inmanta server` log window to the user
-			exportToServerChannel.clear();
-			exportToServerChannel.show();
-
-			child.stdout.on('data', (data) => {
-				exportToServerChannel.appendLine(`stdout: ${data}`);
-			});
-
-			child.stderr.on('data', (data) => {
-				exportToServerChannel.appendLine(`stderr: ${data}`);
-			});
-
-			child.on('close', (code) => {
-				if (code === 0) {
-					exportToServerChannel.appendLine("Export successful");
-				} else {
-					exportToServerChannel.appendLine(`Export failed (exitcode=${code})`);
-				}
-			});
-		};
-
-		context.subscriptions.push(commands.registerCommand(commandId, commandHandler));
-    }
-
-	async function startOrRestartLS(start: boolean = false) {
-		await mutex.runExclusive(async () => {
-			if(start){
-				log("starting Language Server");
-			} else {
-				log("restarting Language Server");
-			}
-			const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
-			await stopServerAndClient();
+			// Start the language server if enabled in the workspace configuration
+			const enable: boolean = workspace.getConfiguration('inmanta', folder).ls.enabled;
 			if (enable) {
-				startServerAndClient();
+				await languageserver.startOrRestartLS(true);
 			}
-		});
-	}
 
-	const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
-	if (enable) {
-		await startOrRestartLS(true);
-	}
+			log(`adding ${folder.uri.toString()} to languageServers`);
 
-	context.subscriptions.push(workspace.onDidChangeConfiguration(async e => {
-		if (e.affectsConfiguration('inmanta')) {
-			await startOrRestartLS();
+
+			languageServers.set(folder.uri.toString(), languageserver);
+			logMap(languageServers, "languageServers:");
+
 		}
+
+
+	}
+
+	workspace.onDidOpenTextDocument(didOpenTextDocument);
+	workspace.textDocuments.forEach(didOpenTextDocument);
+	window.onDidChangeActiveTextEditor((event: TextEditor) => changeActiveTextEditor(event));
+	workspace.onDidChangeWorkspaceFolders((event) => {
+		log("workspaces changed" + String(event));
+		for (const folder of event.removed) {
+			const ls = languageServers.get(folder.uri.toString());
+			if (ls) {
+				languageServers.delete(folder.uri.toString());
+				ls.stopServerAndClient();
+				ls.cleanOutputChannel();
+			}
+		}
+	});
+
+	// Subscribe to workspace configuration changes and restart the affected language server(s) if necessary
+	context.subscriptions.push(workspace.onDidChangeConfiguration(async event => {
+		log(`config changed ${JSON.stringify(event)}`);
+		const promises: Thenable<void>[] = [];
+		for (const ls of languageServers.values()) {
+			if (event.affectsConfiguration('inmanta', ls.rootFolder)) {
+				promises.push(ls.startOrRestartLS());
+			}
+		}
+		await Promise.all(promises);
 	}));
 
-	let exportToServerChannel: OutputChannel = null;
-	registerExportCommand();
 }
 
-async function stopServerAndClient() {
-	/**
-	 * Should always execute under the `mutex` lock.
-	 */
-	if (client) {
-		if(client.needsStop()){
-			await client.stop();
-		}
-		client = undefined;
+export async function deactivate(): Promise<void> {
+	const promises: Thenable<void>[] = [];
+	for (const ls of languageServers.values()) {
+		promises.push(ls.stopServerAndClient());
 	}
-	if(serverProcess){
-		if(!serverProcess.exitCode){
-			serverProcess.kill();
-		}
-		serverProcess = undefined;
-	}
+	await Promise.all(promises);
 }
 
-export async function deactivate(){
-	await mutex.runExclusive(async () => {
-		return stopServerAndClient();
-	});
+
+export function getLanguageMap(): Map<string, LanguageServer> {
+	return languageServers;
 }
+
+export function getLastActiveFolder(): WorkspaceFolder {
+	return lastActiveFolder;
+}
+

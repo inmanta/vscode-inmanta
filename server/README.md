@@ -20,12 +20,14 @@ which can be configured with the `compilerVenv` option.
 
 ## Features
 
-1. navigate-to-defintion on types
+1. navigate-to-definition on types
+2. docstring display on hover
+3. find references to a symbol (e.g. right-click > Find All References)
+4. supports working on an Inmanta project or an Inmanta module
 
 ## Not supported yet
 
-1. re-load code (not upon edit or upon save, need to close vscode)
-2. work with incorrect models (needs to compile, all or nothing)
+1. work with incorrect models (needs to compile, all or nothing)
 
 ## Troubleshooting
 

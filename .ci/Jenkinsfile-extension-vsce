@@ -7,6 +7,11 @@ pipeline {
             choices: ['none', 'patch', 'minor', 'major'],
             description: 'Indicates what kind of version bump should be done for the extension.',
         )
+        string(
+            name: "LS_version",
+            defaultValue: "latest",
+            description: "The version (semver format ex. 1.3.0 or latest) of the LS that will be tied to this release of the extenstion.",
+        )
         booleanParam(
             name: 'run_job',
             defaultValue: false,
@@ -40,6 +45,8 @@ pipeline {
                     checkout scm
                     withCredentials([string(credentialsId: 'fff7ef7e-cb20-4fb2-a93b-c5139463c6bf', variable: 'GITHUB_TOKEN')]) {
                         sh '''
+                            python3 -m venv ${WORKSPACE}/env
+                            ${WORKSPACE}/env/bin/pip install -U pip wheel
                             # set up git ASK_PASS
                             echo 'echo \${GITHUB_TOKEN}' > ${GIT_ASKPASS}
                             chmod u+x ${GIT_ASKPASS}
@@ -91,6 +98,18 @@ pipeline {
                             git checkout next
                             git pull
                             git merge -X theirs issue/version-bump-extension
+
+
+                            # add a requirements.txt file to tie the extenstion to a server version
+                            if [[ "${LS_version}" == "latest" ]]; then
+                                ${WORKSPACE}/env/bin/pip install inmantals
+                            else
+                                ${WORKSPACE}/env/bin/pip install inmantals=="${LS_version}"
+                            fi
+                            ls_version=$(${WORKSPACE}/env/bin/pip freeze | grep inmantals | cut -d'=' -f3
+                            echo "inmantals~=${ls_version}" > requirements.txt
+                            git commit -m "add requirements.txt file to tie the inmantals version (${ls_version}) to the extension" requirements.txt
+
                             git push origin next
 
                             # Create a pull request to bump the version on master
@@ -171,7 +190,8 @@ pipeline {
                         npm ci --omit dev
                         find node_modules/ -mindepth 1 -maxdepth 1 -exec echo '!{}/**' \\; >> .vscodeignore
                         npm i
-                        $(npm bin)/vsce package
+
+                        node_modules/.bin/vsce package
                         git checkout .
                     '''
                 }

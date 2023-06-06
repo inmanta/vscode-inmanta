@@ -2,7 +2,7 @@
     "name": "inmanta",
     "displayName": "inmanta",
     "description": "Inmanta",
-    "version": "1.2.2",
+    "version": "1.3.0",
     "publisher": "Inmanta",
     "icon": "images/inmanta.ico",
     "license": "Apache-2.0",
@@ -59,7 +59,37 @@
                     "type": "string",
                     "default": "",
                     "description": "Path to the Python virtual environment used by the compiler. Will only be used by language server if inmanta-core<6. Leave empty to use the default. Only available when using Inmanta versions higher than 2020.5 in the language server environment.",
-                    "scope": "window"
+                    "scope": "resource"
+                },
+                "inmanta.repos": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "title": "Dependency module location",
+                        "properties": {
+                            "url": {
+                                "type": "string",
+                                "description": "Dependency module location url.",
+                                "order": 1
+                            },
+                            "type":{
+                                "type": "string",
+                                "enum": ["git", "package"],
+                                "markdownEnumDescriptions": [
+                                  "URI of the parent location for a v1 module. (Organization url for github, Group url for gitlab, parent folder for a local repository...)",
+                                  "Pip index url in which to look for v2 modules. ⚠️Be mindful of potential security risks when using more than one index. Please refer to the [documentation](https://docs.inmanta.com/community/latest/reference/projectyml.html#inmanta.module.ProjectMetadata) for more information."
+                                ],
+                                "description": "Type of this Dependency module location, one of: [\"git\", \"package\"].",
+                                "order": 2
+                            }
+                        },
+                        "markdownDescription": "Dependency module location."
+                    },
+                    "default": [
+                        {"url": "https://github.com/inmanta/", "type": "git"}
+                    ],
+                    "markdownDescription": "List of dependency module locations to indicate the Inmanta extension where to look for dependency modules when working on an individual module.\nWhen working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories and pip indexes defined in the repo section of the [project.yml](https://docs.inmanta.com/community/latest/reference/projectyml.html#project-yml) file.",
+                    "scope": "resource"
                 }
             }
         },
@@ -67,6 +97,26 @@
             {
                 "command": "inmanta.exportToServer",
                 "title": "Export to server",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.installLS",
+                "title": "Install the inmanta Language Server",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.activateLS",
+                "title": "Activate the inmanta Language Server",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.projectInstall",
+                "title": "Install all modules required for the active project",
+                "category": "inmanta"
+            },
+            {
+                "command": "inmanta.openWalkthrough",
+                "title": "Open Inmanta Walkthrough",
                 "category": "inmanta"
             }
         ],
@@ -78,23 +128,70 @@
                     "group": "navigation"
                 }
             ]
-        }
+        },
+        "walkthroughs": [
+            {
+                "id": "inmanta.walkthrough",
+                "title": "Get started with the Inmanta extension",
+                "description": "This walk-through helps you getting started with the development of Inmanta modules and projects.",
+                "steps": [
+                    {
+                        "id": "inmanta.setVenv",
+                        "title": "Select a virtual environment",
+                        "description": "This step is to ensure a virtual environment will be used. \n[Select Environment](command:python.setInterpreter)",
+                        "media": {
+                            "markdown": "media/markdown_env.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.installLanguageServer",
+                        "title": "Install the Language Server",
+                        "description": "Install the language server to enjoy features like Syntax highlighting, Code navigation and many more. \n[Install Language Server](command:inmanta.installLS)",
+                        "media": {
+                            "markdown": "media/markdown_install_ls.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.setModuleDependencyLocations",
+                        "title": "Setup module dependency locations",
+                        "description": "Edit setting.\n[Go to setting](command:workbench.action.openSettings?%5B%22inmanta%3A%20Repos%22%5D)",
+                        "media": {
+                            "markdown": "media/markdown_set_module_dependency.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.activateLanguageServer",
+                        "title": "Make sure the Language Server is enabled",
+                        "description": "To have the language server start, it needs to be activated in the settings.  \n[Activate Language Server](command:inmanta.activateLS)",
+                        "media": {
+                            "markdown": "media/markdown_activate_ls.md"
+                        }
+                    },
+                    {
+                        "id": "inmanta.projectInstall",
+                        "title": "Install all modules required for the active project",
+                        "description": "Make sure all the missing modules are installed in the development virtual environment. \n[Install dependencies](command:inmanta.projectInstall)",
+                        "media": {
+                            "markdown": "media/markdown_project_install.md"
+                        }
+                    }
+                ]
+            }
+        ]
     },
     "dependencies": {
         "async-mutex": "^0.4.0",
         "get-port": "^5.1.1",
         "log-symbols": "^5.1.0",
-        "lru-cache": "^7.14.1",
-        "minimatch": "^5.1.2",
-        "vscode-languageclient": "^8.0.2"
+        "lru-cache": "^9.1.2",
+        "minimatch": "^9.0.1",
+        "uuid": "^9.0.0",
+        "vscode-languageclient": "^8.1.0"
     },
-    "activationEvents": [
-        "onLanguage:inmanta",
-        "onCommand:inmanta.exportToServer"
-    ],
     "extensionDependencies": [
         "ms-python.python"
     ],
+    "activationEvents": [],
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "rimraf out && tsc -p ./",
@@ -104,25 +201,23 @@
         "test": "node ./out/test/runTest.js"
     },
     "devDependencies": {
-        "@types/fs-extra": "^9.0.13",
-        "@types/glob": "^8.0.0",
+        "@types/fs-extra": "^11.0.1",
         "@types/mocha": "^10.0.1",
-        "@types/node": "^18.11.17",
-        "@types/rimraf": "^3.0.2",
-        "@types/semver": "^7.3.13",
+        "@types/node": "^20.2.5",
+        "@types/semver": "^7.5.0",
         "@types/vscode": "^1.63.2",
-        "@typescript-eslint/eslint-plugin": "^5.47.0",
-        "@typescript-eslint/parser": "^5.47.0",
-        "@vscode/test-electron": "^2.2.1",
-        "@vscode/vsce": "^2.16.0",
-        "eslint": "^8.30.0",
+        "@typescript-eslint/eslint-plugin": "^5.59.8",
+        "@typescript-eslint/parser": "^5.59.8",
+        "@vscode/test-electron": "^2.3.2",
+        "@vscode/vsce": "^2.19.0",
+        "eslint": "^8.42.0",
         "eslint-config-google": "^0.14.0",
-        "fs-extra": "^11.1.0",
-        "glob": "^8.0.3",
+        "fs-extra": "^11.1.1",
+        "glob": "^10.2.6",
         "mocha": "^10.2.0",
-        "rimraf": "^3.0.2",
-        "semver": "^7.3.8",
-        "typescript": "^4.9.4"
+        "rimraf": "^5.0.1",
+        "semver": "^7.5.1",
+        "typescript": "^5.1.3"
     },
     "main": "./out/extension"
 }

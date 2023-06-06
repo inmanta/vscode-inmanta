@@ -15,6 +15,8 @@
 
     Contact: code@inmanta.com
 """
+from pydantic import FileUrl
+
 """
     This module contains types as specified in the
     `LSP spec 3.15 <https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/>`__
@@ -104,7 +106,6 @@ class Diagnostic(LspModel):
 
 
 class SymbolKind(Enum):
-
     # supported by default
     File: int = 1
     Module: int = 2
@@ -185,3 +186,12 @@ class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams):
     """
 
     query: str
+
+
+class WorkspaceFolder(LspModel):
+    """
+    Folder living inside a vscode workspace.
+    """
+
+    uri: FileUrl
+    name: str

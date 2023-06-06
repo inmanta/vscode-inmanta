@@ -3,7 +3,7 @@ import { after, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-import { Uri, window, commands, workspace, TextDocument, Position, Range, Location, TextEditor, SnippetString } from 'vscode';
+import { Uri, window, commands, workspace, TextDocument, Position, Range, Location } from 'vscode';
 import { waitForCompile } from '../helpers';
 
 const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
@@ -36,10 +36,11 @@ describe('Language Server Code navigation', () => {
 			assert.strictEqual(typeInDifferentFile[0].uri.fsPath, path.resolve(libsPath, "testmodule", "model", "_init.cf"));
 			assert.deepStrictEqual(typeInDifferentFile[0].range, new Range(new Position(0, 8), new Position(0, 11)), "Attribute location in different file doesn't match");
 
+
 			const pluginLocation = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(17, 15));
 			assert.strictEqual((pluginLocation as Location[]).length, 1);
 			assert.strictEqual(pluginLocation[0].uri.fsPath, path.resolve(libsPath, "testmodule", "plugins", "__init__.py"));
-			assert.deepStrictEqual(pluginLocation[0].range, new Range(new Position(4, 0), new Position(5, 0)), "Plugin location doesn't match");
+			assert.deepStrictEqual(pluginLocation[0].range, new Range(new Position(4, 4), new Position(4, 8)), "Plugin location doesn't match");
 			resolve();
 		});
 	}).timeout(0);
