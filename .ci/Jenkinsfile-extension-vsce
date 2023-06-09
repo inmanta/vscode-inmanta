@@ -101,7 +101,7 @@ pipeline {
 
 
                             if [ -f "${WORKSPACE}/requirements.txt" ]; then
-                                echo "Error: requirements.txt already file exists. Stopping execution."
+                                echo "Error: requirements.txt already exists. Stopping execution."
                                 exit 1
                             fi
 
@@ -111,7 +111,7 @@ pipeline {
                             else
                                 ${WORKSPACE}/env/bin/pip install inmantals=="${LS_version}"
                             fi
-                            
+
                             ls_version=$(${WORKSPACE}/env/bin/pip freeze | grep -E '^inmantals==[0-9]+\.[0-9]+\.[0-9]+$' | cut -d'=' -f3)
 
                             if [[ -z "${ls_version}" ]]; then
