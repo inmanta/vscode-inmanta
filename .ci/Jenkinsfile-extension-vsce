@@ -107,6 +107,12 @@ pipeline {
                                 ${WORKSPACE}/env/bin/pip install inmantals=="${LS_version}"
                             fi
                             ls_version=$(${WORKSPACE}/env/bin/pip freeze | grep inmantals | cut -d'=' -f3)
+
+                            if [[ -z "${ls_version}" ]]; then
+                                echo "Error: ls_version not found. Stopping execution."
+                                exit 1
+                            fi
+
                             echo "inmantals~=${ls_version}" > requirements.txt
                             git add requirements.txt -f
                             git commit -m "add requirements.txt file to tie the inmantals version (${ls_version}) to the extension"
