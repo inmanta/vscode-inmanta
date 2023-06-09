@@ -100,6 +100,11 @@ pipeline {
                             git merge -X theirs issue/version-bump-extension
 
 
+                            if [ -f "$file" ]; then
+                                echo "Error: requirements.txt already file exists. Stopping execution."
+                                exit 1
+                            fi
+
                             # add a requirements.txt file to tie the extenstion to a server version
                             if [[ "${LS_version}" == "latest" ]]; then
                                 ${WORKSPACE}/env/bin/pip install inmantals
