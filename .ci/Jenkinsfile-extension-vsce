@@ -100,7 +100,7 @@ pipeline {
                             git merge -X theirs issue/version-bump-extension
 
 
-                            if [ -f "${WORKSPACE}/requirements.txt" ]; then
+                            if [ -f "requirements.txt" ]; then
                                 echo "Error: requirements.txt already exists. Stopping execution."
                                 exit 1
                             fi
