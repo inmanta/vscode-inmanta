@@ -114,6 +114,7 @@ pipeline {
                             fi
 
                             echo "inmantals~=${ls_version}" > requirements.txt
+                            # force add requirements.txt as it is part of .gitignore
                             git add requirements.txt -f
                             git commit -m "add requirements.txt file to tie the inmantals version (${ls_version}) to the extension"
 
