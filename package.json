@@ -222,7 +222,7 @@
         "glob": "^10.3.0",
         "mocha": "^10.2.0",
         "rimraf": "^5.0.1",
-        "semver": "^7.5.2",
+        "semver": "^7.5.3",
         "typescript": "^5.1.3"
     },
     "main": "./out/extension"
