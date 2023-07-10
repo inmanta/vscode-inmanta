@@ -212,7 +212,7 @@
           "match": "\\b(using|extends|matching|for|with|when|as|if|else|elif)\\b"
         },
         {
-          "name": "keyword.operator.inmanta",
+          "name": "keyword.operator.new.inmanta",
           "match": "\\b(in|or|and|is defined)\\b"
         }
       ]
