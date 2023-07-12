@@ -53,7 +53,7 @@ pipeline {
                     pip install --pre ./server
                     deactivate
                     rm -rf node_modules
-                    npm i --also=dev
+                    npm i --include=dev
                     xvfb-run npm run test
                 '''
             }
