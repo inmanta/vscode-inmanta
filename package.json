@@ -191,7 +191,7 @@
         "log-symbols": "^5.1.0",
         "lru-cache": "^10.0.1",
         "minimatch": "^9.0.3",
-        "uuid": "^9.0.0",
+        "uuid": "^9.0.1",
         "vscode-languageclient": "^8.1.0"
     },
     "extensionDependencies": [
