@@ -1,5 +1,6 @@
 # v 1.5.0 (?)
 Changes in this release:
+- Drop support for iso4/iso5
 
 # v 1.4.0 (2023-06-06)
 Changes in this release:
