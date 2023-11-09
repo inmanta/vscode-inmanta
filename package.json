@@ -207,7 +207,7 @@
         "test": "node ./out/test/runTest.js"
     },
     "devDependencies": {
-        "@types/fs-extra": "^11.0.3",
+        "@types/fs-extra": "^11.0.4",
         "@types/mocha": "^10.0.4",
         "@types/node": "^20.9.0",
         "@types/semver": "^7.5.4",
