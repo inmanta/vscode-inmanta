@@ -44,11 +44,7 @@ from inmanta.execute import scheduler
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
-from inmantals.jsonrpc import (
-    InvalidParamsException,
-    JsonRpcHandler,
-    MethodNotFoundException,
-)
+from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
 from intervaltree.interval import Interval
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
