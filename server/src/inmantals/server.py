@@ -29,6 +29,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from itertools import chain
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type
 from urllib.parse import unquote, urlparse
+from pydantic import AnyUrl
 
 from tornado.iostream import BaseIOStream
 
@@ -106,8 +107,8 @@ class Folder:
     inmanta_project_dir: str
     handler: "InmantaLSHandler"
 
-    def __init__(self, root_uri: str, handler: "InmantaLSHandler"):
-        folder_uri = urlparse(root_uri)
+    def __init__(self, root_uri: AnyUrl, handler: "InmantaLSHandler"):
+        folder_uri = urlparse(str(root_uri))
         """
         :param root_uri: path of the outermost folder that is assumed to live in a workspace
         :param handler: reference to the InmantaLSHandler responsible for this folder
