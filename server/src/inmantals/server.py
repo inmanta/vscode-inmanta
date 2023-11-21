@@ -107,7 +107,7 @@ class Folder:
     handler: "InmantaLSHandler"
 
     def __init__(self, root_uri: str, handler: "InmantaLSHandler"):
-        folder_uri = urlparse(root_uri)
+        folder_uri = urlparse(str(root_uri))
         """
         :param root_uri: path of the outermost folder that is assumed to live in a workspace
         :param handler: reference to the InmantaLSHandler responsible for this folder
@@ -348,7 +348,7 @@ class InmantaLSHandler(JsonRpcHandler):
             if rootUri is None:
                 raise InvalidExtensionSetup("No workspace folder or rootUri specified.")
             workspaceFolders = [rootUri]
-            workspace_folder = lsp_types.WorkspaceFolder(uri=rootUri, name=os.path.dirname(urlparse(rootUri).path))
+            workspace_folder = lsp_types.WorkspaceFolder(uri=rootUri, name=os.path.dirname(urlparse(str(rootUri)).path))
         else:
             workspace_folder = lsp_types.WorkspaceFolder(**workspaceFolders[0])
 
@@ -356,20 +356,18 @@ class InmantaLSHandler(JsonRpcHandler):
             raise InvalidExtensionSetup(
                 "InmantaLSHandler can only handle a single folder. Instantiate one InmantaLSHandler per folder instead."
             )
-
         init_options = kwargs.get("initializationOptions", None)
         logger.debug("init_options= %s", init_options)
-
         if init_options:
             self.compiler_venv_path = init_options.get(
-                "compilerVenv", os.path.join(os.path.abspath(urlparse(workspace_folder.uri).path), ".env-ls-compiler")
+                "compilerVenv", os.path.join(os.path.abspath(urlparse(str(workspace_folder.uri)).path), ".env-ls-compiler")
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
-
         # Keep track of the root folder opened in this workspace
         self.root_folder: Folder = Folder(workspace_folder.uri, self)
         value_set: List[int]
+        logger.warning("3")
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
         except KeyError:
@@ -381,7 +379,7 @@ class InmantaLSHandler(JsonRpcHandler):
             except ValueError:
                 logging.warning("Client specified unsupported symbol kind %s" % value)
                 return None
-
+        logger.warning("4")
         self.supported_symbol_kinds = {symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None}
 
         return {
