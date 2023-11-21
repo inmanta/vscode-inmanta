@@ -348,7 +348,7 @@ class InmantaLSHandler(JsonRpcHandler):
             if rootUri is None:
                 raise InvalidExtensionSetup("No workspace folder or rootUri specified.")
             workspaceFolders = [rootUri]
-            workspace_folder = lsp_types.WorkspaceFolder(uri=rootUri, name=os.path.dirname(urlparse(str(rootUri)).path))
+            workspace_folder = lsp_types.WorkspaceFolder(uri=rootUri, name=os.path.dirname(urlparse(rootUri).path))
         else:
             workspace_folder = lsp_types.WorkspaceFolder(**workspaceFolders[0])
 
