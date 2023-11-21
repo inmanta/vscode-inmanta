@@ -152,6 +152,7 @@ class JsonRpcHandler(object):
         if value is not None and message[field] != value:
             raise InvalidRequestException(
                 "expected header %s to be %s but was %s" % (field, value, message[field]),
+                 id,
             )
         return message[field]
 
