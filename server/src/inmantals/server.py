@@ -107,7 +107,7 @@ class Folder:
     handler: "InmantaLSHandler"
 
     def __init__(self, root_uri: str, handler: "InmantaLSHandler"):
-        folder_uri = urlparse(str(root_uri))
+        folder_uri = urlparse(root_uri)
         """
         :param root_uri: path of the outermost folder that is assumed to live in a workspace
         :param handler: reference to the InmantaLSHandler responsible for this folder
