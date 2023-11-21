@@ -19,10 +19,9 @@
 import logging
 import sys
 
+from inmantals.server import InmantaLSHandler
 from tornado.ioloop import IOLoop
 from tornado.iostream import PipeIOStream
-
-from inmantals.server import InmantaLSHandler
 
 logger = logging.getLogger(__name__)
 

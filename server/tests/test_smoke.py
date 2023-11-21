@@ -23,15 +23,14 @@ import socket
 from typing import AsyncIterator, Dict, List, Optional
 
 import pytest
-from tornado.iostream import IOStream
-from tornado.tcpclient import TCPClient
-
 from inmanta import env
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import CORE_VERSION, InmantaLSHandler
 from packaging import version
 from pkg_resources import Requirement, parse_requirements
+from tornado.iostream import IOStream
+from tornado.tcpclient import TCPClient
 
 
 class JsonRPC(object):
