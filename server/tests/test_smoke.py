@@ -23,14 +23,15 @@ import socket
 from typing import AsyncIterator, Dict, List, Optional
 
 import pytest
+from tornado.iostream import IOStream
+from tornado.tcpclient import TCPClient
+
 from inmanta import env
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import CORE_VERSION, InmantaLSHandler
 from packaging import version
 from pkg_resources import Requirement, parse_requirements
-from tornado.iostream import IOStream
-from tornado.tcpclient import TCPClient
 
 
 class JsonRPC(object):
@@ -182,7 +183,13 @@ async def test_connection(client, caplog):
 
     path = os.path.join(os.path.dirname(__file__), "project")
     path_uri = {"uri": f"file://{path}", "name": "project"}
-    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[path_uri], capabilities={})
+    ret = await client.call(
+        "initialize",
+        rootPath=path,
+        rootUri=f"file://{path}",
+        workspaceFolders=[path_uri],
+        capabilities={},
+    )
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
@@ -254,7 +261,10 @@ async def test_working_on_v1_modules(client, caplog):
 
     options = {
         "repos": [
-            {"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},
+            {
+                "url": "https://artifacts.internal.inmanta.com/inmanta/dev",
+                "type": "package",
+            },
         ]
     }
 
@@ -319,7 +329,10 @@ async def test_working_on_v2_modules(client, caplog):
     venv = env.VirtualEnv(env_path)
     venv.use_virtual_env()
 
-    assert "inmanta-module-module-v2" not in env.PythonWorkingSet.get_packages_in_working_set()
+    assert (
+        "inmanta-module-module-v2"
+        not in env.PythonWorkingSet.get_packages_in_working_set()
+    )
 
     options = {
         "repos": [
@@ -354,7 +367,9 @@ async def test_working_on_v2_modules(client, caplog):
 
     ret = await client.call("initialized")
     result = await client.assert_one(ret)
-    assert "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
+    assert (
+        "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
+    )
 
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
     assert "Anchormap took" in caplog.text
@@ -396,10 +411,13 @@ async def test_diagnostics(client: JsonRPC) -> None:
 
     notification: Dict = json.loads(await client.read_one())
     assert notification["method"] == "textDocument/publishDiagnostics"
-    diagnostics: lsp_types.PublishDiagnosticsParams = lsp_types.PublishDiagnosticsParams(**notification["params"])
+    diagnostics: lsp_types.PublishDiagnosticsParams = (
+        lsp_types.PublishDiagnosticsParams(**notification["params"])
+    )
 
     assert diagnostics == lsp_types.PublishDiagnosticsParams(
-        uri="file://%s" % os.path.join(os.path.dirname(__file__), project_name, "main.cf"),
+        uri="file://%s"
+        % os.path.join(os.path.dirname(__file__), project_name, "main.cf"),
         diagnostics=[
             lsp_types.Diagnostic(
                 range=lsp_types.Range(
@@ -427,13 +445,21 @@ async def test_symbol_provider(client: JsonRPC) -> None:
     ret = await client.call("workspace/symbol", query="symbol")
     result = await client.assert_one(ret)
     assert isinstance(result, list)
-    symbol_info: List[lsp_types.SymbolInformation] = [lsp_types.SymbolInformation.parse_obj(symbol) for symbol in result]
+    symbol_info: List[lsp_types.SymbolInformation] = [
+        lsp_types.SymbolInformation.parse_obj(symbol) for symbol in result
+    ]
 
-    project_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "project"))
+    project_dir: str = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "project")
+    )
     uri_main: str = "file://%s" % os.path.join(project_dir, "main.cf")
     testmodule_dir: str = os.path.join(project_dir, "libs", "testmodule")
-    uri_testmodule_model: str = "file://%s" % os.path.join(testmodule_dir, "model", "_init.cf")
-    uri_testmodule_plugins: str = "file://%s" % os.path.join(testmodule_dir, "plugins", "__init__.py")
+    uri_testmodule_model: str = "file://%s" % os.path.join(
+        testmodule_dir, "model", "_init.cf"
+    )
+    uri_testmodule_plugins: str = "file://%s" % os.path.join(
+        testmodule_dir, "plugins", "__init__.py"
+    )
 
     assert symbol_info == [
         lsp_types.SymbolInformation(
