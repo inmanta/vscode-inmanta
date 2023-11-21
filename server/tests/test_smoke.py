@@ -183,13 +183,7 @@ async def test_connection(client, caplog):
 
     path = os.path.join(os.path.dirname(__file__), "project")
     path_uri = {"uri": f"file://{path}", "name": "project"}
-    ret = await client.call(
-        "initialize",
-        rootPath=path,
-        rootUri=f"file://{path}",
-        workspaceFolders=[path_uri],
-        capabilities={},
-    )
+    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[path_uri], capabilities={})
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
@@ -261,10 +255,7 @@ async def test_working_on_v1_modules(client, caplog):
 
     options = {
         "repos": [
-            {
-                "url": "https://artifacts.internal.inmanta.com/inmanta/dev",
-                "type": "package",
-            },
+            {"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},
         ]
     }
 
@@ -364,9 +355,7 @@ async def test_working_on_v2_modules(client, caplog):
 
     ret = await client.call("initialized")
     result = await client.assert_one(ret)
-    assert (
-        "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
-    )
+    assert "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
 
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
     assert "Anchormap took" in caplog.text
@@ -408,9 +397,7 @@ async def test_diagnostics(client: JsonRPC) -> None:
 
     notification: Dict = json.loads(await client.read_one())
     assert notification["method"] == "textDocument/publishDiagnostics"
-    diagnostics: lsp_types.PublishDiagnosticsParams = (
-        lsp_types.PublishDiagnosticsParams(**notification["params"])
-    )
+    diagnostics: lsp_types.PublishDiagnosticsParams = lsp_types.PublishDiagnosticsParams(**notification["params"])
 
     assert diagnostics == lsp_types.PublishDiagnosticsParams(
         uri="file://%s"

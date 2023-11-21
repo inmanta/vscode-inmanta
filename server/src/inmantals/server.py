@@ -434,12 +434,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
                 if LEGACY_MODE_COMPILER_VENV:
                     if self.compiler_venv_path:
-                        module.Project.set(
-                            module.Project(
-                                folder.inmanta_project_dir,
-                                venv_path=self.compiler_venv_path,
-                            )
-                        )
+                        module.Project.set(module.Project(folder.inmanta_project_dir, venv_path=self.compiler_venv_path))
                     else:
                         module.Project.set(module.Project(folder.inmanta_project_dir))
                 else:
@@ -463,9 +458,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 else [
                     # Make sure everything is an AnchorTarget: this is for backward compatibility
                     (s, AnchorTarget(t)) if isinstance(t, Location) else (s, t)
-                    for s, t in scheduler_instance.anchormap(
-                        compiler_instance, statements, blocks
-                    )
+                    for s, t in scheduler_instance.anchormap(compiler_instance, statements, blocks)
                 ]
             )
             self.types = scheduler_instance.get_types()
@@ -491,12 +484,8 @@ class InmantaLSHandler(JsonRpcHandler):
                 tree = IntervalTree()
                 for f, t in iterator:
                     if isinstance(t.location, Range):
-                        start = self.flatten(
-                            t.location.lnr - 1, t.location.start_char - 1
-                        )
-                        end = self.flatten(
-                            t.location.end_lnr - 1, t.location.end_char - 1
-                        )
+                        start = self.flatten(t.location.lnr - 1, t.location.start_char - 1)
+                        end = self.flatten(t.location.end_lnr - 1, t.location.end_char - 1)
                         if start <= end:
                             tree[start:end] = f
                 return tree
@@ -514,9 +503,7 @@ class InmantaLSHandler(JsonRpcHandler):
             if self.shutdown_requested:
                 return
             # run synchronous part in executor to allow context switching while awaiting
-            await asyncio.get_event_loop().run_in_executor(
-                self.threadpool, sync_compile_and_anchor
-            )
+            await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
             await self.publish_diagnostics(None)
             logger.info("Compilation succeeded")
         except asyncio.CancelledError:
@@ -588,11 +575,7 @@ class InmantaLSHandler(JsonRpcHandler):
             self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(
-        self,
-        tmp_project: tempfile.TemporaryDirectory,
-        module_in_tmp_libs: typing.Pattern,
-    ):
+    def register_tmp_project(self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern):
         """
         Bookkeeping method to keep track of things related to the currently opened module
 
@@ -626,13 +609,7 @@ class InmantaLSHandler(JsonRpcHandler):
         if match:
             start_pos = match.start(1)
             end_pos = match.end(1)
-            return Range(
-                file=filename,
-                start_lnr=line_number,
-                end_lnr=line_number,
-                start_char=start_pos,
-                end_char=end_pos,
-            )
+            return Range(file=filename, start_lnr=line_number, end_lnr=line_number, start_char=start_pos, end_char=end_pos)
         return None
 
     def convert_location(self, location: Location):
@@ -645,14 +622,8 @@ class InmantaLSHandler(JsonRpcHandler):
             return {
                 "uri": uri,
                 "range": {
-                    "start": {
-                        "line": location.lnr - 1,
-                        "character": location.start_char - 1,
-                    },
-                    "end": {
-                        "line": location.end_lnr - 1,
-                        "character": location.end_char - 1,
-                    },
+                    "start": {"line": location.lnr - 1, "character": location.start_char - 1},
+                    "end": {"line": location.end_lnr - 1, "character": location.end_char - 1},
                 },
             }
 
@@ -690,9 +661,7 @@ class InmantaLSHandler(JsonRpcHandler):
         else:
             return ""
 
-    def get_range_from_position(
-        self, textDocument, position, anchormap
-    ) -> Optional[Interval]:
+    def get_range_from_position(self, textDocument, position, anchormap) -> Optional[Interval]:
         uri = textDocument["uri"]
         url = os.path.realpath(uri.replace("file://", ""))
 
@@ -717,12 +686,8 @@ class InmantaLSHandler(JsonRpcHandler):
 
         return self.convert_location(target.location)
 
-    async def textDocument_references(
-        self, textDocument, position, context
-    ):  # noqa: N802, N803  # noqa: N802, N803
-        range = self.get_range_from_position(
-            textDocument, position, self.reverse_anchormap
-        )
+    async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
+        range = self.get_range_from_position(textDocument, position, self.reverse_anchormap)
         if not range:
             return {}
 
@@ -734,9 +699,7 @@ class InmantaLSHandler(JsonRpcHandler):
             return {}
 
         data = list(range)[0].data
-        docstring = (
-            textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
-        )
+        docstring = textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
         docstring = docstring.replace(" ", "&nbsp;").replace("\n", "\n\n").strip()
         try:
             definition = self.get_definition(data).strip()
@@ -771,23 +734,14 @@ class InmantaLSHandler(JsonRpcHandler):
         ]
 
         def get_symbol_kind(tp: inmanta_type.NamedType) -> lsp_types.SymbolKind:
-            def if_supported(
-                then: lsp_types.SymbolKind, otherwise: lsp_types.SymbolKind
-            ) -> lsp_types.SymbolKind:
+            def if_supported(then: lsp_types.SymbolKind, otherwise: lsp_types.SymbolKind) -> lsp_types.SymbolKind:
                 """
                 Returns `then` iff the client can handle it, otherwise returns `otherwise`.
                 If the client explicitly specifies its supported symbol kinds, it is expected to gracefully handle symbol kinds
                 outside of this set. If it doesn't specify its supported symbol kinds, it must support all symbol kinds up to
                 Array.
                 """
-                return (
-                    then
-                    if (
-                        self.supported_symbol_kinds is not None
-                        and then in self.supported_symbol_kinds
-                    )
-                    else otherwise
-                )
+                return then if (self.supported_symbol_kinds is not None and then in self.supported_symbol_kinds) else otherwise
 
             if isinstance(tp, Plugin):
                 return lsp_types.SymbolKind.Function
@@ -799,9 +753,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 return lsp_types.SymbolKind.Constructor
 
             logger.warning("Unknown type %s, using default symbol kind", tp)
-            return if_supported(
-                lsp_types.SymbolKind.Object, lsp_types.SymbolKind.Variable
-            )
+            return if_supported(lsp_types.SymbolKind.Object, lsp_types.SymbolKind.Variable)
 
         type_symbols: Iterator[lsp_types.SymbolInformation] = (
             lsp_types.SymbolInformation(
@@ -856,13 +808,9 @@ class InmantaLSHandler(JsonRpcHandler):
         """
         Show a pop up message to the user, type gives the level of the message, message is the content
         """
-        await self.send_notification(
-            "window/showMessage", {"type": type.value, "message": message}
-        )
+        await self.send_notification("window/showMessage", {"type": type.value, "message": message})
 
-    async def publish_diagnostics(
-        self, params: Optional[lsp_types.PublishDiagnosticsParams]
-    ) -> None:
+    async def publish_diagnostics(self, params: Optional[lsp_types.PublishDiagnosticsParams]) -> None:
         """
         Publishes supplied diagnostics and caches it. If params is None, clears previously published diagnostics.
         """
@@ -871,12 +819,8 @@ class InmantaLSHandler(JsonRpcHandler):
             if params is None:
                 if self.diagnostics_cache is None:
                     return
-                publish_params = lsp_types.PublishDiagnosticsParams(
-                    uri=self.diagnostics_cache.uri, diagnostics=[]
-                )
+                publish_params = lsp_types.PublishDiagnosticsParams(uri=self.diagnostics_cache.uri, diagnostics=[])
             else:
                 publish_params = params
-            await self.send_notification(
-                "textDocument/publishDiagnostics", publish_params.dict()
-            )
+            await self.send_notification("textDocument/publishDiagnostics", publish_params.dict())
             self.diagnostics_cache = params
