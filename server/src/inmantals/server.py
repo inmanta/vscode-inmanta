@@ -367,7 +367,6 @@ class InmantaLSHandler(JsonRpcHandler):
         # Keep track of the root folder opened in this workspace
         self.root_folder: Folder = Folder(workspace_folder.uri, self)
         value_set: List[int]
-        logger.warning("3")
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
         except KeyError:
@@ -379,7 +378,6 @@ class InmantaLSHandler(JsonRpcHandler):
             except ValueError:
                 logging.warning("Client specified unsupported symbol kind %s" % value)
                 return None
-        logger.warning("4")
         self.supported_symbol_kinds = {symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None}
 
         return {
