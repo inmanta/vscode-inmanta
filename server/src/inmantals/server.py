@@ -220,9 +220,7 @@ class Folder:
                     self.kind = module.ModuleV1
 
                 elif os.path.exists(unquote(v2_metadata_file)):
-                    mv2 = module.ModuleV2(
-                        project=None, path=folder_path, is_editable_install=True
-                    )
+                    mv2 = module.ModuleV2(project=None, path=folder_path, is_editable_install=True)
                     module_name = mv2.name
                     self.kind = module.ModuleV2
             return module_name
@@ -251,9 +249,7 @@ class Folder:
         if self.handler.repos:
             metadata["repo"] = self.handler.repos
         logger.debug(
-            "project.yaml created at %s, repos=%s",
-            os.path.join(inmanta_project_dir, "project.yml"),
-            self.handler.repos,
+            "project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), self.handler.repos
         )
 
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
@@ -289,22 +285,16 @@ class Folder:
         compiled_pattern = re.compile(re.escape(pattern))
 
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
-        self.handler.register_tmp_project(
-            tmp_project=tmp_dir, module_in_tmp_libs=compiled_pattern
-        )
+        self.handler.register_tmp_project(tmp_project=tmp_dir, module_in_tmp_libs=compiled_pattern)
         return inmanta_project_dir
 
     def install_project(self, attach_cf_cache: bool):
         """
         This method is assumed to be called in an iso6+ context
         """
-        module.Project.set(
-            module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache)
-        )
+        module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
         env_path = module.Project.get().virtualenv.env_path
-        logger.info(
-            "Installing project at %s in env %s.", self.inmanta_project_dir, env_path
-        )
+        logger.info("Installing project at %s in env %s.", self.inmanta_project_dir, env_path)
         if self.kind == module.ModuleV2:
             # If the open folder is a v2 module we must install it in editable mode in the temporary project using the pip
             # indexes set in the "repos" extension setting for its dependencies.
@@ -314,11 +304,7 @@ class Folder:
             module.Project.get().install_modules()
 
     def __str__(self):
-        return (
-            f"Folder opened at {self.folder_path}"
-            + " with a project at "
-            + self.inmanta_project_dir
-        )
+        return f"Folder opened at {self.folder_path}" + " with a project at " + self.inmanta_project_dir
 
 
 class InmantaLSHandler(JsonRpcHandler):
@@ -357,17 +343,13 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("kwargs=%s", kwargs)
 
         if rootPath:
-            logger.warning(
-                "The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter."
-            )
+            logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
 
         if workspaceFolders is None:
             if rootUri is None:
                 raise InvalidExtensionSetup("No workspace folder or rootUri specified.")
             workspaceFolders = [rootUri]
-            workspace_folder = lsp_types.WorkspaceFolder(
-                uri=rootUri, name=os.path.dirname(str(urlparse(rootUri)).path)
-            )
+            workspace_folder = lsp_types.WorkspaceFolder(uri=rootUri, name=os.path.dirname(urlparse(rootUri).path))
         else:
             workspace_folder = lsp_types.WorkspaceFolder(**workspaceFolders[0])
 
@@ -379,11 +361,7 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("init_options= %s", init_options)
         if init_options:
             self.compiler_venv_path = init_options.get(
-                "compilerVenv",
-                os.path.join(
-                    os.path.abspath(urlparse(str(workspace_folder.uri)).path),
-                    ".env-ls-compiler",
-                ),
+                "compilerVenv", os.path.join(os.path.abspath(urlparse(workspace_folder.uri).path), ".env-ls-compiler")
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
@@ -402,9 +380,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 logging.warning("Client specified unsupported symbol kind %s" % value)
                 return None
 
-        self.supported_symbol_kinds = {
-            symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None
-        }
+        self.supported_symbol_kinds = {symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None}
 
         return {
             "capabilities": {
@@ -440,11 +416,7 @@ class InmantaLSHandler(JsonRpcHandler):
 
         :param path: The path in which the replacement should occur.
         """
-        return re.sub(
-            pattern=self.module_in_tmp_libs,
-            repl=self.root_folder.folder_path,
-            string=path,
-        )
+        return re.sub(pattern=self.module_in_tmp_libs, repl=self.root_folder.folder_path, string=path)
 
     async def compile_and_anchor(self) -> None:
         """
