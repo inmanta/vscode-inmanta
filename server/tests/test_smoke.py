@@ -400,8 +400,7 @@ async def test_diagnostics(client: JsonRPC) -> None:
     diagnostics: lsp_types.PublishDiagnosticsParams = lsp_types.PublishDiagnosticsParams(**notification["params"])
 
     assert diagnostics == lsp_types.PublishDiagnosticsParams(
-        uri="file://%s"
-        % os.path.join(os.path.dirname(__file__), project_name, "main.cf"),
+        uri="file://%s" % os.path.join(os.path.dirname(__file__), project_name, "main.cf"),
         diagnostics=[
             lsp_types.Diagnostic(
                 range=lsp_types.Range(
@@ -429,21 +428,13 @@ async def test_symbol_provider(client: JsonRPC) -> None:
     ret = await client.call("workspace/symbol", query="symbol")
     result = await client.assert_one(ret)
     assert isinstance(result, list)
-    symbol_info: List[lsp_types.SymbolInformation] = [
-        lsp_types.SymbolInformation.parse_obj(symbol) for symbol in result
-    ]
+    symbol_info: List[lsp_types.SymbolInformation] = [lsp_types.SymbolInformation.parse_obj(symbol) for symbol in result]
 
-    project_dir: str = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "project")
-    )
+    project_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "project"))
     uri_main: str = "file://%s" % os.path.join(project_dir, "main.cf")
     testmodule_dir: str = os.path.join(project_dir, "libs", "testmodule")
-    uri_testmodule_model: str = "file://%s" % os.path.join(
-        testmodule_dir, "model", "_init.cf"
-    )
-    uri_testmodule_plugins: str = "file://%s" % os.path.join(
-        testmodule_dir, "plugins", "__init__.py"
-    )
+    uri_testmodule_model: str = "file://%s" % os.path.join(testmodule_dir, "model", "_init.cf")
+    uri_testmodule_plugins: str = "file://%s" % os.path.join(testmodule_dir, "plugins", "__init__.py")
 
     assert symbol_info == [
         lsp_types.SymbolInformation(
