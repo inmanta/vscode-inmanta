@@ -362,13 +362,13 @@ class InmantaLSHandler(JsonRpcHandler):
 
         if init_options:
             self.compiler_venv_path = init_options.get(
-                "compilerVenv", os.path.join(os.path.abspath(urlparse(workspace_folder.uri).path), ".env-ls-compiler")
+                "compilerVenv", os.path.join(os.path.abspath(urlparse(str(workspace_folder.uri)).path), ".env-ls-compiler")
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
 
         # Keep track of the root folder opened in this workspace
-        self.root_folder: Folder = Folder(workspace_folder.uri, self)
+        self.root_folder: Folder = Folder(str(workspace_folder.uri), self)
         value_set: List[int]
         try:
             value_set: List[int] = capabilities["workspace"]["symbol"]["symbolKind"]["valueSet"]  # type: ignore
