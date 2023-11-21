@@ -174,16 +174,12 @@ class Folder:
         with env_vars(
             {
                 "PIP_INDEX_URL": urls[0],
-                "PIP_PRE": "0"
-                if project.install_mode == module.InstallMode.release
-                else "1",
+                "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
                 "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
             }
         ):
             logger.info("Installing modules from source: %s", mod.name)
-            project.virtualenv.install_from_source(
-                [env.LocalPackagePath(mod.path, editable=True)]
-            )
+            project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True)])
 
         project.install_modules()
 
@@ -206,35 +202,21 @@ class Folder:
             module_name: Optional[str] = None
             libs_folder = os.path.join(inmanta_project_dir, "libs")
             if CORE_VERSION < version.Version("5.dev"):
-                v1_metadata_file: str = os.path.join(
-                    self.folder_path, module.Module.MODULE_FILE
-                )
+                v1_metadata_file: str = os.path.join(self.folder_path, module.Module.MODULE_FILE)
 
                 if os.path.exists(v1_metadata_file):
                     mv1 = module.Module(project=None, path=self.folder_path)
                     module_name = mv1.name
-                    os.symlink(
-                        self.folder_path,
-                        os.path.join(libs_folder, module_name),
-                        target_is_directory=True,
-                    )
+                    os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
                     self.kind = module.Module
             else:
-                v2_metadata_file: str = os.path.join(
-                    folder_path, module.ModuleV2.MODULE_FILE
-                )
-                v1_metadata_file: str = os.path.join(
-                    folder_path, module.ModuleV1.MODULE_FILE
-                )
+                v2_metadata_file: str = os.path.join(folder_path, module.ModuleV2.MODULE_FILE)
+                v1_metadata_file: str = os.path.join(folder_path, module.ModuleV1.MODULE_FILE)
 
                 if os.path.exists(unquote(v1_metadata_file)):
                     mv1 = module.ModuleV1(project=None, path=folder_path)
                     module_name = mv1.name
-                    os.symlink(
-                        folder_path,
-                        os.path.join(libs_folder, module_name),
-                        target_is_directory=True,
-                    )
+                    os.symlink(folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
                     self.kind = module.ModuleV1
 
                 elif os.path.exists(unquote(v2_metadata_file)):

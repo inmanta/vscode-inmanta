@@ -151,9 +151,7 @@ class JsonRpcHandler(object):
             raise InvalidRequestException("header %s not found" % field, id)
         if value is not None and message[field] != value:
             raise InvalidRequestException(
-                "expected header %s to be %s but was %s"
-                % (field, value, message[field]),
-                id,
+                "expected header %s to be %s but was %s" % (field, value, message[field]),
             )
         return message[field]
 
@@ -263,9 +261,7 @@ class JsonRpcHandler(object):
                     e.id = id
                     raise
             except Exception as e:
-                logger.debug(
-                    "exception occurred during method handling ", exc_info=True
-                )
+                logger.debug("exception occurred during method handling ", exc_info=True)
                 if id is not None:
                     # no exceptions on notifications
                     raise InternalErrorException(str(e), id)
