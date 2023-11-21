@@ -46,7 +46,7 @@ from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotF
 from intervaltree.interval import Interval
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
-from pydantic import AnyUrl
+from pydantic import FileUrl
 from tornado.iostream import BaseIOStream
 
 CORE_VERSION: version.Version = version.Version(pkg_resources.get_distribution("inmanta-core").version)
@@ -106,7 +106,7 @@ class Folder:
     inmanta_project_dir: str
     handler: "InmantaLSHandler"
 
-    def __init__(self, root_uri: AnyUrl, handler: "InmantaLSHandler"):
+    def __init__(self, root_uri: FileUrl, handler: "InmantaLSHandler"):
         folder_uri = urlparse(str(root_uri))
         """
         :param root_uri: path of the outermost folder that is assumed to live in a workspace
