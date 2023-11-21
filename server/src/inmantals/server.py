@@ -54,9 +54,7 @@ from intervaltree.intervaltree import IntervalTree
 from packaging import version
 from pydantic import FileUrl
 
-CORE_VERSION: version.Version = version.Version(
-    pkg_resources.get_distribution("inmanta-core").version
-)
+CORE_VERSION: version.Version = version.Version(pkg_resources.get_distribution("inmanta-core").version)
 """
 Version of the inmanta-core package.
 """

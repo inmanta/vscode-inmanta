@@ -329,10 +329,7 @@ async def test_working_on_v2_modules(client, caplog):
     venv = env.VirtualEnv(env_path)
     venv.use_virtual_env()
 
-    assert (
-        "inmanta-module-module-v2"
-        not in env.PythonWorkingSet.get_packages_in_working_set()
-    )
+    assert "inmanta-module-module-v2" not in env.PythonWorkingSet.get_packages_in_working_set()
 
     options = {
         "repos": [
