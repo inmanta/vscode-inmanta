@@ -378,6 +378,7 @@ class InmantaLSHandler(JsonRpcHandler):
             except ValueError:
                 logging.warning("Client specified unsupported symbol kind %s" % value)
                 return None
+
         self.supported_symbol_kinds = {symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None}
 
         return {
