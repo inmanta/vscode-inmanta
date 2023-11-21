@@ -357,14 +357,17 @@ class InmantaLSHandler(JsonRpcHandler):
             raise InvalidExtensionSetup(
                 "InmantaLSHandler can only handle a single folder. Instantiate one InmantaLSHandler per folder instead."
             )
+
         init_options = kwargs.get("initializationOptions", None)
         logger.debug("init_options= %s", init_options)
+
         if init_options:
             self.compiler_venv_path = init_options.get(
                 "compilerVenv", os.path.join(os.path.abspath(urlparse(workspace_folder.uri).path), ".env-ls-compiler")
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
+
         # Keep track of the root folder opened in this workspace
         self.root_folder: Folder = Folder(workspace_folder.uri, self)
         value_set: List[int]
