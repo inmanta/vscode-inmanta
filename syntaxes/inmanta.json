@@ -247,7 +247,7 @@
     },
     "types": {
       "name": "support.type.inmanta",
-      "match": "\\b(string|number|int|bool|list|dict)\\b"
+      "match": "\\b(string|number|float|int|bool|list|dict)\\b"
     }
   },
   "scopeName": "source.inmanta"
