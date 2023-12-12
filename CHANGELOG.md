@@ -1,6 +1,7 @@
 # v 1.5.0 (?)
 Changes in this release:
 - Drop support for iso4/iso5
+- Add workaround for bug in the python extension where `getExecutionDetails().execCommand[0]` returns the path to the root of the venv instead of the path to the python binary in that venv.
 
 # v 1.4.0 (2023-06-06)
 Changes in this release:
