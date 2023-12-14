@@ -36,7 +36,7 @@ class LspModel(BaseModel):
 
     class Config:
         alias_generator = partial(re.sub, r"_([a-z])", lambda match: match.group(1).upper())
-        allow_population_by_field_name = True
+        populate_by_name = True
 
     def dict(self, *args: object, **kwargs: Any) -> Dict[str, object]:
         extended_kwargs: Dict[str, Any] = {

@@ -61,6 +61,27 @@
                     "description": "Path to the Python virtual environment used by the compiler. Will only be used by language server if inmanta-core<6. Leave empty to use the default. Only available when using Inmanta versions higher than 2020.5 in the language server environment.",
                     "scope": "resource"
                 },
+                "inmanta.pip.pre": {
+                    "type": "boolean",
+                    "description": "Allow pre-releases when installing Python packages",
+                    "scope": "resource"
+                },
+                "inmanta.pip.index_url": {
+                    "type": "string",
+                    "description": "Pip index",
+                    "scope": "resource"
+                },
+                "inmanta.pip.extra_index_url": {
+                    "type": "string",
+                    "description": "Extra pip index",
+                    "scope": "resource"
+                },
+                "inmanta.pip.use_system_config": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use system config",
+                    "scope": "resource"
+                },
                 "inmanta.repos": {
                     "type": "array",
                     "items": {

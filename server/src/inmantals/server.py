@@ -163,6 +163,7 @@ class Folder:
         mod = module.Module.from_path(str(self.folder_path))
 
         assert isinstance(mod, module.ModuleV2), type(mod)
+        breakpoint()
         logger.info(f"Module {mod.name} is v2, we will attempt to install it")
 
         # Install all v2 modules in editable mode using the project's configured package sources
@@ -238,19 +239,31 @@ class Folder:
 
             raise InvalidExtensionSetup(error_message)
 
-        metadata: typing.Mapping[str, object] = {
-            "name": "Temporary project",
-            "description": "Temporary project",
-            "modulepath": "libs",
-            "downloadpath": "libs",
-            "install_mode": install_mode.value,
-        }
-        if self.handler.repos:
-            metadata["repo"] = self.handler.repos
-        logger.debug(
-            "project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), self.handler.repos
-        )
+        def _build_metadata() -> dict[str, object]:
+            """
+            Construct
+            """
+            if CORE_VERSION < version.Version("600.dev"):
+                metadata = {
+                    "name": "Temporary project",
+                    "description": "Temporary project",
+                    "modulepath": "libs",
+                    "downloadpath": "libs",
+                    "install_mode": install_mode.value,
+                }
+                if self.handler.repos:
+                    metadata["repo"] = self.handler.repos
+            else:
+                metadata = {}
 
+            return metadata
+
+
+        metadata = _build_metadata()
+
+        logger.debug(
+            "project.yml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), self.handler.repos
+        )
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
 
@@ -325,6 +338,7 @@ class InmantaLSHandler(JsonRpcHandler):
         # The scope for the 'compilerVenv' and 'repos' settings in the package.json are set to 'resource' to allow different
         # values for each folder in the workspace. See https://github.com/Microsoft/vscode/wiki/Adopting-Multi-Root-Workspace-APIs#settings  # NOQA E501
         self.repos: Optional[str] = None
+        self.pipconig: Optional[dict] = None
 
     async def initialize(
         self,
@@ -366,6 +380,8 @@ class InmantaLSHandler(JsonRpcHandler):
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
+            self.pipconfig = init_options.get("pip", None)
+            logger.debug("self.pipconfig= %s", self.pipconfig)
 
         # Keep track of the root folder opened in this workspace
         self.root_folder: Folder = Folder(str(workspace_folder.uri), self)
