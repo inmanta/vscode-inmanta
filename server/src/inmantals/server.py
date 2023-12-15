@@ -40,7 +40,6 @@ from inmanta.agent import handler
 from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.config import is_bool
-from inmanta.data import PipConfig
 from inmanta.execute import scheduler
 from inmanta.module import Project
 from inmanta.plugins import Plugin
@@ -61,6 +60,11 @@ LEGACY_MODE_COMPILER_VENV: bool = CORE_VERSION < version.Version("6.dev")
 Older versions of inmanta-core work with a separate compiler venv and install modules and their dependencies on the fly.
 Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
 """
+
+SUPPORTS_PROJECT_PIP_INDEX: bool = CORE_VERSION is not None and CORE_VERSION >= version.Version("11.0.0.dev")
+
+if SUPPORTS_PROJECT_PIP_INDEX:
+    from inmanta.data import PipConfig
 
 try:
     from inmanta.ast import AnchorTarget
@@ -170,8 +174,13 @@ class Folder:
         logger.info(f"Project {project}")
         logger.info(f"{project.__dict__=}")
 
-        # Special case for earlier versions of core that didn't support a project-wide pip config
-        if CORE_VERSION < version.Version("11.0.0.dev"):
+        if SUPPORTS_PROJECT_PIP_INDEX:
+            project.virtualenv.install_for_config(
+                requirements=[],
+                paths=[env.LocalPackagePath(mod.path, editable=True)],
+                config=PipConfig(**self.handler.pipconfig),
+            )
+        else:
             # Install all v2 modules in editable mode using the project's configured package sources
             urls: abc.Sequence[str] = project.module_source.urls
             if not urls:
@@ -187,12 +196,6 @@ class Folder:
             ):
                 logger.info("Installing modules from source: %s", mod.name)
                 project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True)])
-        else:
-            project.virtualenv.install_for_config(
-                requirements=[],
-                paths=[env.LocalPackagePath(mod.path, editable=True)],
-                config=PipConfig(**self.handler.pipconfig),
-            )
 
         project.install_modules()
 
@@ -262,12 +265,12 @@ class Folder:
                 "modulepath": "libs",
                 "downloadpath": "libs",
             }
-            if CORE_VERSION < version.Version("11.0.0.dev"):
+            if SUPPORTS_PROJECT_PIP_INDEX:
+                content["pip"] = self.handler.pipconfig
+            else:
                 content["install_mode"]: install_mode.value
                 if self.handler.repos:
                     content["repo"] = self.handler.repos
-            else:
-                content["pip"] = self.handler.pipconfig
 
             return content
 
