@@ -26,12 +26,17 @@ import pytest
 from tornado.iostream import IOStream
 from tornado.tcpclient import TCPClient
 
+import pkg_resources
 from inmanta import env
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import CORE_VERSION, InmantaLSHandler
 from packaging import version
 from pkg_resources import Requirement, parse_requirements
+
+SUPPORTS_PYDANTIC_V2: bool = version.Version(pkg_resources.get_distribution("inmanta-core").version) >= version.Version(
+    "2.0.0.dev"
+)
 
 
 class JsonRPC(object):
@@ -375,7 +380,11 @@ async def test_working_on_v2_modules(client, caplog):
     caplog.clear()
 
 
-def test_lsp_type_serialization() -> None:
+@pytest.mark.skipif(
+    SUPPORTS_PYDANTIC_V2 == "false",
+    reason="Only run when pydantic v2 is supported",
+)
+def test_lsp_type_serialization_pydantic_v1() -> None:
     """
     LSP spec names are camel case while Python conventions are to use snake case.
     """
@@ -389,6 +398,29 @@ def test_lsp_type_serialization() -> None:
     v1 = MyLspType(snake_case_name=0)
     v2 = MyLspType(snakeCaseName=0)
     v3 = MyLspType.model_validate(spec_compatible)
+
+    for v in [v1, v2, v3]:
+        assert v.dict() == spec_compatible
+
+
+@pytest.mark.skipif(
+    SUPPORTS_PYDANTIC_V2 == "true",
+    reason="Only run when pydantic v1 is supported",
+)
+def test_lsp_type_serialization_pydantic_v2() -> None:
+    """
+    LSP spec names are camel case while Python conventions are to use snake case.
+    """
+
+    class MyLspType(lsp_types.LspModel):
+        snake_case_name: int
+        optional: Optional[int]
+
+    spec_compatible: Dict = {"snakeCaseName": 0}
+
+    v1 = MyLspType(snake_case_name=0)
+    v2 = MyLspType(snakeCaseName=0)
+    v3 = MyLspType.parse_obj(spec_compatible)
 
     for v in [v1, v2, v3]:
         assert v.dict() == spec_compatible
