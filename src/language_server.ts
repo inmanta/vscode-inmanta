@@ -457,7 +457,7 @@ export class LanguageServer {
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
 				repos: repos,
-				pipConfig: pipConfig,
+				pip: pipConfig,
 			},
 			workspaceFolder: this.rootFolder,
 		};

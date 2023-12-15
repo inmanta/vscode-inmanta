@@ -388,7 +388,7 @@ class InmantaLSHandler(JsonRpcHandler):
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
-            self.pipconfig = init_options.get("pipConfig", None)
+            self.pipconfig = init_options.get("pip", None)
             logger.debug("self.pipconfig= %s", self.pipconfig)
 
         # Keep track of the root folder opened in this workspace
