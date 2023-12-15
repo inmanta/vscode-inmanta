@@ -44,7 +44,7 @@ class LspModel(BaseModel):
             "exclude_none": True,
             **kwargs,
         }
-        return super().dict(*args, **extended_kwargs)
+        return super().model_dump(*args, **extended_kwargs)
 
 
 # Data types
@@ -144,9 +144,9 @@ class SymbolInformation(LspModel):
 
     name: str
     kind: SymbolKind
-    deprecated: Optional[bool]
+    deprecated: Optional[bool] = None
     location: Location
-    container_name: Optional[str]
+    container_name: Optional[str] = None
 
 
 # Message parameters

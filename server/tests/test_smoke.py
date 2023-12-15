@@ -253,11 +253,20 @@ async def test_working_on_v1_modules(client, caplog):
     # This dummy module is used because it is only present in the dev artifacts and not in pypi index.
     assert not venv.are_installed(reqs)
 
-    options = {
-        "repos": [
-            {"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},
-        ]
-    }
+    if CORE_VERSION < version.Version("11.0.0"):
+        options = {
+            "repos": [
+                {"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},
+            ]
+        }
+    else:
+        options = {
+            "pip":
+                {
+                    "index_url": "https://artifacts.internal.inmanta.com/inmanta/dev"
+                }
+        }
+
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
     ret = await client.call(
@@ -322,11 +331,21 @@ async def test_working_on_v2_modules(client, caplog):
 
     assert "inmanta-module-module-v2" not in env.PythonWorkingSet.get_packages_in_working_set()
 
-    options = {
-        "repos": [
-            {"url": "https://pypi.org/simple", "type": "package"},
-        ]
-    }
+
+
+    if CORE_VERSION < version.Version("11.0.0"):
+        options = {
+            "repos": [
+                {"url": "https://pypi.org/simple", "type": "package"},
+            ]
+        }
+    else:
+        options = {
+            "pip":
+                {
+                    "index_url": "https://pypi.org/simple"
+                }
+        }
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
     ret = await client.call(
@@ -375,13 +394,13 @@ def test_lsp_type_serialization() -> None:
 
     class MyLspType(lsp_types.LspModel):
         snake_case_name: int
-        optional: Optional[int]
+        optional: Optional[int]=None
 
     spec_compatible: Dict = {"snakeCaseName": 0}
 
     v1 = MyLspType(snake_case_name=0)
     v2 = MyLspType(snakeCaseName=0)
-    v3 = MyLspType.parse_obj(spec_compatible)
+    v3 = MyLspType.model_validate(spec_compatible)
 
     for v in [v1, v2, v3]:
         assert v.dict() == spec_compatible
