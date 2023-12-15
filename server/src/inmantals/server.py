@@ -40,6 +40,7 @@ from inmanta.agent import handler
 from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.config import is_bool
+from inmanta.data import PipConfig
 from inmanta.execute import scheduler
 from inmanta.module import Project
 from inmanta.plugins import Plugin
@@ -179,13 +180,19 @@ class Folder:
             # plain Python install so core does not apply project's sources -> we need to configure pip index ourselves
             with env_vars(
                 {
-                "PIP_INDEX_URL": urls[0],
-                "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
-                "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
+                    "PIP_INDEX_URL": urls[0],
+                    "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
+                    "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
                 }
             ):
                 logger.info("Installing modules from source: %s", mod.name)
                 project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True)])
+        else:
+            project.virtualenv.install_for_config(
+                requirements=[],
+                paths=[env.LocalPackagePath(mod.path, editable=True)],
+                config=PipConfig(**self.handler.pipconfig),
+            )
 
         project.install_modules()
 
@@ -260,9 +267,7 @@ class Folder:
                 if self.handler.repos:
                     content["repo"] = self.handler.repos
             else:
-                # Make sure we leave pip config options that are unset in the Inmanta extension's config (i.e. null values
-                # from the settings.json) out of the project.yml file, so the default behaviour from core is followed.
-                content["pip"] = {k: v for k, v in self.handler.pipconfig.items() if v is not None}
+                content["pip"] = self.handler.pipconfig
 
             return content
 
@@ -388,7 +393,10 @@ class InmantaLSHandler(JsonRpcHandler):
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
-            self.pipconfig = init_options.get("pip", None)
+            # Make sure we leave pip config options that are unset in the Inmanta extension's config (i.e. null values
+            # from the settings.json) out of the pipconfig, so the default behaviour from core is followed.
+            self.pipconfig = {k: v for k, v in init_options.get("pip", None).items() if v is not None}
+
             logger.debug("self.pipconfig= %s", self.pipconfig)
 
         # Keep track of the root folder opened in this workspace

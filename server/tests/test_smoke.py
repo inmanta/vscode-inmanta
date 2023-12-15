@@ -183,6 +183,7 @@ async def test_connection(client, caplog):
 
     path = os.path.join(os.path.dirname(__file__), "project")
     path_uri = {"uri": f"file://{path}", "name": "project"}
+
     ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[path_uri], capabilities={})
     result = await client.assert_one(ret)
     assert result == {
@@ -260,13 +261,7 @@ async def test_working_on_v1_modules(client, caplog):
             ]
         }
     else:
-        options = {
-            "pip":
-                {
-                    "index_url": "https://artifacts.internal.inmanta.com/inmanta/dev"
-                }
-        }
-
+        options = {"pip": {"index_url": "https://artifacts.internal.inmanta.com/inmanta/dev"}}
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
     ret = await client.call(
@@ -331,8 +326,6 @@ async def test_working_on_v2_modules(client, caplog):
 
     assert "inmanta-module-module-v2" not in env.PythonWorkingSet.get_packages_in_working_set()
 
-
-
     if CORE_VERSION < version.Version("11.0.0"):
         options = {
             "repos": [
@@ -340,12 +333,7 @@ async def test_working_on_v2_modules(client, caplog):
             ]
         }
     else:
-        options = {
-            "pip":
-                {
-                    "index_url": "https://pypi.org/simple"
-                }
-        }
+        options = {"pip": {"index_url": "https://pypi.org/simple"}}
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
     ret = await client.call(
@@ -394,7 +382,7 @@ def test_lsp_type_serialization() -> None:
 
     class MyLspType(lsp_types.LspModel):
         snake_case_name: int
-        optional: Optional[int]=None
+        optional: Optional[int] = None
 
     spec_compatible: Dict = {"snakeCaseName": 0}
 
