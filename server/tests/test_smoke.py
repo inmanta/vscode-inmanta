@@ -382,7 +382,7 @@ async def test_working_on_v2_modules(client, caplog):
 
 @pytest.mark.skipif(
     SUPPORTS_PYDANTIC_V2 == "false",
-    reason="Only run when pydantic v2 is supported",
+    reason="Only run when pydantic v1 is supported",
 )
 def test_lsp_type_serialization_pydantic_v1() -> None:
     """
@@ -391,7 +391,7 @@ def test_lsp_type_serialization_pydantic_v1() -> None:
 
     class MyLspType(lsp_types.LspModel):
         snake_case_name: int
-        optional: Optional[int] = None
+        optional: Optional[int]
 
     spec_compatible: Dict = {"snakeCaseName": 0}
 
@@ -414,7 +414,7 @@ def test_lsp_type_serialization_pydantic_v2() -> None:
 
     class MyLspType(lsp_types.LspModel):
         snake_case_name: int
-        optional: Optional[int]
+        optional: Optional[int] = None
 
     spec_compatible: Dict = {"snakeCaseName": 0}
 
