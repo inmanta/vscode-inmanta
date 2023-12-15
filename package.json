@@ -64,24 +64,24 @@
                 "inmanta.pip.pre": {
                     "type": "boolean",
                     "default": null,
-                    "description": "Allow pre-releases when installing Python packages",
+                    "description": "Allow pre-releases when installing Python packages. Will only be used by language server if inmanta-core>11.0.0",
                     "scope": "resource"
                 },
                 "inmanta.pip.index_url": {
                     "type": "string",
-                    "description": "Pip index",
+                    "description": "Pip index to use for this project. Will only be used by language server if inmanta-core>11.0.0",
                     "scope": "resource"
                 },
                 "inmanta.pip.extra_index_url": {
                     "type": "string",
                     "default": null,
-                    "description": "Extra pip index",
+                    "description": "Extra pip index. Will only be used by language server if inmanta-core>11.0.0",
                     "scope": "resource"
                 },
                 "inmanta.pip.use_system_config": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Use system config",
+                    "description": "Use pip config defined at the system level. Will only be used by language server if inmanta-core>11.0.0",
                     "scope": "resource"
                 },
                 "inmanta.repos": {
