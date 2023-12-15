@@ -63,6 +63,7 @@
                 },
                 "inmanta.pip.pre": {
                     "type": "boolean",
+                    "default": null,
                     "description": "Allow pre-releases when installing Python packages",
                     "scope": "resource"
                 },
@@ -73,6 +74,7 @@
                 },
                 "inmanta.pip.extra_index_url": {
                     "type": "string",
+                    "default": null,
                     "description": "Extra pip index",
                     "scope": "resource"
                 },

@@ -41,6 +41,7 @@ from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.config import is_bool
 from inmanta.execute import scheduler
+from inmanta.module import Project
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -84,6 +85,7 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 
 
 class InvalidExtensionSetup(Exception):
@@ -153,7 +155,7 @@ class Folder:
             yield
             set_env(old_env)
 
-        project = module.Project.get()
+        project: Project = module.Project.get()
         # Make sure the virtual environment is ready
         if not project.is_using_virtual_env():
             project.use_virtual_env()
@@ -163,25 +165,36 @@ class Folder:
         mod = module.Module.from_path(str(self.folder_path))
 
         assert isinstance(mod, module.ModuleV2), type(mod)
-        breakpoint()
         logger.info(f"Module {mod.name} is v2, we will attempt to install it")
 
-        # Install all v2 modules in editable mode using the project's configured package sources
-        urls: abc.Sequence[str] = project.module_source.urls
-        if not urls:
-            raise Exception("No package repos configured for project")
-        # plain Python install so core does not apply project's sources -> we need to configure pip index ourselves
-        with env_vars(
-            {
+        logger.info(f"Project {project}")
+        logger.info(f"{project.__dict__=}")
+
+        if CORE_VERSION >= version.Version("11.0.0.dev"):
+            env_vars_dict = {}
+        else:
+            # Install all v2 modules in editable mode using the project's configured package sources
+            urls: abc.Sequence[str] = project.module_source.urls
+            if not urls:
+                raise Exception("No package repos configured for project")
+            env_vars_dict = {
                 "PIP_INDEX_URL": urls[0],
                 "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
                 "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
             }
-        ):
-            logger.info("Installing modules from source: %s", mod.name)
-            project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True)])
 
+            # plain Python install so core does not apply project's sources -> we need to configure pip index ourselves
+            with env_vars(env_vars_dict):
+                logger.info("Installing modules from source: %s", mod.name)
+                project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True)])
+
+        logger.info(
+            "project.install_modules()...",
+        )
         project.install_modules()
+        logger.info(
+            "project.install_modules()...DONE",
+        )
 
     def create_tmp_project(self) -> str:
         """
@@ -243,26 +256,28 @@ class Folder:
             """
             Construct
             """
-            if CORE_VERSION < version.Version("600.dev"):
-                metadata = {
-                    "name": "Temporary project",
-                    "description": "Temporary project",
-                    "modulepath": "libs",
-                    "downloadpath": "libs",
-                    "install_mode": install_mode.value,
-                }
+            metadata = {
+                "name": "Temporary project",
+                "description": "Temporary project",
+                "modulepath": "libs",
+                "downloadpath": "libs",
+            }
+            if CORE_VERSION < version.Version("11.0.0.dev"):
+                metadata["install_mode"]: install_mode.value
                 if self.handler.repos:
                     metadata["repo"] = self.handler.repos
             else:
-                metadata = {}
+                metadata["pip"] = {k: v for k, v in self.handler.pipconfig.items() if v is not None}
 
             return metadata
-
 
         metadata = _build_metadata()
 
         logger.debug(
-            "project.yml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), self.handler.repos
+            "project.yml created at %s, repos=%s, pip_config=%s",
+            os.path.join(inmanta_project_dir, "project.yml"),
+            self.handler.repos,
+            self.handler.pipconfig,
         )
         with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
             yaml.dump(metadata, fd)
@@ -380,7 +395,7 @@ class InmantaLSHandler(JsonRpcHandler):
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
-            self.pipconfig = init_options.get("pip", None)
+            self.pipconfig = init_options.get("pipConfig", None)
             logger.debug("self.pipconfig= %s", self.pipconfig)
 
         # Keep track of the root folder opened in this workspace
@@ -462,6 +477,7 @@ class InmantaLSHandler(JsonRpcHandler):
             resources.resource.reset()
             handler.Commander.reset()
 
+            logger.info("Setting up project...")
             setup_project(self.root_folder)
 
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471

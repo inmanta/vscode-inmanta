@@ -426,16 +426,19 @@ export class LanguageServer {
 
 		let compilerVenv: string | undefined;
 		let repos: string | undefined;
+		let pipConfig: Map<string, string | boolean> | undefined;
 
 		if (!folder) {
 			// Not in a workspace
 			compilerVenv = workspace.getConfiguration('inmanta').compilerVenv;
 			repos = workspace.getConfiguration('inmanta').repos;
+			pipConfig = workspace.getConfiguration('inmanta').pip;
 		} else {
 			// In a workspace
 			const multiRootConfigForResource = workspace.getConfiguration('inmanta', folder);
 			compilerVenv = multiRootConfigForResource.get('compilerVenv');
 			repos = multiRootConfigForResource.get('repos');
+			pipConfig = multiRootConfigForResource.get('pip');
 		}
 
 		if (this.lsOutputChannel === null) {
@@ -454,6 +457,7 @@ export class LanguageServer {
 			initializationOptions: {
 				compilerVenv: compilerVenv, //this will be ignore if inmanta-core>=6
 				repos: repos,
+				pipConfig: pipConfig,
 			},
 			workspaceFolder: this.rootFolder,
 		};
