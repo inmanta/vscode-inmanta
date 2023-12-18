@@ -34,7 +34,7 @@ from inmantals.server import CORE_VERSION, InmantaLSHandler
 from packaging import version
 from pkg_resources import Requirement, parse_requirements
 
-SUPPORTS_PYDANTIC_V2: bool = version.Version(pkg_resources.get_distribution("inmanta-core").version) >= version.Version(
+SUPPORTS_PYDANTIC_V2: bool = version.Version(pkg_resources.get_distribution("pydantic").version) >= version.Version(
     "2.0.0.dev"
 )
 
@@ -188,8 +188,9 @@ async def test_connection(client, caplog):
 
     path = os.path.join(os.path.dirname(__file__), "project")
     path_uri = {"uri": f"file://{path}", "name": "project"}
+    pip_config = {"index_url": "https://pypi.org/simple/"}
 
-    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[path_uri], capabilities={})
+    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[path_uri], initializationOptions={"pip": pip_config},capabilities={})
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
