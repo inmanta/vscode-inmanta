@@ -34,9 +34,7 @@ from inmantals.server import CORE_VERSION, InmantaLSHandler
 from packaging import version
 from pkg_resources import Requirement, parse_requirements
 
-SUPPORTS_PYDANTIC_V2: bool = version.Version(pkg_resources.get_distribution("pydantic").version) >= version.Version(
-    "2.0.0.dev"
-)
+SUPPORTS_PYDANTIC_V2: bool = version.Version(pkg_resources.get_distribution("pydantic").version) >= version.Version("2.0.0.dev")
 
 
 class JsonRPC(object):
@@ -136,11 +134,11 @@ async def initialize(
         client_capabilities = {}
     path = os.path.join(os.path.dirname(__file__), project)
     folder = {"uri": f"file://{path}", "name": project}
+
     ret = await client.call(
-        "initialize",
-        workspaceFolders=[folder],
-        capabilities=client_capabilities,
+        "initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[folder], capabilities=client_capabilities
     )
+
     await client.assert_one(ret)
 
 
@@ -190,7 +188,14 @@ async def test_connection(client, caplog):
     path_uri = {"uri": f"file://{path}", "name": "project"}
     pip_config = {"index_url": "https://pypi.org/simple/"}
 
-    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[path_uri], initializationOptions={"pip": pip_config},capabilities={})
+    ret = await client.call(
+        "initialize",
+        rootPath=path,
+        rootUri=f"file://{path}",
+        workspaceFolders=[path_uri],
+        initializationOptions={"pip": pip_config},
+        capabilities={},
+    )
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
@@ -382,7 +387,7 @@ async def test_working_on_v2_modules(client, caplog):
 
 
 @pytest.mark.skipif(
-    SUPPORTS_PYDANTIC_V2 == True,
+    SUPPORTS_PYDANTIC_V2,
     reason="Only run when pydantic v1 is supported",
 )
 def test_lsp_type_serialization_pydantic_v1() -> None:
@@ -405,7 +410,7 @@ def test_lsp_type_serialization_pydantic_v1() -> None:
 
 
 @pytest.mark.skipif(
-    SUPPORTS_PYDANTIC_V2 == False,
+    not SUPPORTS_PYDANTIC_V2,
     reason="Only run when pydantic v1 is supported",
 )
 def test_lsp_type_serialization_pydantic_v2() -> None:
@@ -463,6 +468,7 @@ async def test_symbol_provider(client: JsonRPC) -> None:
     await initialize(client, "project")
 
     ret = await client.call("initialized")
+
     await client.assert_one(ret)
 
     ret = await client.call("workspace/symbol", query="symbol")
