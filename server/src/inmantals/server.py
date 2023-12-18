@@ -398,7 +398,7 @@ class InmantaLSHandler(JsonRpcHandler):
             logger.debug("self.repos= %s", self.repos)
             # Make sure we leave pip config options that are unset in the Inmanta extension's config (i.e. null values
             # from the settings.json) out of the pipconfig, so the default behaviour from core is followed.
-            self.pipconfig = {k: v for k, v in init_options.get("pip", None).items() if v is not None}
+            self.pipconfig = {k: v for k, v in init_options.get("pip", {}).items() if v is not None}
 
             logger.debug("self.pipconfig= %s", self.pipconfig)
 
