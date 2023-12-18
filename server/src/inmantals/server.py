@@ -63,6 +63,7 @@ Recent versions use the encapsulating environment and require explicit project i
 
 SUPPORTS_PROJECT_PIP_INDEX: bool = CORE_VERSION is not None and CORE_VERSION >= version.Version("11.0.0.dev")
 
+
 if SUPPORTS_PROJECT_PIP_INDEX:
     from inmanta.data import PipConfig
 

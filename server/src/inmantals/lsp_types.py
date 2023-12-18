@@ -15,7 +15,11 @@
 
     Contact: code@inmanta.com
 """
+import pkg_resources
+from packaging import version
 from pydantic import FileUrl
+
+SUPPORTS_PYDANTIC_V2: bool = version.Version(pkg_resources.get_distribution("pydantic").version) >= version.Version("2.0.0.dev")
 
 """
     This module contains types as specified in the
@@ -44,7 +48,10 @@ class LspModel(BaseModel):
             "exclude_none": True,
             **kwargs,
         }
-        return super().model_dump(*args, **extended_kwargs)
+        if SUPPORTS_PYDANTIC_V2:
+            return super().model_dump(*args, **extended_kwargs)
+        else:
+            return super().dict(*args, **extended_kwargs)
 
 
 # Data types
