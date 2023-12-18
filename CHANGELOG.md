@@ -2,6 +2,7 @@
 Changes in this release:
 - Drop support for iso4/iso5
 - Add workaround for bug in the python extension where `getExecutionDetails().execCommand[0]` returns the path to the root of the venv instead of the path to the python binary in that venv.
+- Add extension settings to configure pip when working on a module or a project. (#1511)
 
 # v 1.4.0 (2023-06-06)
 Changes in this release:
@@ -11,7 +12,7 @@ Changes in this release:
 - Add information about how to show the python interpreter information in the status bar and make it so the status bar should appear when opening an inmanta file. (#939)
 - A warning that suggests running the `inmanta project install` command is now shown when the compiler fails to install modules. (#894)
 - Add support to work on a module. (#891)
-- make some unclear error messages more helpfull (#970)
+- make some unclear error messages more helpful (#970)
 - 'Export to server' is now run in terminal (#970)
 - Walkthrough/setup assistant added (#970)
 - Commands added to: install the language server, activate the language server, run 'project install' and to open the setup assistant (#970)
