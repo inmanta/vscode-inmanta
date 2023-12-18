@@ -64,24 +64,24 @@
                 "inmanta.pip.pre": {
                     "type": "boolean",
                     "default": null,
-                    "description": "Allow pre-releases when installing Python packages. Will only be used by language server if inmanta-core>11.0.0",
+                    "description": "Allow pre-releases when installing Python packages. Will only be used by language server if inmanta-core>=11.0.0",
                     "scope": "resource"
                 },
                 "inmanta.pip.index_url": {
                     "type": "string",
-                    "description": "Pip index to use for this project. Will only be used by language server if inmanta-core>11.0.0",
+                    "description": "Pip index to use for this project. Will only be used by language server if inmanta-core>=11.0.0",
                     "scope": "resource"
                 },
                 "inmanta.pip.extra_index_url": {
                     "type": "string",
                     "default": null,
-                    "description": "Extra pip index. Will only be used by language server if inmanta-core>11.0.0",
+                    "description": "Extra pip index. Will only be used by language server if inmanta-core>=11.0.0",
                     "scope": "resource"
                 },
                 "inmanta.pip.use_system_config": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Use pip config defined at the system level. Will only be used by language server if inmanta-core>11.0.0",
+                    "description": "Use pip config defined at the system level. Will only be used by language server if inmanta-core>=11.0.0",
                     "scope": "resource"
                 },
                 "inmanta.repos": {
@@ -103,7 +103,7 @@
                                 ],
                                 "markdownEnumDescriptions": [
                                     "URI of the parent location for a v1 module. (Organization url for github, Group url for gitlab, parent folder for a local repository...)",
-                                    "Pip index url in which to look for v2 modules. ⚠️Be mindful of potential security risks when using more than one index. Please refer to the [documentation](https://docs.inmanta.com/community/latest/reference/projectyml.html#inmanta.module.ProjectMetadata) for more information."
+                                    "Pip index url in which to look for v2 modules if inmanta-core<11.0.0. ⚠️Be mindful of potential security risks when using more than one index. Please refer to the [documentation](https://docs.inmanta.com/community/latest/reference/projectyml.html#inmanta.module.ProjectMetadata) for more information."
                                 ],
                                 "description": "Type of this Dependency module location, one of: [\"git\", \"package\"].",
                                 "order": 2
