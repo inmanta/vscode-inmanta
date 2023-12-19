@@ -69,6 +69,7 @@
                 },
                 "inmanta.pip.index_url": {
                     "type": "string",
+                    "default": null,
                     "description": "Pip index to use for this project. Will only be used by language server if inmanta-core>=11.0.0",
                     "scope": "resource"
                 },
