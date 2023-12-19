@@ -131,9 +131,15 @@ async def initialize(
         client_capabilities = {}
     path = os.path.join(os.path.dirname(__file__), project)
     folder = {"uri": f"file://{path}", "name": project}
+    pip_config = {"use_system_config": True}
 
     ret = await client.call(
-        "initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[folder], capabilities=client_capabilities
+        "initialize",
+        rootPath=path,
+        rootUri=f"file://{path}",
+        workspaceFolders=[folder],
+        capabilities=client_capabilities,
+        initializationOptions={"pip": pip_config},
     )
 
     await client.assert_one(ret)
