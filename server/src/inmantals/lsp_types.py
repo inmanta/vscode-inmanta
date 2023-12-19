@@ -19,7 +19,12 @@ import pkg_resources
 from packaging import version
 from pydantic import FileUrl
 
-SUPPORTS_PYDANTIC_V2: bool = version.Version(pkg_resources.get_distribution("pydantic").version) >= version.Version("2.0.0.dev")
+PYDANTIC_V2_INSTALLED: bool = version.Version(pkg_resources.get_distribution("pydantic").version) >= version.Version(
+    "2.0.0.dev"
+)
+if PYDANTIC_V2_INSTALLED:
+    from pydantic import ConfigDict
+    from pydantic.alias_generators import to_camel
 
 """
     This module contains types as specified in the
@@ -38,11 +43,12 @@ class LspModel(BaseModel):
     Base model for the LSP spec.
     """
 
-    class Config:
-        alias_generator = partial(re.sub, r"_([a-z])", lambda match: match.group(1).upper())
-        if SUPPORTS_PYDANTIC_V2:
-            populate_by_name = True
-        else:
+    if PYDANTIC_V2_INSTALLED:
+        model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+    else:
+
+        class Config:
+            alias_generator = partial(re.sub, r"_([a-z])", lambda match: match.group(1).upper())
             allow_population_by_field_name = True
 
     def dict(self, *args: object, **kwargs: Any) -> Dict[str, object]:
@@ -51,7 +57,7 @@ class LspModel(BaseModel):
             "exclude_none": True,
             **kwargs,
         }
-        if SUPPORTS_PYDANTIC_V2:
+        if PYDANTIC_V2_INSTALLED:
             return super().model_dump(*args, **extended_kwargs)
         else:
             return super().dict(*args, **extended_kwargs)

@@ -124,6 +124,8 @@ class Folder:
         self.handler = handler  # Keep a reference to the handler for cleanup
         self.kind: Type[module.ModuleLike]
 
+        assert self.handler.pipconfig is not None
+
         # Check that we are working inside an existing project:
         project_file: str = os.path.join(self.folder_path, module.Project.PROJECT_FILE)
         if os.path.exists(project_file):
@@ -172,8 +174,7 @@ class Folder:
         assert isinstance(mod, module.ModuleV2), type(mod)
         logger.info(f"Module {mod.name} is v2, we will attempt to install it")
 
-        logger.info(f"Project {project}")
-        logger.info(f"{project.__dict__=}")
+        logger.debug(f"{project.__dict__=}")
 
         if SUPPORTS_PROJECT_PIP_INDEX:
             project.virtualenv.install_for_config(
@@ -275,14 +276,13 @@ class Folder:
 
             return content
 
-        logger.debug(
-            "project.yml created at %s, repos=%s, pip_config=%s",
-            os.path.join(inmanta_project_dir, "project.yml"),
-            self.handler.repos,
-            self.handler.pipconfig,
-        )
-        with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
-            yaml.dump(_generate_project_yml(), fd)
+        project_yml_path = os.path.join(inmanta_project_dir, "project.yml")
+        with open(project_yml_path, "w+") as fd:
+            content = _generate_project_yml()
+            yaml.dump(content, fd)
+            logger.debug(
+                f"project.yml created at {project_yml_path}:\n{content}",
+            )
 
         def _get_name_spaces(curdir: str, prefix: str) -> List[str]:
             """

@@ -26,15 +26,12 @@ import pytest
 from tornado.iostream import IOStream
 from tornado.tcpclient import TCPClient
 
-import pkg_resources
 from inmanta import env
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import CORE_VERSION, InmantaLSHandler
 from packaging import version
 from pkg_resources import Requirement, parse_requirements
-
-SUPPORTS_PYDANTIC_V2: bool = version.Version(pkg_resources.get_distribution("pydantic").version) >= version.Version("2.0.0.dev")
 
 
 class JsonRPC(object):
@@ -387,7 +384,7 @@ async def test_working_on_v2_modules(client, caplog):
 
 
 @pytest.mark.skipif(
-    SUPPORTS_PYDANTIC_V2,
+    lsp_types.PYDANTIC_V2_INSTALLED,
     reason="Only run when pydantic v1 is supported",
 )
 def test_lsp_type_serialization_pydantic_v1() -> None:
@@ -410,8 +407,8 @@ def test_lsp_type_serialization_pydantic_v1() -> None:
 
 
 @pytest.mark.skipif(
-    not SUPPORTS_PYDANTIC_V2,
-    reason="Only run when pydantic v1 is supported",
+    not lsp_types.PYDANTIC_V2_INSTALLED,
+    reason="Only run when pydantic v2 is supported",
 )
 def test_lsp_type_serialization_pydantic_v2() -> None:
     """

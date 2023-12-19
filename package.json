@@ -73,8 +73,11 @@
                     "scope": "resource"
                 },
                 "inmanta.pip.extra_index_url": {
-                    "type": "string",
+                    "type": "array",
                     "default": null,
+                    "items": {
+                        "type": "string"
+                    },
                     "description": "Extra pip index. Will only be used by language server if inmanta-core>=11.0.0",
                     "scope": "resource"
                 },
