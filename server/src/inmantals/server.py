@@ -41,6 +41,7 @@ from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.config import is_bool
 from inmanta.execute import scheduler
+from inmanta.module import Project
 from inmanta.plugins import Plugin
 from inmanta.util import groupby
 from inmantals import lsp_types
@@ -59,6 +60,12 @@ LEGACY_MODE_COMPILER_VENV: bool = CORE_VERSION < version.Version("6.dev")
 Older versions of inmanta-core work with a separate compiler venv and install modules and their dependencies on the fly.
 Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
 """
+
+SUPPORTS_PROJECT_PIP_INDEX: bool = CORE_VERSION is not None and CORE_VERSION >= version.Version("11.0.0.dev")
+
+
+if SUPPORTS_PROJECT_PIP_INDEX:
+    from inmanta.data import PipConfig
 
 try:
     from inmanta.ast import AnchorTarget
@@ -117,6 +124,8 @@ class Folder:
         self.handler = handler  # Keep a reference to the handler for cleanup
         self.kind: Type[module.ModuleLike]
 
+        assert self.handler.pipconfig is not None
+
         # Check that we are working inside an existing project:
         project_file: str = os.path.join(self.folder_path, module.Project.PROJECT_FILE)
         if os.path.exists(project_file):
@@ -153,7 +162,7 @@ class Folder:
             yield
             set_env(old_env)
 
-        project = module.Project.get()
+        project: Project = module.Project.get()
         # Make sure the virtual environment is ready
         if not project.is_using_virtual_env():
             project.use_virtual_env()
@@ -165,20 +174,30 @@ class Folder:
         assert isinstance(mod, module.ModuleV2), type(mod)
         logger.info(f"Module {mod.name} is v2, we will attempt to install it")
 
-        # Install all v2 modules in editable mode using the project's configured package sources
-        urls: abc.Sequence[str] = project.module_source.urls
-        if not urls:
-            raise Exception("No package repos configured for project")
-        # plain Python install so core does not apply project's sources -> we need to configure pip index ourselves
-        with env_vars(
-            {
-                "PIP_INDEX_URL": urls[0],
-                "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
-                "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
-            }
-        ):
-            logger.info("Installing modules from source: %s", mod.name)
-            project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True)])
+        logger.debug(f"{project.__dict__=}")
+
+        if SUPPORTS_PROJECT_PIP_INDEX:
+            project.virtualenv.install_for_config(
+                requirements=[],
+                paths=[env.LocalPackagePath(mod.path, editable=True)],
+                config=PipConfig(**self.handler.pipconfig),
+            )
+        else:
+            # Install all v2 modules in editable mode using the project's configured package sources
+            urls: abc.Sequence[str] = project.module_source.urls
+            if not urls:
+                raise Exception("No package repos configured for project")
+
+            # plain Python install so core does not apply project's sources -> we need to configure pip index ourselves
+            with env_vars(
+                {
+                    "PIP_INDEX_URL": urls[0],
+                    "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
+                    "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
+                }
+            ):
+                logger.info("Installing modules from source: %s", mod.name)
+                project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True)])
 
         project.install_modules()
 
@@ -238,21 +257,30 @@ class Folder:
 
             raise InvalidExtensionSetup(error_message)
 
-        metadata: typing.Mapping[str, object] = {
-            "name": "Temporary project",
-            "description": "Temporary project",
-            "modulepath": "libs",
-            "downloadpath": "libs",
-            "install_mode": install_mode.value,
-        }
-        if self.handler.repos:
-            metadata["repo"] = self.handler.repos
-        logger.debug(
-            "project.yaml created at %s, repos=%s", os.path.join(inmanta_project_dir, "project.yml"), self.handler.repos
-        )
+        def _generate_project_yml() -> dict[str, object]:
+            """
+            Generate the content of the project.yml for the temporary project as a python dict.
+            """
+            content = {
+                "name": "Temporary project",
+                "description": "Temporary project",
+                "modulepath": "libs",
+                "downloadpath": "libs",
+            }
+            if SUPPORTS_PROJECT_PIP_INDEX:
+                content["pip"] = self.handler.pipconfig
+            else:
+                content["install_mode"]: install_mode.value
+                if self.handler.repos:
+                    content["repo"] = self.handler.repos
 
-        with open(os.path.join(inmanta_project_dir, "project.yml"), "w+") as fd:
-            yaml.dump(metadata, fd)
+            return content
+
+        project_yml_path = os.path.join(inmanta_project_dir, "project.yml")
+        with open(project_yml_path, "w+") as fd:
+            content = _generate_project_yml()
+            yaml.dump(content, fd)
+            logger.debug("project.yml created at %s: %s", project_yml_path, content)
 
         def _get_name_spaces(curdir: str, prefix: str) -> List[str]:
             """
@@ -325,6 +353,7 @@ class InmantaLSHandler(JsonRpcHandler):
         # The scope for the 'compilerVenv' and 'repos' settings in the package.json are set to 'resource' to allow different
         # values for each folder in the workspace. See https://github.com/Microsoft/vscode/wiki/Adopting-Multi-Root-Workspace-APIs#settings  # NOQA E501
         self.repos: Optional[str] = None
+        self.pipconfig: Optional[dict] = None
 
     async def initialize(
         self,
@@ -366,6 +395,11 @@ class InmantaLSHandler(JsonRpcHandler):
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
+            # Make sure we leave pip config options that are unset in the Inmanta extension's config (i.e. null values
+            # from the settings.json) out of the pipconfig, so the default behaviour from core is followed.
+            self.pipconfig = {k: v for k, v in init_options.get("pip", {}).items() if v is not None}
+
+            logger.debug("self.pipconfig= %s", self.pipconfig)
 
         # Keep track of the root folder opened in this workspace
         self.root_folder: Folder = Folder(str(workspace_folder.uri), self)

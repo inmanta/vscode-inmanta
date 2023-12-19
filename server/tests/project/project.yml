@@ -4,3 +4,5 @@ modulepath: libs
 downloadpath: libs
 repo: ['https://github.com/inmanta/{}.git/']
 install_mode: "master"
+pip:
+    use_system_config: true
