@@ -280,9 +280,7 @@ class Folder:
         with open(project_yml_path, "w+") as fd:
             content = _generate_project_yml()
             yaml.dump(content, fd)
-            logger.debug(
-                "project.yml created at %s: %s", project_yml_path, content},
-            )
+            logger.debug("project.yml created at %s: %s", project_yml_path, content)
 
         def _get_name_spaces(curdir: str, prefix: str) -> List[str]:
             """
