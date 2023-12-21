@@ -212,7 +212,7 @@
           "match": "\\b(using|extends|matching|for|with|when|as|if|else|elif)\\b"
         },
         {
-          "name": "keyword.operator.inmanta",
+          "name": "keyword.operator.new.inmanta",
           "match": "\\b(in|or|and|is defined)\\b"
         }
       ]
@@ -247,7 +247,7 @@
     },
     "types": {
       "name": "support.type.inmanta",
-      "match": "\\b(string|number|int|bool|list|dict)\\b"
+      "match": "\\b(string|number|float|int|bool|list|dict)\\b"
     }
   },
   "scopeName": "source.inmanta"

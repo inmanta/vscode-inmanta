@@ -1,3 +1,7 @@
+# v 1.5.0 (2023-12-21)
+Changes in this release:
+- Add  support for the float type in the inmanta syntax.
+
 # v 1.4.0 (2023-06-06)
 Changes in this release:
 
