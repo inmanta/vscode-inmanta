@@ -4,7 +4,6 @@ import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, Worksp
 import { IExtensionApi, Resource } from './types';
 import { fileOrDirectoryExists, log, getOuterMostWorkspaceFolder, logMap} from './utils';
 import { getLanguageMap, getLastActiveFolder} from './extension';
-import * as fs from "fs";
 
 
 export const PYTHONEXTENSIONID = "ms-python.python";
@@ -32,43 +31,11 @@ export class PythonExtension {
 	 * @returns {string} A string representing the path to the Python interpreter.
 	 */
 	get pythonPath(): string {
-		return PythonExtension.getPathPythonBinary(this.executionDetails.execCommand[0]);
+		return this.executionDetails.execCommand[0];
 	}
 
 	get virtualEnvName(): string | null {
 		return this.pythonPathToEnvName(this.pythonPath);
-	}
-
-
-	/**
-	 * Due to bug https://github.com/microsoft/vscode-python/issues/22617, the `this.pythonApi.settings.getExecutionDetails()` method
-	 * might return the path to the root of the venv instead of the path to the python binary in that venv. This method exists to work
-	 * around that issue.
-	 */
-	private static getPathPythonBinary(execCommand: string): string {
-		if(PythonExtension.isFile(execCommand)){
-			return execCommand;
-		}
-		for(const pythonSuffix of ["python3", "python"]){
-			const execCommandWithSuffix = execCommand + "/bin/" + pythonSuffix;
-			if(PythonExtension.isFile(execCommandWithSuffix)){
-				return execCommandWithSuffix
-			}
-		}
-		throw new Error(`Failed to find python binary ${execCommand}`);
-	}
-
-
-	/**
-	 * @returns {boolean} True iff the given path references a file (or symbolic link to file).
-	 */
-	private static isFile(path: string): boolean {
-		try{
-			const stat = fs.statSync(path);
-			return stat.isFile();
-		} catch(err){
-			return false;
-		}
 	}
 
 	pythonPathToEnvName(path: string) : string {
@@ -174,8 +141,7 @@ export class PythonExtension {
 
 	getPathForResource(resource) {
 		try{
-			const execDetails = this.pythonApi.settings.getExecutionDetails(resource);
-			return PythonExtension.getPathPythonBinary(execDetails.execCommand[0]);
+			return this.pythonApi.settings.getExecutionDetails(resource).execCommand[0];
 		} catch (error){
 			console.error(`Failed to getPathForResource   :` + error.name + error.message);
 		}
@@ -194,9 +160,8 @@ export class PythonExtension {
 
 				if(this.executionDetails.execCommand[0] !== newExecutionDetails.execCommand[0]){
 					this.executionDetails = newExecutionDetails;
-					const newPathPythonBinary = PythonExtension.getPathPythonBinary(newExecutionDetails.execCommand[0]);
 					for (const callback of this.callBacksOnchange) {
-						callback(newPathPythonBinary, outermost);
+						callback(newExecutionDetails.execCommand[0], outermost);
 					}
 				}
 			}

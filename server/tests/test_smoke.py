@@ -131,17 +131,11 @@ async def initialize(
         client_capabilities = {}
     path = os.path.join(os.path.dirname(__file__), project)
     folder = {"uri": f"file://{path}", "name": project}
-    pip_config = {"use_system_config": True}
-
     ret = await client.call(
         "initialize",
-        rootPath=path,
-        rootUri=f"file://{path}",
         workspaceFolders=[folder],
         capabilities=client_capabilities,
-        initializationOptions={"pip": pip_config},
     )
-
     await client.assert_one(ret)
 
 
@@ -189,16 +183,7 @@ async def test_connection(client, caplog):
 
     path = os.path.join(os.path.dirname(__file__), "project")
     path_uri = {"uri": f"file://{path}", "name": "project"}
-    pip_config = {"index_url": "https://pypi.org/simple/"}
-
-    ret = await client.call(
-        "initialize",
-        rootPath=path,
-        rootUri=f"file://{path}",
-        workspaceFolders=[path_uri],
-        initializationOptions={"pip": pip_config},
-        capabilities={},
-    )
+    ret = await client.call("initialize", rootPath=path, rootUri=f"file://{path}", workspaceFolders=[path_uri], capabilities={})
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
@@ -268,14 +253,11 @@ async def test_working_on_v1_modules(client, caplog):
     # This dummy module is used because it is only present in the dev artifacts and not in pypi index.
     assert not venv.are_installed(reqs)
 
-    if CORE_VERSION < version.Version("11.0.0"):
-        options = {
-            "repos": [
-                {"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},
-            ]
-        }
-    else:
-        options = {"pip": {"index_url": "https://artifacts.internal.inmanta.com/inmanta/dev"}}
+    options = {
+        "repos": [
+            {"url": "https://artifacts.internal.inmanta.com/inmanta/dev", "type": "package"},
+        ]
+    }
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
     ret = await client.call(
@@ -340,14 +322,11 @@ async def test_working_on_v2_modules(client, caplog):
 
     assert "inmanta-module-module-v2" not in env.PythonWorkingSet.get_packages_in_working_set()
 
-    if CORE_VERSION < version.Version("11.0.0"):
-        options = {
-            "repos": [
-                {"url": "https://pypi.org/simple", "type": "package"},
-            ]
-        }
-    else:
-        options = {"pip": {"index_url": "https://pypi.org/simple"}}
+    options = {
+        "repos": [
+            {"url": "https://pypi.org/simple", "type": "package"},
+        ]
+    }
 
     path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
     ret = await client.call(
@@ -389,11 +368,7 @@ async def test_working_on_v2_modules(client, caplog):
     caplog.clear()
 
 
-@pytest.mark.skipif(
-    lsp_types.PYDANTIC_V2_INSTALLED,
-    reason="Only run when pydantic v1 is supported",
-)
-def test_lsp_type_serialization_pydantic_v1() -> None:
+def test_lsp_type_serialization() -> None:
     """
     LSP spec names are camel case while Python conventions are to use snake case.
     """
@@ -407,29 +382,6 @@ def test_lsp_type_serialization_pydantic_v1() -> None:
     v1 = MyLspType(snake_case_name=0)
     v2 = MyLspType(snakeCaseName=0)
     v3 = MyLspType.parse_obj(spec_compatible)
-
-    for v in [v1, v2, v3]:
-        assert v.dict() == spec_compatible
-
-
-@pytest.mark.skipif(
-    not lsp_types.PYDANTIC_V2_INSTALLED,
-    reason="Only run when pydantic v2 is supported",
-)
-def test_lsp_type_serialization_pydantic_v2() -> None:
-    """
-    LSP spec names are camel case while Python conventions are to use snake case.
-    """
-
-    class MyLspType(lsp_types.LspModel):
-        snake_case_name: int
-        optional: Optional[int] = None
-
-    spec_compatible: Dict = {"snakeCaseName": 0}
-
-    v1 = MyLspType(snake_case_name=0)
-    v2 = MyLspType(snakeCaseName=0)
-    v3 = MyLspType.model_validate(spec_compatible)
 
     for v in [v1, v2, v3]:
         assert v.dict() == spec_compatible
@@ -471,7 +423,6 @@ async def test_symbol_provider(client: JsonRPC) -> None:
     await initialize(client, "project")
 
     ret = await client.call("initialized")
-
     await client.assert_one(ret)
 
     ret = await client.call("workspace/symbol", query="symbol")
