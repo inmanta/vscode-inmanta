@@ -38,6 +38,38 @@ export class PythonExtension {
 		return this.pythonPathToEnvName(this.pythonPath);
 	}
 
+
+	/**
+	 * Due to bug https://github.com/microsoft/vscode-python/issues/22617, the `this.pythonApi.settings.getExecutionDetails()` method
+	 * might return the path to the root of the venv instead of the path to the python binary in that venv. This method exists to work
+	 * around that issue.
+	 */
+	private static getPathPythonBinary(execCommand: string): string {
+		if(PythonExtension.isFile(execCommand)){
+			return execCommand;
+		}
+		for(const pythonSuffix of ["python3", "python"]){
+			const execCommandWithSuffix = execCommand + "/bin/" + pythonSuffix;
+			if(PythonExtension.isFile(execCommandWithSuffix)){
+				return execCommandWithSuffix;
+			}
+		}
+		throw new Error(`Failed to find python binary ${execCommand}`);
+	}
+
+
+	/**
+	 * @returns {boolean} True iff the given path references a file (or symbolic link to file).
+	 */
+	private static isFile(path: string): boolean {
+		try{
+			const stat = fs.statSync(path);
+			return stat.isFile();
+		} catch(err){
+			return false;
+		}
+	}
+
 	pythonPathToEnvName(path: string) : string {
 		/**
 		 *  Match the virtual environment name using a regular expression to transform 

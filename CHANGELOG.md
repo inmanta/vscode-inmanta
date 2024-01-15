@@ -1,4 +1,10 @@
-# v 1.4.5 (2023-06-08)
+# v 1.5.0 (2024-01-15)
+Changes in this release:
+- Drop support for iso4/iso5
+- Add workaround for bug in the python extension where `getExecutionDetails().execCommand[0]` returns the path to the root of the venv instead of the path to the python binary in that venv.
+- Add extension settings to configure pip when working on a module or a project. (#1511)
+
+# v 1.4.0 (2023-06-06)
 Changes in this release:
 - Tie the version of the language server to the version of the extension to make sure everything stays compatible and up to date.(#1099)
 - Show docstring for Entities and Plugins on hover.(#1035)
