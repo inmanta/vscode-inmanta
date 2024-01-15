@@ -52,7 +52,7 @@ export class PythonExtension {
 		for(const pythonSuffix of ["python3", "python"]){
 			const execCommandWithSuffix = execCommand + "/bin/" + pythonSuffix;
 			if(PythonExtension.isFile(execCommandWithSuffix)){
-				return execCommandWithSuffix
+				return execCommandWithSuffix;
 			}
 		}
 		throw new Error(`Failed to find python binary ${execCommand}`);
