@@ -2,7 +2,7 @@
     "name": "inmanta",
     "displayName": "inmanta",
     "description": "Inmanta",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "publisher": "Inmanta",
     "icon": "images/inmanta.ico",
     "license": "Apache-2.0",
@@ -213,7 +213,7 @@
         ]
     },
     "dependencies": {
-        "async-mutex": "^0.4.0",
+        "async-mutex": "^0.4.1",
         "get-port": "^5.1.1",
         "log-symbols": "^6.0.0",
         "lru-cache": "^10.1.0",
@@ -236,11 +236,11 @@
     "devDependencies": {
         "@types/fs-extra": "^11.0.4",
         "@types/mocha": "^10.0.6",
-        "@types/node": "^20.11.0",
+        "@types/node": "^20.11.5",
         "@types/semver": "^7.5.6",
         "@types/vscode": "^1.63.2",
-        "@typescript-eslint/eslint-plugin": "^6.18.1",
-        "@typescript-eslint/parser": "^6.18.1",
+        "@typescript-eslint/eslint-plugin": "^6.19.1",
+        "@typescript-eslint/parser": "^6.19.1",
         "@vscode/test-electron": "^2.3.8",
         "@vscode/vsce": "^2.22.0",
         "eslint": "^8.56.0",

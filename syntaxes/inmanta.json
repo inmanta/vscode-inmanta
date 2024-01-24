@@ -130,6 +130,21 @@
       "include": "#special"
     },
     {
+      "patterns": [
+        {
+          "match": "(matching)[\\s]+(/(?:[^/\\\\\\n]|\\\\.)+/)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.inmanta"
+            },
+            "2": {
+              "name": "constant.regexp.inmanta"
+            }
+          }
+        }
+      ]
+    },
+    {
       "include": "#keywords"
     },
     {
@@ -140,6 +155,22 @@
     },
     {
       "include": "#types"
+    },
+    {
+      "patterns": [
+        {
+          "name": "constant.numeric.inmanta",
+          "match": "([-]?[0-9]+|[-]?[0-9]*[.][0-9]+)"
+        }
+      ]
+    },
+    {
+      "patterns": [
+        {
+          "match": "\\+|-|\\*|/|%",
+          "name": "keyword.operator.new.inmanta"
+        }
+      ]
     }
   ],
   "repository": {
