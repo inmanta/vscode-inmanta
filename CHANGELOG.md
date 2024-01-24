@@ -1,5 +1,6 @@
 # v 1.6.0 (?)
 Changes in this release:
+- Add syntax highlighting for arithmetic operators.
 
 # v 1.5.0 (2024-01-15)
 Changes in this release:
