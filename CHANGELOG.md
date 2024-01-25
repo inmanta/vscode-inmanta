@@ -1,4 +1,7 @@
-# v 1.6.0 (?)
+# v 1.7.0 (?)
+Changes in this release:
+
+# v 1.6.0 (2024-01-24)
 Changes in this release:
 - Add syntax highlighting for arithmetic operators.
 
