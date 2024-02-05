@@ -21,6 +21,7 @@ import logging
 import os
 import shutil
 import socket
+import time
 from typing import AsyncIterator, Dict, List, Optional
 
 import pytest
@@ -323,6 +324,8 @@ async def test_working_on_v2_modules(client, caplog):
     """
     Simulate opening a v2 module in vscode. This test makes sure the module is installed in editable mode.
     """
+    start_time = time.time()
+    
     if CORE_VERSION < version.Version("5"):
         pytest.skip("Feature not supported below iso5")
 
@@ -336,8 +339,14 @@ async def test_working_on_v2_modules(client, caplog):
         shutil.rmtree(env_path)
         os.makedirs(env_path)
 
+    logging.info(f"Setup completed in {time.time() - start_time:.2f} seconds")
+    part_time = time.time()
+
     venv = env.VirtualEnv(env_path)
     venv.use_virtual_env()
+
+    logging.info(f"VirtualEnv setup completed in {time.time() - part_time:.2f} seconds")
+    part_time = time.time()
 
     assert "inmanta-module-module-v2" not in env.PythonWorkingSet.get_packages_in_working_set()
 
@@ -358,6 +367,10 @@ async def test_working_on_v2_modules(client, caplog):
         capabilities={},
         initializationOptions=options,
     )
+
+    logging.info(f"Initialization completed in {time.time() - part_time:.2f} seconds")
+    part_time = time.time()
+
     result = await client.assert_one(ret)
     assert result == {
         "capabilities": {
@@ -379,12 +392,19 @@ async def test_working_on_v2_modules(client, caplog):
     result = await client.assert_one(ret)
     assert "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
 
+    logging.info(f"Module assertion completed in {time.time() - part_time:.2f} seconds")
+    part_time = time.time()
+
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
     assert "Anchormap took" in caplog.text
     caplog.clear()
 
     ret = await client.call("textDocument/didSave")
     result = await client.assert_one(ret)
+
+    logging.info(f"saved in {time.time() - part_time:.2f} seconds")
+    part_time = time.time()
+
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
     assert "Anchormap took" in caplog.text
     caplog.clear()
