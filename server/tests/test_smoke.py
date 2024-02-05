@@ -368,7 +368,7 @@ async def test_working_on_v2_modules(client, caplog):
         initializationOptions=options,
     )
 
-    logging.info(f"Initialization completed in {time.time() - part_time:.2f} seconds")
+    logging.info(f"Initialization 1 completed in {time.time() - part_time:.2f} seconds")
     part_time = time.time()
 
     result = await client.assert_one(ret)
@@ -387,16 +387,23 @@ async def test_working_on_v2_modules(client, caplog):
             "workspaceSymbolProvider": {"workDoneProgress": False},
         }
     }
+    logging.info(f"Initialization assert 1 completed in {time.time() - part_time:.2f} seconds")
+    part_time = time.time()
 
     ret = await client.call("initialized")
+
+    logging.info(f"Initialization 2 completed in {time.time() - part_time:.2f} seconds")
+    part_time = time.time()
     result = await client.assert_one(ret)
+    logging.info(f"Initialization assert 2 completed in {time.time() - part_time:.2f} seconds")
+    part_time = time.time()
+
     assert "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
+    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
+    assert "Anchormap took" in caplog.text
 
     logging.info(f"Module assertion completed in {time.time() - part_time:.2f} seconds")
     part_time = time.time()
-
-    # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
-    assert "Anchormap took" in caplog.text
     caplog.clear()
 
     ret = await client.call("textDocument/didSave")
