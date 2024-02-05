@@ -325,7 +325,7 @@ async def test_working_on_v2_modules(client, caplog):
     Simulate opening a v2 module in vscode. This test makes sure the module is installed in editable mode.
     """
     start_time = time.time()
-    
+
     if CORE_VERSION < version.Version("5"):
         pytest.skip("Feature not supported below iso5")
 
