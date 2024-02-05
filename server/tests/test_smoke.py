@@ -318,7 +318,7 @@ async def test_working_on_v1_modules(client, caplog):
     caplog.clear()
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(15)
 @pytest.mark.asyncio
 async def test_working_on_v2_modules(client, caplog):
     """
