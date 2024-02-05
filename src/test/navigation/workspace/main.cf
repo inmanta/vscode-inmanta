@@ -1,7 +1,7 @@
 import testmodule
 entity Person:
     string name
-    number age
+    int age
     testmodule::pet pet
 end
 
