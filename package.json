@@ -243,7 +243,7 @@
         "@typescript-eslint/parser": "^7.0.2",
         "@vscode/test-electron": "^2.3.9",
         "@vscode/vsce": "^2.24.0",
-        "eslint": "^8.56.0",
+        "eslint": "^8.57.0",
         "eslint-config-google": "^0.14.0",
         "fs-extra": "^11.2.0",
         "glob": "^10.3.10",
