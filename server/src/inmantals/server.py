@@ -42,9 +42,9 @@ from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.config import is_bool
 from inmanta.execute import scheduler
+from inmanta.export import Exporter
 from inmanta.module import Project
 from inmanta.plugins import Plugin, PluginMeta
-from inmanta.export import Exporter
 from inmanta.util import groupby
 from inmantals import lsp_types
 from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
