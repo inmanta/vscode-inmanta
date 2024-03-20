@@ -1,5 +1,6 @@
 # v 1.6.0 (?)
 Changes in this release:
+- Fix memory leak by resetting the `inmanta.plugins.PluginMeta` and `inmanta.export.Exporter` classes after every compile.
 
 # v 1.5.0 (2023-12-21)
 Changes in this release:
