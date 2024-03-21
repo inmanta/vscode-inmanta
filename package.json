@@ -250,7 +250,7 @@
         "mocha": "^10.3.0",
         "rimraf": "^5.0.5",
         "semver": "^7.6.0",
-        "typescript": "^5.4.2"
+        "typescript": "^5.4.3"
     },
     "main": "./out/extension"
 }
