@@ -247,7 +247,7 @@
         "eslint-config-google": "^0.14.0",
         "fs-extra": "^11.2.0",
         "glob": "^10.3.10",
-        "mocha": "^10.3.0",
+        "mocha": "^10.4.0",
         "rimraf": "^5.0.5",
         "semver": "^7.6.0",
         "typescript": "^5.4.3"
