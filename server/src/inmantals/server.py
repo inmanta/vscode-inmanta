@@ -42,8 +42,9 @@ from inmanta.ast import CompilerException, Location, Range
 from inmanta.ast.entity import Entity, Implementation
 from inmanta.config import is_bool
 from inmanta.execute import scheduler
+from inmanta.export import Exporter
 from inmanta.module import Project
-from inmanta.plugins import Plugin
+from inmanta.plugins import Plugin, PluginMeta
 from inmanta.util import groupby
 from inmantals import lsp_types
 from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
@@ -480,6 +481,9 @@ class InmantaLSHandler(JsonRpcHandler):
             # reset all
             resources.resource.reset()
             handler.Commander.reset()
+            PluginMeta.clear()
+            if hasattr(Exporter, "clear"):  # Remain backwards-compatible with older version of inmanta-core
+                Exporter.clear()
 
             setup_project(self.root_folder)
 
@@ -568,7 +572,6 @@ class InmantaLSHandler(JsonRpcHandler):
         except InvalidExtensionSetup as e:
             await self.handle_invalid_extension_setup(e)
             logger.error(e)
-
         except Exception as e:
             logger.debug(e)
 
