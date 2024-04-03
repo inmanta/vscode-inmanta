@@ -638,6 +638,9 @@ export class LanguageServer {
 
 	/**
 	 * Stops the language server and its client.
+	 *
+	 * @param {acquire_lock} If this parameter is set to false, the `mutex` lock must be acquired by the caller.
+	 *                       Otherwise this method acquires the lock itself.
 	 */
 	async stopServerAndClient(acquire_lock: boolean = true) {
 		log("Stopping server and client...");
