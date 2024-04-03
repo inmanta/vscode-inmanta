@@ -217,7 +217,7 @@
         "get-port": "^5.1.1",
         "log-symbols": "^6.0.0",
         "lru-cache": "^10.2.0",
-        "minimatch": "^9.0.3",
+        "minimatch": "^9.0.4",
         "uuid": "^9.0.1",
         "vscode-languageclient": "^9.0.1"
     },
@@ -236,21 +236,21 @@
     "devDependencies": {
         "@types/fs-extra": "^11.0.4",
         "@types/mocha": "^10.0.6",
-        "@types/node": "^20.11.30",
+        "@types/node": "^20.12.2",
         "@types/semver": "^7.5.8",
         "@types/vscode": "^1.63.2",
-        "@typescript-eslint/eslint-plugin": "^7.3.1",
-        "@typescript-eslint/parser": "^7.3.1",
+        "@typescript-eslint/eslint-plugin": "^7.5.0",
+        "@typescript-eslint/parser": "^7.5.0",
         "@vscode/test-electron": "^2.3.9",
         "@vscode/vsce": "^2.24.0",
         "eslint": "^8.57.0",
         "eslint-config-google": "^0.14.0",
         "fs-extra": "^11.2.0",
-        "glob": "^10.3.10",
-        "mocha": "^10.3.0",
+        "glob": "^10.3.12",
+        "mocha": "^10.4.0",
         "rimraf": "^5.0.5",
         "semver": "^7.6.0",
-        "typescript": "^5.4.2"
+        "typescript": "^5.4.3"
     },
     "main": "./out/extension"
 }
