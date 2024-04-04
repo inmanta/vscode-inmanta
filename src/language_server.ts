@@ -639,12 +639,12 @@ export class LanguageServer {
 	/**
 	 * Stops the language server and its client.
 	 *
-	 * @param {acquire_lock} If this parameter is set to false, the `mutex` lock must be acquired by the caller.
+	 * @param {acquireLock} If this parameter is set to false, the `mutex` lock must be acquired by the caller.
 	 *                       Otherwise this method acquires the lock itself.
 	 */
-	async stopServerAndClient(acquire_lock: boolean = true) {
+	async stopServerAndClient(acquireLock: boolean = true) {
 		log("Stopping server and client...");
-		if(acquire_lock){
+		if(acquireLock){
 			await this.mutex.runExclusive(async () => {
 				await this._stopServerAndClient();
 			});
