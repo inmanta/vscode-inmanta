@@ -5,7 +5,7 @@ entity Person:
     the entity for a Person
     """
     string name
-    number age
+    int age
     testmodule::pet pet
 end
 

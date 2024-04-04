@@ -499,10 +499,14 @@ export class LanguageServer {
 
 	/**
 	 * Starts the TCP server and the Inmanta Language Server.
+	 * This function should always run under the `mutex` lock.
 	 *
 	 * @param clientOptions The options for the language client.
 	 */
 	private async startTcp(clientOptions: LanguageClientOptions) {
+		if(this.client){
+			return;
+		}
 		const host = "127.0.0.1";
 		// Get a random free port on 127.0.0.1
 		const serverPort = await getPort({ host: host });
@@ -568,10 +572,14 @@ export class LanguageServer {
 
 	/**
 	 * Starts the Inmanta Language Server by creating a new LanguageClient and starting it with the given clientOptions.
+	 * This function should always run under the `mutex` lock.
 	 *
 	 * @param {LanguageClientOptions} clientOptions The options for the LanguageClient.
 	 */
 	async startPipe(clientOptions: LanguageClientOptions) {
+		if(this.client){
+			return;
+		}
 		log(`Python path is ${this.pythonPath}`);
 
 		const serverOptions: ServerOptions = {
@@ -619,33 +627,49 @@ export class LanguageServer {
 			log("restarting Language Server");
 		}
 		const enable: boolean = workspace.getConfiguration('inmanta').ls.enabled;
-		await this.stopServerAndClient();
-		if (enable) {
-			await this.startServerAndClient();
-			window.showInformationMessage(`The Language server has been enabled for folder ${this.rootFolder.name}`);
-		}
-
+		await this.mutex.runExclusive(async () => {
+			await this.stopServerAndClient(false);
+			if (enable) {
+				await this.startServerAndClient();
+				window.showInformationMessage(`The Language server has been enabled for folder ${this.rootFolder.name}`);
+			}
+		});
 	}
 
 	/**
 	 * Stops the language server and its client.
+	 *
+	 * @param {acquireLock} If this parameter is set to false, the `mutex` lock must be acquired by the caller.
+	 *                       Otherwise this method acquires the lock itself.
 	 */
-	async stopServerAndClient() {
+	async stopServerAndClient(acquireLock: boolean = true) {
 		log("Stopping server and client...");
-		await this.mutex.runExclusive(async () => {
-			if (this.client) {
-				if(this.client.needsStop()){
-					await this.client.stop();
-				}
-				this.client = undefined;
+		if(acquireLock){
+			await this.mutex.runExclusive(async () => {
+				await this._stopServerAndClient();
+			});
+		} else {
+			await this._stopServerAndClient();
+		}
+	}
+
+	/* 
+	 * Stops the language server and its client.
+	 * This function should always run under the `mutex` lock.
+	 */
+	async _stopServerAndClient() {
+		if (this.client) {
+			if(this.client.needsStop()){
+				await this.client.stop();
 			}
-			if(this.serverProcess){
-				if(!this.serverProcess.exitCode){
-					this.serverProcess.kill();
-				}
-				this.serverProcess = undefined;
+			this.client = undefined;
+		}
+		if(this.serverProcess){
+			if(!this.serverProcess.exitCode){
+				this.serverProcess.kill();
 			}
-		});
+			this.serverProcess = undefined;
+		}
 	}
 
 	cleanOutputChannel() {

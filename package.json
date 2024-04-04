@@ -2,7 +2,7 @@
     "name": "inmanta",
     "displayName": "inmanta",
     "description": "Inmanta",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "publisher": "Inmanta",
     "icon": "images/inmanta.ico",
     "license": "Apache-2.0",
@@ -213,11 +213,11 @@
         ]
     },
     "dependencies": {
-        "async-mutex": "^0.4.1",
+        "async-mutex": "^0.5.0",
         "get-port": "^5.1.1",
         "log-symbols": "^6.0.0",
-        "lru-cache": "^10.1.0",
-        "minimatch": "^9.0.3",
+        "lru-cache": "^10.2.0",
+        "minimatch": "^9.0.4",
         "uuid": "^9.0.1",
         "vscode-languageclient": "^9.0.1"
     },
@@ -228,7 +228,7 @@
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "rimraf out && tsc -p ./",
-        "lint": "eslint src --ext ts",
+        "lint": "eslint --max-warnings 0 src --ext ts",
         "watch": "rimraf out && tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
         "test": "node ./out/test/runTest.js"
@@ -236,21 +236,21 @@
     "devDependencies": {
         "@types/fs-extra": "^11.0.4",
         "@types/mocha": "^10.0.6",
-        "@types/node": "^20.11.5",
-        "@types/semver": "^7.5.6",
+        "@types/node": "^20.12.3",
+        "@types/semver": "^7.5.8",
         "@types/vscode": "^1.63.2",
-        "@typescript-eslint/eslint-plugin": "^6.19.1",
-        "@typescript-eslint/parser": "^6.19.1",
-        "@vscode/test-electron": "^2.3.8",
-        "@vscode/vsce": "^2.22.0",
-        "eslint": "^8.56.0",
+        "@typescript-eslint/eslint-plugin": "^7.5.0",
+        "@typescript-eslint/parser": "^7.5.0",
+        "@vscode/test-electron": "^2.3.9",
+        "@vscode/vsce": "^2.24.0",
+        "eslint": "^8.57.0",
         "eslint-config-google": "^0.14.0",
         "fs-extra": "^11.2.0",
-        "glob": "^10.3.10",
-        "mocha": "^10.2.0",
+        "glob": "^10.3.12",
+        "mocha": "^10.4.0",
         "rimraf": "^5.0.5",
-        "semver": "^7.5.4",
-        "typescript": "^5.3.3"
+        "semver": "^7.6.0",
+        "typescript": "^5.4.3"
     },
     "main": "./out/extension"
 }
