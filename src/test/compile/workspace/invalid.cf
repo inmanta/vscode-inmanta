@@ -1,6 +1,6 @@
 entity Person:
     string name
-    number age
+    int age
 end
 
 Person.friends [0:] -- Person

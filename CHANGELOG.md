@@ -1,3 +1,7 @@
+# v 1.7.0 (?)
+Changes in this release:
+- Fix bug that could cause multiple instances of the language server to be running simultaneously.
+
 # v 1.6.0 (2024-01-24)
 Changes in this release:
 - Add syntax highlighting for arithmetic operators.

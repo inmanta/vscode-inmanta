@@ -15,6 +15,7 @@
 
     Contact: code@inmanta.com
 """
+
 import pkg_resources
 from packaging import version
 from pydantic import FileUrl
