@@ -1,3 +1,6 @@
+# v 1.8.0 (?)
+Changes in this release:
+
 # v 1.7.0 (2024-04-04)
 Changes in this release:
 - Fix bug that could cause multiple instances of the language server to be running simultaneously.
