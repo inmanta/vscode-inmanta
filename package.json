@@ -217,7 +217,7 @@
         "get-port": "^5.1.1",
         "log-symbols": "^6.0.0",
         "lru-cache": "^10.2.2",
-        "minimatch": "^9.0.4",
+        "minimatch": "^9.0.5",
         "uuid": "^10.0.0",
         "vscode-languageclient": "^9.0.1"
     },
