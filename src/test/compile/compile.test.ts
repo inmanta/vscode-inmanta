@@ -19,7 +19,7 @@ describe('Compile checks', () => {
 		{ source: 'invalid.cf', succeed: false }
 	];
 
-	let envPath: string = "";
+	const envPath: string = "";
 	beforeEach(async () => {
 		await Promise.all([
 			fs.writeFile(logPath, ""),

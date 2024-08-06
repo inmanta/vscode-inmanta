@@ -1,8 +1,8 @@
 import * as assert from 'assert';
-import { after, before, describe, it, beforeEach } from 'mocha';
+import { describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 
-import { Uri, window, commands, workspace, TextDocument, TextEditor, extensions } from 'vscode';
+import { Uri, window, commands, workspace, TextDocument, extensions } from 'vscode';
 
 const cfFile: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/compile/workspace/valid.cf'));
 

@@ -115,7 +115,7 @@ export function createProjectInstallHandler(pythonPath: string){
 			};
 			installProjectTerminal = window.createTerminal(options);
 		}
-		let command = pythonPath+' -m inmanta.app project install';
+		const command = pythonPath+' -m inmanta.app project install';
 		installProjectTerminal.sendText(command);
 		installProjectTerminal.show();
 	};

@@ -10,9 +10,7 @@ async function main() {
 	const tmpHomeDir: string = fs.mkdtempSync("/tmp/vscode-tests");
 	try {
 		const settings = {
-			// eslint-disable-next-line @typescript-eslint/naming-convention
 			"inmanta.ls.enabled": true,
-			// eslint-disable-next-line @typescript-eslint/naming-convention
 			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV
 		};
 
@@ -34,8 +32,8 @@ async function main() {
 		// Ensure the tests don't pick up any config present in the .config
 		// in the home dir.
 		const extensionTestsEnv = {
-			HOME: tmpHomeDir,  // eslint-disable-line @typescript-eslint/naming-convention
-			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH,  // eslint-disable-line @typescript-eslint/naming-convention,
+			HOME: tmpHomeDir,
+			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH,
 		};
 
 		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');

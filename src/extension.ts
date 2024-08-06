@@ -101,7 +101,7 @@ export async function activate(context: ExtensionContext) {
 		// If we have nested workspace folders we only start a language server on the outer most workspace folder.
 		folder = getOuterMostWorkspaceFolder(folder);
 		lastActiveFolder = folder;
-		let folderURI = folder.uri.toString();
+		const folderURI = folder.uri.toString();
 
 		if (!languageServers.has(folderURI)) {
 			/*
@@ -118,11 +118,11 @@ export async function activate(context: ExtensionContext) {
 
 			*/
 
-			let newPath = pythonExtensionInstance.getPathForResource(folder.uri);
+			const newPath = pythonExtensionInstance.getPathForResource(folder.uri);
 
-			let errorHandler = new LsErrorHandler(folder);
+			const errorHandler = new LsErrorHandler(folder);
 
-			let languageserver = new LanguageServer(context, newPath, folder, errorHandler);
+			const languageserver = new LanguageServer(context, newPath, folder, errorHandler);
 			log("created LanguageServer");
 			//register listener to restart the LS if the python interpreter changes.
 			pythonExtensionInstance.registerCallbackOnChange(
@@ -136,7 +136,7 @@ export async function activate(context: ExtensionContext) {
 							inmantaCommands.registerCommands(languageserver);
 						}
 					).catch(
-						err => {
+						(_err) => {
 							console.error(`Error updating python path to ${updatedPath}`);
 					})
 					;

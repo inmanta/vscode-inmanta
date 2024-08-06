@@ -15,11 +15,17 @@ export default [{
     },
 
     rules: {
-        "@typescript-eslint/naming-convention": "warn",
-        "@typescript-eslint/semi": "warn",
+        "prefer-const": ["error", { "ignoreReadBeforeAssign": true }],
         curly: "warn",
         eqeqeq: "warn",
         "no-throw-literal": "warn",
         semi: "off",
+        "no-unused-vars": "off",
+
+        "@typescript-eslint/no-unused-vars": ["warn", {
+            argsIgnorePattern: "^_",
+            varsIgnorePattern: "^_",
+            caughtErrorsIgnorePattern: "^_",
+        }],
     },
 }];

@@ -11,7 +11,7 @@ export function fileOrDirectoryExists(filePath: string): boolean {
 	try {
 	  fs.accessSync(filePath);
 	  return true;
-	} catch (error) {
+	} catch (_error) {
 	  return false;
 	}
   }
@@ -29,7 +29,7 @@ export function logMap(map: Map<string, LanguageServer>, msg?: string) {
 	if (msg) {
 		log(msg);
 	}
-	for (let key of map.keys()) {
+	for (const key of map.keys()) {
 		log(key);
 	}
 }
