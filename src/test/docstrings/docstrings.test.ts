@@ -26,7 +26,7 @@ describe('Language Server Code docstrings', () => {
 			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 			const docstringEntity = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(13, 11));
 
-			let expectedDocstringEntity: string = `
+			const expectedDocstringEntity: string = `
 \`\`\`inmanta
 entity Person:
 \`\`\`

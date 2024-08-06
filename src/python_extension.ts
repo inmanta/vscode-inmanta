@@ -1,8 +1,8 @@
 'use strict';
 import { exec } from 'child_process';
-import { StatusBarAlignment, ThemeColor, window, workspace, TextDocument, WorkspaceFolder, StatusBarItem} from 'vscode';
+import { StatusBarAlignment, ThemeColor, window, workspace, WorkspaceFolder, StatusBarItem} from 'vscode';
 import { IExtensionApi, Resource } from './types';
-import { fileOrDirectoryExists, log, getOuterMostWorkspaceFolder, logMap} from './utils';
+import { fileOrDirectoryExists, getOuterMostWorkspaceFolder} from './utils';
 import { getLanguageMap, getLastActiveFolder} from './extension';
 import * as fs from "fs";
 
@@ -66,7 +66,7 @@ export class PythonExtension {
 		try{
 			const stat = fs.statSync(path);
 			return stat.isFile();
-		} catch(err){
+		} catch(_err){
 			return false;
 		}
 	}
@@ -109,13 +109,13 @@ export class PythonExtension {
 	async updateInmantaEnvVisibility(documentURI?) {
 		let venvName = this.virtualEnvName;
 		let folderName = "";
-		let lastActiveFolder = getLastActiveFolder();
+		const lastActiveFolder = getLastActiveFolder();
 		if (lastActiveFolder) {
 			folderName = lastActiveFolder.name;
 		}
 		if (documentURI) {
 			try{
-				let folder = workspace.getWorkspaceFolder(documentURI);
+				const folder = workspace.getWorkspaceFolder(documentURI);
 				if (folder) {
 					folderName = folder.name;
 					venvName = this.pythonPathToEnvName(getLanguageMap().get(folder.uri.toString()).pythonPath);
@@ -188,9 +188,9 @@ export class PythonExtension {
 	private onChange(pythonApi : IExtensionApi) {
 		pythonApi.settings.onDidChangeExecutionDetails(
 			(resource: Resource) => {
-				let newExecutionDetails = pythonApi.settings.getExecutionDetails(resource);
-				let folder = workspace.getWorkspaceFolder(resource);
-				let outermost = getOuterMostWorkspaceFolder(folder).uri;
+				const newExecutionDetails = pythonApi.settings.getExecutionDetails(resource);
+				const folder = workspace.getWorkspaceFolder(resource);
+				const outermost = getOuterMostWorkspaceFolder(folder).uri;
 
 				if(this.executionDetails.execCommand[0] !== newExecutionDetails.execCommand[0]){
 					this.executionDetails = newExecutionDetails;

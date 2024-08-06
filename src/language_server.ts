@@ -35,8 +35,8 @@ export class LsErrorHandler implements ErrorHandler{
 	constructor(folder: WorkspaceFolder) {
 		this.folder = folder;
 	}
-	async error(error: Error, message: Message | undefined, count: number | undefined): Promise<ErrorHandlerResult> {
-		let languageServer: LanguageServer = getLanguageMap().get(this.folder.uri.toString());
+	async error(error: Error, _message: Message | undefined, _count: number | undefined): Promise<ErrorHandlerResult> {
+		const languageServer: LanguageServer = getLanguageMap().get(this.folder.uri.toString());
 
 		if (languageServer === undefined) {
 			return;
@@ -120,7 +120,7 @@ export class LanguageServer {
 		try {
 		  const version = cp.execSync(`${this.pythonPath} -m pip freeze | grep inmantals | cut -d'=' -f3`).toString();
 		  return version;
-		} catch (error) {}
+		} catch (_error) {}
 		return null;
 	}
 
@@ -134,7 +134,7 @@ export class LanguageServer {
 				return true;
 			  }
 			  return false;
-			} catch (error) {}
+			} catch (_error) {}
 			return false;
 		}
 
@@ -236,7 +236,7 @@ export class LanguageServer {
 			"    sys.exit(5)\n" +
 			"  sys.exit(3)";
 
-		let spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
+		const spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
 		if (spawnResult.status === 4) {
 			return LanguageServerDiagnoseResult.wrongPythonVersion;
@@ -515,7 +515,7 @@ export class LanguageServer {
 		if (process.env.INMANTA_LS_LOG_PATH) {
 			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`);
 			options.env = {
-				"LOG_PATH": process.env.INMANTA_LS_LOG_PATH  // eslint-disable-line @typescript-eslint/naming-convention
+				"LOG_PATH": process.env.INMANTA_LS_LOG_PATH 
 			};
 		}
 
@@ -550,8 +550,8 @@ export class LanguageServer {
 			}, 500);
 		});
 
-		let serverOptions: ServerOptions = function () {
-			let socket = net.connect({ port: serverPort, host: host});
+		const serverOptions: ServerOptions = function () {
+			const socket = net.connect({ port: serverPort, host: host});
 			const streamInfo = {
 				reader: socket,
 				writer: socket
