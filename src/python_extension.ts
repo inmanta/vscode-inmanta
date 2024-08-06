@@ -6,7 +6,6 @@ import { fileOrDirectoryExists, getOuterMostWorkspaceFolder} from './utils';
 import { getLanguageMap, getLastActiveFolder} from './extension';
 import * as fs from "fs";
 
-
 export const PYTHONEXTENSIONID = "ms-python.python";
 
 export class PythonExtension {
