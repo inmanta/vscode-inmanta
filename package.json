@@ -228,7 +228,7 @@
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "rimraf out && tsc -p ./",
-        "lint": "eslint --max-warnings 0 src --ext ts",
+        "lint": "eslint --max-warnings 0",
         "watch": "rimraf out && tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
         "test": "node ./out/test/runTest.js"
