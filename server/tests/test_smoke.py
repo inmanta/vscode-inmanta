@@ -19,6 +19,7 @@
 import json
 import logging
 import os
+import pathlib
 import shutil
 import socket
 import time
@@ -28,12 +29,12 @@ import pytest
 from tornado.iostream import IOStream
 from tornado.tcpclient import TCPClient
 
+import inmanta.util
 from inmanta import env
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import CORE_VERSION, InmantaLSHandler
 from packaging import version
-from pkg_resources import Requirement, parse_requirements
 
 
 class JsonRPC(object):
@@ -260,13 +261,12 @@ async def test_working_on_v1_modules(client, caplog):
         os.makedirs(env_path)
 
     req_file = os.path.join(path_to_module, "requirements.txt")
-    with open(req_file, "r") as f:
-        reqs = list(parse_requirements(f.readlines()))
+    reqs = inmanta.util.parse_requirements_from_file(pathlib.Path(req_file))
 
     venv = env.VirtualEnv(env_path)
     venv.use_virtual_env()
 
-    assert Requirement.parse("inmanta-module-dummy>=3.0.8") in reqs
+    assert inmanta.util.parse_requirement("inmanta-module-dummy>=3.0.8") in reqs
     # This dummy module is used because it is only present in the dev artifacts and not in pypi index.
     assert not venv.are_installed(reqs)
 
