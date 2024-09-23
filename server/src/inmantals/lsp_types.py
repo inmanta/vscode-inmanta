@@ -16,13 +16,12 @@
     Contact: code@inmanta.com
 """
 
-import pkg_resources
+import importlib.metadata
+
 from packaging import version
 from pydantic import FileUrl
 
-PYDANTIC_V2_INSTALLED: bool = version.Version(pkg_resources.get_distribution("pydantic").version) >= version.Version(
-    "2.0.0.dev"
-)
+PYDANTIC_V2_INSTALLED: bool = version.Version(importlib.metadata.version("pydantic")) >= version.Version("2.0.0.dev")
 if PYDANTIC_V2_INSTALLED:
     from pydantic import ConfigDict
     from pydantic.alias_generators import to_camel
