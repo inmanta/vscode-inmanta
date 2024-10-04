@@ -263,12 +263,13 @@ async def test_working_on_v1_modules(client, caplog):
     with open(req_file, "r") as f:
         reqs = list(parse_requirements(f.readlines()))
 
+    str_reqs = [str(e) for e in reqs]
     venv = env.VirtualEnv(env_path)
     venv.use_virtual_env()
 
     assert Requirement.parse("inmanta-module-dummy>=3.0.8") in reqs
     # This dummy module is used because it is only present in the dev artifacts and not in pypi index.
-    assert not venv.are_installed(reqs)
+    assert not venv.are_installed(str_reqs)
 
     if CORE_VERSION < version.Version("11.0.0"):
         options = {
@@ -307,7 +308,7 @@ async def test_working_on_v1_modules(client, caplog):
     ret = await client.call("initialized")
     result = await client.assert_one(ret)
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
-    assert venv.are_installed(reqs)
+    assert venv.are_installed(str_reqs)
     assert "Anchormap took" in caplog.text
     caplog.clear()
 
