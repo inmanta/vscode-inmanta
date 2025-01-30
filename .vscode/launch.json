@@ -21,6 +21,11 @@
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
             "preLaunchTask": "npm: pretest",
+            "env": {
+                "INMANTA_LS_PATH": "${workspaceRoot}/server",
+                "INMANTA_LS_LOG_PATH": "${workspaceRoot}/vscode-inmanta.log",
+                "INMANTA_EXTENSION_TEST_ENV":"/tmp/venv"
+            }
         },
         {
             "name": "Extension Test Navigation",
@@ -31,6 +36,11 @@
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
             "preLaunchTask": "npm: pretest",
+            "env": {
+                "INMANTA_LS_PATH": "${workspaceRoot}/server",
+                "INMANTA_LS_LOG_PATH": "${workspaceRoot}/vscode-inmanta.log",
+                "INMANTA_EXTENSION_TEST_ENV":"/tmp/venv"
+            }
         },
         {
             "name": "Extension Test LoadExtension",
@@ -41,6 +51,11 @@
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
             "preLaunchTask": "npm: pretest",
+            "env": {
+                "INMANTA_LS_PATH": "${workspaceRoot}/server",
+                "INMANTA_LS_LOG_PATH": "${workspaceRoot}/vscode-inmanta.log",
+                "INMANTA_EXTENSION_TEST_ENV":"/tmp/venv"
+            }
         },
         {
             "name": "Extension Test Docstrings",
@@ -51,6 +66,11 @@
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
             "preLaunchTask": "npm: pretest",
+            "env": {
+                "INMANTA_LS_PATH": "${workspaceRoot}/server",
+                "INMANTA_LS_LOG_PATH": "${workspaceRoot}/vscode-inmanta.log",
+                "INMANTA_EXTENSION_TEST_ENV":"/tmp/venv"
+            }
         }
     ]
 }

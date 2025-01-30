@@ -6,12 +6,10 @@ import * as fs from 'fs-extra';
 import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, SnippetString } from 'vscode';
 import { waitForCompile } from '../helpers';
 
-
-const logPath: string = process.env.INMANTA_LS_LOG_PATH || './server.log';
+const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/compile/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
-
 
 describe('Compile checks', () => {
 	const tests = [
