@@ -9,12 +9,12 @@ import { LanguageServer } from './language_server';
  */
 export function fileOrDirectoryExists(filePath: string): boolean {
 	try {
-	  fs.accessSync(filePath);
-	  return true;
+		fs.accessSync(filePath);
+		return true;
 	} catch (_error) {
-	  return false;
+		return false;
 	}
-  }
+}
 
 /**
  * Logs a message to the console with a timestamp and a tag.

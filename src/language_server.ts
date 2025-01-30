@@ -7,8 +7,8 @@ import * as path from "path";
 import * as fs from "fs";
 import getPort from 'get-port';
 
-import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder, Location, Definition, Position, TextDocument} from 'vscode';
-import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction, ProvideDefinitionSignature, CancellationToken} from 'vscode-languageclient';
+import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder, Location, Definition, Position, TextDocument } from 'vscode';
+import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction, ProvideDefinitionSignature, CancellationToken } from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
 import { fileOrDirectoryExists, isLocation, log } from './utils';
@@ -24,13 +24,13 @@ export enum LanguageServerDiagnoseResult {
 	wrongLanguageServer,
 	unknown,
 	ok,
-  }
+}
 
 
 /**
  * An implementation of the ErrorHandler interface for the language server client.
  */
-export class LsErrorHandler implements ErrorHandler{
+export class LsErrorHandler implements ErrorHandler {
 	folder: WorkspaceFolder;
 	constructor(folder: WorkspaceFolder) {
 		this.folder = folder;
@@ -42,17 +42,17 @@ export class LsErrorHandler implements ErrorHandler{
 			return;
 		}
 		const languageServerDiagnose = await languageServer.canServerStart();
-		if (languageServerDiagnose === LanguageServerDiagnoseResult.unknown){
-			window.showErrorMessage(error.name+": "+error.message);
+		if (languageServerDiagnose === LanguageServerDiagnoseResult.unknown) {
+			window.showErrorMessage(error.name + ": " + error.message);
 		}
-		if (languageServerDiagnose !== LanguageServerDiagnoseResult.ok){
+		if (languageServerDiagnose !== LanguageServerDiagnoseResult.ok) {
 			await languageServer.proposeSolution(languageServerDiagnose, uuidv4());
 		}
-		return {action: ErrorAction.Shutdown};
+		return { action: ErrorAction.Shutdown };
 	}
 
-	closed(): CloseHandlerResult{
-		return {action: CloseAction.DoNotRestart};
+	closed(): CloseHandlerResult {
+		return { action: CloseAction.DoNotRestart };
 	}
 
 }
@@ -96,16 +96,16 @@ export class LanguageServer {
 		const version = [];
 
 		if (process.env.INMANTA_LS_PATH) {
-		  version.push("-e", process.env.INMANTA_LS_PATH);
-		  log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
+			version.push("-e", process.env.INMANTA_LS_PATH);
+			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
 		} else {
-		  // Check for the presence of requirements.txt
-		  if (fs.existsSync(REQUIREMENTS_PATH)) {
-			version.push("-r", REQUIREMENTS_PATH);
-			log(`Installing Language Server from requirements file "${REQUIREMENTS_PATH}"`);
-		  } else {
-			version.push("inmantals");
-		  }
+			// Check for the presence of requirements.txt
+			if (fs.existsSync(REQUIREMENTS_PATH)) {
+				version.push("-r", REQUIREMENTS_PATH);
+				log(`Installing Language Server from requirements file "${REQUIREMENTS_PATH}"`);
+			} else {
+				version.push("inmantals");
+			}
 		}
 
 		return version;
@@ -118,9 +118,9 @@ export class LanguageServer {
 	 */
 	getInstalledInmantaLSVersion(): string | null {
 		try {
-		  const version = cp.execSync(`${this.pythonPath} -m pip freeze | grep inmantals | cut -d'=' -f3`).toString();
-		  return version;
-		} catch (_error) {}
+			const version = cp.execSync(`${this.pythonPath} -m pip freeze | grep inmantals | cut -d'=' -f3`).toString();
+			return version;
+		} catch (_error) { }
 		return null;
 	}
 
@@ -129,14 +129,14 @@ export class LanguageServer {
 	 */
 	isEditableInstall(): boolean {
 		try {
-			  const inmantals = cp.execSync(`${this.pythonPath} -m pip list --editable | grep inmantals`).toString();
-			  if(inmantals){
+			const inmantals = cp.execSync(`${this.pythonPath} -m pip list --editable | grep inmantals`).toString();
+			if (inmantals) {
 				return true;
-			  }
-			  return false;
-			} catch (_error) {}
+			}
 			return false;
-		}
+		} catch (_error) { }
+		return false;
+	}
 
 	/**
 	 * Checks if the correct version of the Inmanta Language Server is installed.
@@ -164,8 +164,8 @@ export class LanguageServer {
 		}
 
 		if (!expectedVersion) {
-		  // requirement.txt does not specify inmantals, no requirements specified
-		  return true;
+			// requirement.txt does not specify inmantals, no requirements specified
+			return true;
 		}
 
 		// Get the installed version of inmantals
@@ -203,7 +203,7 @@ export class LanguageServer {
 				return this.proposeSolution(canStart, this.diagnoseId);
 			}
 		}
-  	}
+	}
 
 	/**
 	 * Check if the server can start using the provided interpreter.
@@ -214,7 +214,7 @@ export class LanguageServer {
 
 	 * @returns {Promise<LanguageServerDiagnoseResult>} The diagnose result
 	 */
-	async canServerStart(pythonPath?: string):Promise<LanguageServerDiagnoseResult>{
+	async canServerStart(pythonPath?: string): Promise<LanguageServerDiagnoseResult> {
 		if (pythonPath === undefined) {
 			pythonPath = this.pythonPath;
 		}
@@ -247,13 +247,13 @@ export class LanguageServer {
 			// The check itself is nspired by: https://stackoverflow.com/questions/1871549/determine-if-python-is-running-inside-virtualenv/42580137#42580137
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		} else if (spawnResult.status !== 0) {
-			log("can not start server due to: "+stdout);
+			log("can not start server due to: " + stdout);
 			return LanguageServerDiagnoseResult.unknown;
 		}
-		if(!this.isCorrectInmantaLSVersionInstalled()){
+		if (!this.isCorrectInmantaLSVersionInstalled()) {
 			return LanguageServerDiagnoseResult.wrongLanguageServer;
 		}
-		else{
+		else {
 			return LanguageServerDiagnoseResult.ok;
 		}
 	}
@@ -265,15 +265,15 @@ export class LanguageServer {
 	 * @param {LanguageServerDiagnoseResult} error the extension language server error for wich we propose a solution
 	 * @param {string} diagnoseId a uuid to identify the diagnose
 	 */
-	async proposeSolution(error:LanguageServerDiagnoseResult, diagnoseId: string){
+	async proposeSolution(error: LanguageServerDiagnoseResult, diagnoseId: string) {
 		let response;
-		switch (error){
+		switch (error) {
 			case LanguageServerDiagnoseResult.wrongInterpreter:
 				await this.selectInterpreter(diagnoseId);
 				break;
 			case LanguageServerDiagnoseResult.wrongPythonVersion:
-				response = await window.showErrorMessage(`The Inmanta Language Server requires at least Python 3.6, but the provided interpreter (${this.pythonPath}) is an older version.`,  "Setup assistant");
-				if(response === "Setup assistant"){
+				response = await window.showErrorMessage(`The Inmanta Language Server requires at least Python 3.6, but the provided interpreter (${this.pythonPath}) is an older version.`, "Setup assistant");
+				if (response === "Setup assistant") {
 					commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 				};
 				break;
@@ -285,7 +285,7 @@ export class LanguageServer {
 				break;
 			case LanguageServerDiagnoseResult.unknown:
 				response = await window.showErrorMessage(`The Inmanta Language Server failed to start`, "Setup assistant");
-				if(response === "Setup assistant"){
+				if (response === "Setup assistant") {
 					commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 				};
 				break;
@@ -299,18 +299,18 @@ export class LanguageServer {
 	* @returns {Promise<any>} A Promise that resolves to the result of startOrRestartLS() after the interpreter is selected.
 	*    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
 	*/
-	async selectInterpreter(diagnoseId: string):Promise<any>{
+	async selectInterpreter(diagnoseId: string): Promise<any> {
 		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
 
-		if(response === 'Select interpreter'){
+		if (response === 'Select interpreter') {
 			return await commands.executeCommand('python.setInterpreter');
 		}
-		if(this.diagnoseId!==diagnoseId){
+		if (this.diagnoseId !== diagnoseId) {
 			//another diagnose has been run in the mean time
 			return Promise.resolve();
 		} else {
-			const response2 =  await window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
-			if(response2 === "Setup assistant"){
+			const response2 = await window.showErrorMessage("The Inmanta language server could not start as no virtual environment is selected", "Setup assistant");
+			if (response2 === "Setup assistant") {
 				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 			}
 			return Promise.reject("No Interpreter Selected");
@@ -330,19 +330,19 @@ export class LanguageServer {
 			await this.selectInterpreter(diagnoseId);
 		}
 		const msg = reason === LanguageServerDiagnoseResult.wrongLanguageServer
-		? "A new version of the Inmanta Language Server is available. Do you want to update? "
-		: `Inmanta Language Server not installed. Install the Language server in ${this.pythonPath}? `;
+			? "A new version of the Inmanta Language Server is available. Do you want to update? "
+			: `Inmanta Language Server not installed. Install the Language server in ${this.pythonPath}? `;
 		const response = await window.showErrorMessage(msg, 'Yes', 'No');
-		if(response === 'Yes'){
+		if (response === 'Yes') {
 			await this.installLanguageServer();
 			return this.startOrRestartLS(true);
 		}
-		if(this.diagnoseId!==diagnoseId){
+		if (this.diagnoseId !== diagnoseId) {
 			//another diagnose has been run in the mean time
 			return Promise.resolve();
 		} else {
 			const response = await window.showErrorMessage("The Inmanta language server could not start as the language server was not installed", "Setup assistant");
-			if(response === "Setup assistant"){
+			if (response === "Setup assistant") {
 				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 			};
 			return Promise.reject("Inmanta Language Server was not installed");
@@ -364,16 +364,16 @@ export class LanguageServer {
 		const cmdArgs: string[] = ["-m", "pip", "install"];
 		cmdArgs.push(...this.languageServerVersionToInstall());
 		window.showInformationMessage(`Installing Inmanta Language server in ${this.pythonPath}. This may take a few seconds`);
-		log("installing LS  with: "+ cmdArgs.join(' '));
+		log("installing LS  with: " + cmdArgs.join(' '));
 		const child = cp.spawnSync(this.pythonPath, cmdArgs);
 		if (child.status !== 0) {
 			log(`Can not start server and client`);
-			const response = await window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`,  "Setup assistant");
-			if(response === "Setup assistant"){
+			const response = await window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`, "Setup assistant");
+			if (response === "Setup assistant") {
 				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 			};
 			return Promise.reject("failed to install LS");
-		} else{
+		} else {
 			window.showInformationMessage("Inmanta Language server was installed successfully");
 			return Promise.resolve();
 		}
@@ -395,19 +395,19 @@ export class LanguageServer {
 		position: Position,
 		token: CancellationToken,
 		next: ProvideDefinitionSignature
-	  ): Promise<Location | Location[] | undefined> {
+	): Promise<Location | Location[] | undefined> {
 		const definition: Location | Location[] = await next(document, position, token) as Definition;
 		if (Array.isArray(definition)) {
-			const filteredDefinition:Location[] = definition.filter(
+			const filteredDefinition: Location[] = definition.filter(
 				(loc): loc is Location => (isLocation(loc) && loc.uri.path !== "/undefined")
 			);
 			return filteredDefinition;
-		  } else if (isLocation(definition) && definition.uri.path !== "/undefined") {
+		} else if (isLocation(definition) && definition.uri.path !== "/undefined") {
 			return definition;
-		  } else {
+		} else {
 			return undefined;
-		  }
-	  }
+		}
+	}
 
 
 	/**
@@ -416,7 +416,7 @@ export class LanguageServer {
 	 * 		including document selector, error handler, output channel settings, and initialization options.
 	 * @throws {Error} Throws an error if a file is opened instead of a folder.
 	 */
-	private	async getClientOptions(): Promise<LanguageClientOptions> {
+	private async getClientOptions(): Promise<LanguageClientOptions> {
 		if (this.context.storageUri === undefined) {
 			window.showWarningMessage("A folder should be opened instead of a file in order to use the inmanta extension.");
 			throw Error("A folder should be opened instead of a file in order to use the inmanta extension.");
@@ -447,7 +447,7 @@ export class LanguageServer {
 
 		const clientOptions: LanguageClientOptions = {
 			// Register the server for inmanta documents living under the root folder.
-			documentSelector: [{ scheme: 'file', language: 'inmanta'}],
+			documentSelector: [{ scheme: 'file', language: 'inmanta' }],
 			middleware: {
 				provideDefinition: this.middlewareProvideDefinition
 			},
@@ -481,7 +481,7 @@ export class LanguageServer {
 			log("Error occured while retrieving client options:" + err);
 			return Promise.reject("failed retrieving client options");
 		}
-		try{
+		try {
 			if (os.platform() === "win32") {
 				return this.startTcp(clientOptions);
 			} else {
@@ -490,7 +490,7 @@ export class LanguageServer {
 		} catch (err) {
 			log(`Could not start Language Server: ${err.message}`);
 			const response = await window.showErrorMessage('Inmanta Language Server: rejected to start' + err.message, "Setup assistant");
-			if(response === "Setup assistant"){
+			if (response === "Setup assistant") {
 				return commands.executeCommand(`workbench.action.openWalkthrough`, `Inmanta.inmanta#inmanta.walkthrough`, false);
 			};
 			return Promise.reject("failed to start LS");
@@ -504,7 +504,7 @@ export class LanguageServer {
 	 * @param clientOptions The options for the language client.
 	 */
 	private async startTcp(clientOptions: LanguageClientOptions) {
-		if(this.client){
+		if (this.client) {
 			return;
 		}
 		const host = "127.0.0.1";
@@ -515,7 +515,7 @@ export class LanguageServer {
 		if (process.env.INMANTA_LS_LOG_PATH) {
 			log(`Language Server log file has been manually set to "${process.env.INMANTA_LS_LOG_PATH}"`);
 			options.env = {
-				"LOG_PATH": process.env.INMANTA_LS_LOG_PATH 
+				"LOG_PATH": process.env.INMANTA_LS_LOG_PATH
 			};
 		}
 
@@ -536,7 +536,7 @@ export class LanguageServer {
 		const timeout: number = 10000;
 		const start = Date.now();
 		// Wait for server to start
-		await new Promise<void>((resolve, reject) =>  {
+		await new Promise<void>((resolve, reject) => {
 			const interval = setInterval(() => {
 				if (Date.now() - start > timeout) {
 					window.showErrorMessage("Couldn't start language server");
@@ -551,7 +551,7 @@ export class LanguageServer {
 		});
 
 		const serverOptions: ServerOptions = function () {
-			const socket = net.connect({ port: serverPort, host: host});
+			const socket = net.connect({ port: serverPort, host: host });
 			const streamInfo = {
 				reader: socket,
 				writer: socket
@@ -577,7 +577,7 @@ export class LanguageServer {
 	 * @param {LanguageClientOptions} clientOptions The options for the LanguageClient.
 	 */
 	async startPipe(clientOptions: LanguageClientOptions) {
-		if(this.client){
+		if (this.client) {
 			return;
 		}
 		log(`Python path is ${this.pythonPath}`);
@@ -612,16 +612,16 @@ export class LanguageServer {
 	 * @param {boolean} start Whether to start the server or restart it.
 	 * @returns {Promise<void>}
 	 */
-	async startOrRestartLS(start: boolean = false, canStart?: LanguageServerDiagnoseResult): Promise<void>{
+	async startOrRestartLS(start: boolean = false, canStart?: LanguageServerDiagnoseResult): Promise<void> {
 		this.diagnoseId = uuidv4();
 		if (canStart === undefined) {
 			canStart = await this.canServerStart();
 		}
-		if (canStart !== LanguageServerDiagnoseResult.ok){
+		if (canStart !== LanguageServerDiagnoseResult.ok) {
 			return this.proposeSolution(canStart, this.diagnoseId);
 		}
 
-		if(start){
+		if (start) {
 			log("starting Language Server");
 		} else {
 			log("restarting Language Server");
@@ -644,7 +644,7 @@ export class LanguageServer {
 	 */
 	async stopServerAndClient(acquireLock: boolean = true) {
 		log("Stopping server and client...");
-		if(acquireLock){
+		if (acquireLock) {
 			await this.mutex.runExclusive(async () => {
 				await this._stopServerAndClient();
 			});
@@ -659,13 +659,13 @@ export class LanguageServer {
 	 */
 	async _stopServerAndClient() {
 		if (this.client) {
-			if(this.client.needsStop()){
+			if (this.client.needsStop()) {
 				await this.client.stop();
 			}
 			this.client = undefined;
 		}
-		if(this.serverProcess){
-			if(!this.serverProcess.exitCode){
+		if (this.serverProcess) {
+			if (!this.serverProcess.exitCode) {
 				this.serverProcess.kill();
 			}
 			this.serverProcess = undefined;
@@ -677,7 +677,7 @@ export class LanguageServer {
 	}
 }
 
-function logAllClientOptions(clientOptions){
+function logAllClientOptions(clientOptions) {
 	log(JSON.stringify(clientOptions));
 }
 

@@ -19,12 +19,12 @@ describe('Compile checks', () => {
 
 	const envPath: string = "";
 	beforeEach(async () => {
-        await Promise.all([
-            fs.writeFile(logPath, ""),
-            fs.pathExists(libsPath).then(exists => exists && fs.remove(libsPath)),
-            fs.pathExists(modelUri.fsPath).then(exists => exists && fs.remove(modelUri.fsPath)),
-        ]);
-        await commands.executeCommand('workbench.action.closeActiveEditor');
+		await Promise.all([
+			fs.writeFile(logPath, ""),
+			fs.pathExists(libsPath).then(exists => exists && fs.remove(libsPath)),
+			fs.pathExists(modelUri.fsPath).then(exists => exists && fs.remove(modelUri.fsPath)),
+		]);
+		await commands.executeCommand('workbench.action.closeActiveEditor');
 	});
 
 	tests.forEach(test => {

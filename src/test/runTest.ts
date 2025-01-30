@@ -9,7 +9,7 @@ async function main() {
 	const tmpHomeDir: string = fs.mkdtempSync("/tmp/vscode-tests");
 	try {
 		console.info("Running tests");
-		
+
 		const settings = {
 			"inmanta.ls.enabled": true,
 			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV || "/tmp/venv"
@@ -40,8 +40,8 @@ async function main() {
 		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
 		const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath, "linux-x64");
 		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python', '--force'], {
-		encoding: 'utf-8',
-		stdio: 'inherit'
+			encoding: 'utf-8',
+			stdio: 'inherit'
 		});
 
 		await runTests({

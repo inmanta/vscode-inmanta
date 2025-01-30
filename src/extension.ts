@@ -7,7 +7,7 @@ import { LanguageServer, LsErrorHandler } from './language_server';
 import { InmantaCommands } from './commands';
 import { addSetupAssistantButton } from './walkthrough_button';
 
-let inmantaCommands;
+let inmantaCommands: InmantaCommands;
 let lastActiveFolder: WorkspaceFolder = undefined;
 
 /*
@@ -19,7 +19,7 @@ let lastActiveFolder: WorkspaceFolder = undefined;
 */
 export const languageServers: Map<string, LanguageServer> = new Map();
 
-let pythonExtensionInstance ;
+let pythonExtensionInstance: PythonExtension;
 
 export async function activate(context: ExtensionContext) {
 	const pythonExtension = extensions.getExtension(PYTHONEXTENSIONID);
@@ -57,7 +57,7 @@ export async function activate(context: ExtensionContext) {
 
 		let folder = workspace.getWorkspaceFolder(uri);
 
-		if (folder === undefined ){
+		if (folder === undefined) {
 			// This happens for example when looking at a .py file living in a venv outside of the current workspace, in which case we must hide our button
 			pythonExtensionInstance.updateInmantaEnvVisibility();
 			return;
@@ -136,8 +136,8 @@ export async function activate(context: ExtensionContext) {
 					).catch(
 						(_err) => {
 							console.error(`Error updating python path to ${updatedPath}`);
-					})
-					;
+						})
+						;
 				}
 			);
 			inmantaCommands.registerCommands(languageserver);

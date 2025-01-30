@@ -28,7 +28,7 @@ export function waitForCompile(logPath: string, timeout: number): Promise<boolea
 					} else if (data.includes('Compilation failed')) {
 						clearInterval(readLogInterval);
 						resolve(false);
-					} 
+					}
 					log(`Waiting for compilation to finish, logPath: ${logPath}`);
 				});
 			}
