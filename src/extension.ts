@@ -17,9 +17,7 @@ let lastActiveFolder: WorkspaceFolder = undefined;
 	responsible for as a key. This allows the servers to be properly stopped if/when the folder is removed from the
 	workspace
 */
-
-export var languageServers: Map<string, LanguageServer> = new Map();
-
+export const languageServers: Map<string, LanguageServer> = new Map();
 
 let pythonExtensionInstance ;
 
