@@ -105,7 +105,6 @@ If you are contributing or developing for the extention, here are the steps requ
         - `sudo apt install python3.12`
 - `python3.12 -m venv /tmp/venv`
 - `export INMANTA_EXTENSION_TEST_ENV=/tmp/venv`
-- `/tmp/venv/bin/python`
 - `/tmp/venv/bin/python -m pip install ./server`
 
 You can now launch the tests either with the debugger, or with `npm run test`.
