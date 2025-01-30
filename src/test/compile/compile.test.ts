@@ -7,7 +7,7 @@ import { Uri, window, commands, workspace, TextDocument, TextEditor, Position, S
 import { waitForCompile } from '../helpers';
 
 
-const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
+const logPath: string = process.env.INMANTA_LS_LOG_PATH || './server.log';
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/compile/workspace'));
 const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
