@@ -54,6 +54,7 @@ pipeline {
                     deactivate
                     rm -rf node_modules
                     npm i --include=dev
+                    npm run lint
                     xvfb-run npm run test
                 '''
             }
