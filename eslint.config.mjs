@@ -6,13 +6,15 @@ export default [{
         "@typescript-eslint": typescriptEslint,
     },
 
-    files: ["**/*.ts"],
+    files: ["src/**/*.ts"],
 
     languageOptions: {
         parser: tsParser,
         ecmaVersion: 6,
         sourceType: "module",
     },
+
+    ignores: ["node_modules/"],
 
     rules: {
         "prefer-const": ["error", { "ignoreReadBeforeAssign": true }],

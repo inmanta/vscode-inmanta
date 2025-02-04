@@ -37,7 +37,7 @@ export class PythonExtension {
 		return PythonExtension.getPathPythonBinary(this.executionDetails.execCommand[0]);
 	}
 
-	get virtualEnvName(): string | null {
+	get virtualEnvName(): string {
 		return this.pythonPathToEnvName(this.pythonPath);
 	}
 
@@ -117,12 +117,8 @@ export class PythonExtension {
 	 * @param {Uri} [documentURI] - The URI of the document to check the workspace folder for.
 	 */
 	async updateInmantaEnvVisibility(documentURI?: Uri): Promise<void> {
-		let venvName = this.virtualEnvName;
-		let folderName = this.getFolderName(documentURI);
-
-		if (documentURI) {
-			venvName = this.getVenvNameFromDocumentURI(documentURI) || venvName;
-		}
+		const venvName = this.getVenvNameFromDocumentURI(documentURI);
+		const folderName = this.getFolderName(documentURI);
 
 		const version = await this.getPythonVersion();
 		const text = this.getSelectorText(version, venvName, folderName);
@@ -153,10 +149,11 @@ export class PythonExtension {
 
 	/**
 	 * Retrieves the virtual environment name from the document URI.
+	 * If the document URI is not provided, the virtual environment name is retrieved from the last active folder.
 	 * @param {Uri} documentURI - The URI of the document to check the workspace folder for.
-	 * @returns {string | undefined} - The virtual environment name or undefined if not found.
+	 * @returns {string} - The virtual environment name for the provided URI, or the last active folder.
 	 */
-	private getVenvNameFromDocumentURI(documentURI: Uri): string | undefined {
+	private getVenvNameFromDocumentURI(documentURI?: Uri): string {
 		try {
 			const folder = workspace.getWorkspaceFolder(documentURI);
 			if (folder) {
@@ -165,7 +162,8 @@ export class PythonExtension {
 		} catch (error) {
 			console.error(`Failed to get virtual environment name: ${error}`);
 		}
-		return undefined;
+
+		return this.virtualEnvName;
 	}
 
 	/**
