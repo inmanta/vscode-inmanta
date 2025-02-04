@@ -93,22 +93,20 @@ export class LanguageServer {
 	 * @returns {string[]} An array of string(s) representing the version of the Inmanta Language Server to be installed.
 	 */
 	languageServerVersionToInstall(): string[] {
-		const version = [];
+		const lsPath = process.env.INMANTA_LS_PATH;
 
-		if (process.env.INMANTA_LS_PATH) {
-			version.push("-e", process.env.INMANTA_LS_PATH);
-			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
-		} else {
-			// Check for the presence of requirements.txt
-			if (fs.existsSync(REQUIREMENTS_PATH)) {
-				version.push("-r", REQUIREMENTS_PATH);
-				log(`Installing Language Server from requirements file "${REQUIREMENTS_PATH}"`);
-			} else {
-				version.push("inmantals");
-			}
+		if (lsPath) {
+			log(`Installing Language Server from local source "${lsPath}"`);
+			return ["-e", lsPath];
 		}
 
-		return version;
+		// Check for the presence of requirements.txt
+		if (fs.existsSync(REQUIREMENTS_PATH)) {
+			log(`Installing Language Server from requirements file "${REQUIREMENTS_PATH}"`);
+			return ["-r", REQUIREMENTS_PATH];
+		}
+
+		return ["inmantals"];
 	}
 
 	/**
@@ -118,9 +116,14 @@ export class LanguageServer {
 	 */
 	getInstalledInmantaLSVersion(): string | null {
 		try {
-			const version = cp.execSync(`${this.pythonPath} -m pip freeze | grep inmantals | cut -d'=' -f3`).toString();
-			return version;
-		} catch (_error) { }
+			const result = cp.spawnSync(this.pythonPath, ["-m", "pip", "show", "inmanta"], { encoding: "utf-8" });
+			if (result.status === 0) {
+				const match = result.stdout.match(/Version: (.+)/);
+				return match ? match[1] : null;
+			}
+		} catch (error) {
+			log(`Error getting installed Inmanta LS version: ${error.message}`);
+		}
 		return null;
 	}
 
