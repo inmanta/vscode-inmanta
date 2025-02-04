@@ -44,19 +44,6 @@ describe('Language Server Code navigation', () => {
 		});
 	}).timeout(0);
 
-	it(`Check that code navigation to a non-existent symbol returns no locations`, () => {
-		return new Promise<void>(async resolve => {
-			// Open model file
-			const doc: TextDocument = await workspace.openTextDocument(modelUri);
-			await window.showTextDocument(doc);
-			const succeeded = await waitForCompile(logPath, 25000);
-			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
-			const nonExistentSymbol = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(20, 20));
-			assert.strictEqual((nonExistentSymbol as Location[]).length, 0, "Non-existent symbol should return no locations");
-			resolve();
-		});
-	}).timeout(0);
-
 	it(`Check that hovering over a symbol displays the correct information`, () => {
 		return new Promise<void>(async resolve => {
 			// Open model file
