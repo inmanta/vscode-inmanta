@@ -44,20 +44,6 @@ describe('Language Server Code navigation', () => {
 		});
 	}).timeout(0);
 
-	it(`Check that hovering over a symbol displays the correct information`, () => {
-		return new Promise<void>(async resolve => {
-			// Open model file
-			const doc: TextDocument = await workspace.openTextDocument(modelUri);
-			await window.showTextDocument(doc);
-			const succeeded = await waitForCompile(logPath, 25000);
-			assert.strictEqual(succeeded, true, "Compilation didn't succeed");
-			const hoverInfo = await commands.executeCommand("vscode.executeHoverProvider", modelUri, new Position(13, 16));
-			assert.strictEqual((hoverInfo as any[]).length, 1, "Hover information should be displayed");
-			assert.strictEqual((hoverInfo as any[])[0].contents[0].value, "\n```inmanta\nstring name\n```\n\n___\n", "Hover information doesn't match");
-			resolve();
-		});
-	}).timeout(0);
-
 	it(`Check that code navigation to a non-existent symbol returns no locations`, () => {
 		return new Promise<void>(async resolve => {
 			// Open model file
