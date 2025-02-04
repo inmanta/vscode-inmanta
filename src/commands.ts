@@ -12,25 +12,25 @@ export class InmantaCommands {
 	commands: DisposableDict = {};
 
 	/**
-    * Creates an instance of InmantaCommands.
-    * @param {ExtensionContext} context The VSCode extension context.
-    */
+	* Creates an instance of InmantaCommands.
+	* @param {ExtensionContext} context The VSCode extension context.
+	*/
 	constructor(context: ExtensionContext) {
 		this.context = context;
 	}
-  	/**
-	 * Registers a command with VSCode.
-	 * If a command with the given ID already exists, it will be disposed before registering the new command.
-	 * @param {string} id The ID of the command to register.
-	 * @param {(...args: any[]) => void} handler The function to execute when the command is triggered.
-	 */
-	registerCommand(id:string, handler:(...args: any[]) => void){
+	/**
+ * Registers a command with VSCode.
+ * If a command with the given ID already exists, it will be disposed before registering the new command.
+ * @param {string} id The ID of the command to register.
+ * @param {(...args: any[]) => void} handler The function to execute when the command is triggered.
+ */
+	registerCommand(id: string, handler: (...args: any[]) => void) {
 		log(`registering command ${id}`);
-		if (id in commands){
+		if (id in commands) {
 			commands[id].dispose();
 		}
 		const disposable = commands.registerCommand(id, handler);
-		commands[id]= disposable;
+		commands[id] = disposable;
 		this.context.subscriptions.push(disposable);
 	}
 
@@ -54,20 +54,20 @@ export class InmantaCommands {
  * @param {ExtensionContext} context The extension context object provided by VS Code.
  * @param {string} pythonPath The path to the Python interpreter.
  */
-export function createHandlerExportCommand(pythonPath:string) {
+export function createHandlerExportCommand(pythonPath: string) {
 	return () => {
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			window.showErrorMessage(`Could not run the export command. Make sure a valid venv is selected`);
 		}
 		if (!exportToServerTerminal) {
 			const options: TerminalOptions = {
-				name:"Export to Inmanta Server",
-				message:"Running command 'inmanta export'"
+				name: "Export to Inmanta Server",
+				message: "Running command 'inmanta export'"
 
 			};
 			exportToServerTerminal = window.createTerminal(options);
 		}
-		exportToServerTerminal.sendText(pythonPath+' -m inmanta.app -vv export');
+		exportToServerTerminal.sendText(pythonPath + ' -m inmanta.app -vv export');
 		exportToServerTerminal.show();
 	};
 }
@@ -102,20 +102,20 @@ export function commandActivateLSHandler(folder: WorkspaceFolder) {
  * @param {string} pythonPath The path to the Python interpreter.
  * @returns {() => void} A function that executes the 'inmanta project install' command in a VSCode terminal.
  */
-export function createProjectInstallHandler(pythonPath: string){
+export function createProjectInstallHandler(pythonPath: string) {
 	return () => {
 		if (!pythonPath || !fileOrDirectoryExists(pythonPath)) {
 			window.showErrorMessage(`Could not run the 'project install' command. Make sure a valid venv is selected.`);
 		}
 		if (!installProjectTerminal) {
 			const options: TerminalOptions = {
-				name:"Inmanta Project Install",
-				message:"Running command 'inmanta project install'"
+				name: "Inmanta Project Install",
+				message: "Running command 'inmanta project install'"
 
 			};
 			installProjectTerminal = window.createTerminal(options);
 		}
-		const command = pythonPath+' -m inmanta.app project install';
+		const command = pythonPath + ' -m inmanta.app project install';
 		installProjectTerminal.sendText(command);
 		installProjectTerminal.show();
 	};

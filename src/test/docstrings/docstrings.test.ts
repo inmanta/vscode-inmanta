@@ -3,7 +3,7 @@ import { after, describe, it, beforeEach } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
-import { Uri, window, commands, workspace, TextDocument, Position} from 'vscode';
+import { Uri, window, commands, workspace, TextDocument, Position } from 'vscode';
 import { waitForCompile } from '../helpers';
 
 const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';

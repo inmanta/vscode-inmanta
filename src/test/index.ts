@@ -12,7 +12,7 @@ export function innerRun(regexToTestFiles: string): Promise<void> {
 	const testsRoot = __dirname;
 
 	return new Promise((c, e) => {
-		glob(regexToTestFiles, { cwd: testsRoot }).then((files)=>{
+		glob(regexToTestFiles, { cwd: testsRoot }).then((files) => {
 			files.forEach(f => mocha.addFile(path.resolve(testsRoot, f)));
 			try {
 				// Run the mocha test

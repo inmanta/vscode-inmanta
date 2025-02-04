@@ -6,12 +6,13 @@ import * as rimraf from 'rimraf';
 
 
 async function main() {
-
 	const tmpHomeDir: string = fs.mkdtempSync("/tmp/vscode-tests");
 	try {
+		console.info("Running tests");
+
 		const settings = {
 			"inmanta.ls.enabled": true,
-			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV
+			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV || "/tmp/venv"
 		};
 
 		// Saving settings of testing workspace to file
@@ -33,14 +34,14 @@ async function main() {
 		// in the home dir.
 		const extensionTestsEnv = {
 			HOME: tmpHomeDir,
-			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH,
+			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH || "./server",
 		};
 
 		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
 		const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath, "linux-x64");
 		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python', '--force'], {
-		encoding: 'utf-8',
-		stdio: 'inherit'
+			encoding: 'utf-8',
+			stdio: 'inherit'
 		});
 
 		await runTests({
