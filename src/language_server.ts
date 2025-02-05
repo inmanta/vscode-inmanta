@@ -225,19 +225,25 @@ export class LanguageServer {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
 
-		const script = "import sys\n" +
-			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
-			"  sys.exit(4)\n" +
-			"try:\n" +
-			"  import inmantals\n" +
-			"  sys.exit(0)\n" +
-			"except ModuleNotFoundError:\n" +
-			"  real_prefix = getattr(sys, 'real_prefix', None)\n" +
-			"  base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
-			"  running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
-			"  if not running_in_virtualenv:\n" +
-			"    sys.exit(5)\n" +
-			"  sys.exit(3)";
+		/**
+		 * Check Python Version: It checks if the Python version is 3.6 or higher. If not, it exits with status code 4
+		 * Try to Import a Module: It tries to import the inmantals module. If the import is successful, it exits with status code 0.
+		 * Try to Import a Module: It tries to import the inmantals module. If the import is successful, it exits with status code 0.
+		 * Check Virtual Environment: If the script is not running in a virtual environment, it exits with status code 5. Otherwise, it exits with status code 3.
+		 */
+		const script = `import sys
+			if sys.version_info[0] != 3 or sys.version_info[1] < 6:
+				sys.exit(4)
+			try:
+				import inmantals
+				sys.exit(0)
+			except ModuleNotFoundError:
+				real_prefix = getattr(sys, 'real_prefix', None)
+				base_prefix = getattr(sys, 'base_prefix', sys.prefix)
+				running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix
+				if not running_in_virtualenv:
+					sys.exit(5)
+				sys.exit(3)`;
 
 		const spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
