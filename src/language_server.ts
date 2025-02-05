@@ -132,7 +132,14 @@ export class LanguageServer {
 	 */
 	isEditableInstall(): boolean {
 		try {
-			const inmantals = cp.execSync(`${this.pythonPath} -m pip list --editable | grep inmantals`).toString();
+			// The os.platform() method in Node.js returns win32 for both 32-bit and 64-bit Windows systems.
+			const isWindows = os.platform() === 'win32';
+			const command = isWindows
+				? `${this.pythonPath} -m pip list --editable | findstr inmantals`
+				: `${this.pythonPath} -m pip list --editable | grep inmantals`;
+
+			const inmantals = cp.execSync(command).toString();
+
 			if (inmantals) {
 				return true;
 			}
