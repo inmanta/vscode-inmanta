@@ -93,22 +93,20 @@ export class LanguageServer {
 	 * @returns {string[]} An array of string(s) representing the version of the Inmanta Language Server to be installed.
 	 */
 	languageServerVersionToInstall(): string[] {
-		const version = [];
+		const lsPath = process.env.INMANTA_LS_PATH;
 
-		if (process.env.INMANTA_LS_PATH) {
-			version.push("-e", process.env.INMANTA_LS_PATH);
-			log(`Installing Language Server from local source "${process.env.INMANTA_LS_PATH}"`);
-		} else {
-			// Check for the presence of requirements.txt
-			if (fs.existsSync(REQUIREMENTS_PATH)) {
-				version.push("-r", REQUIREMENTS_PATH);
-				log(`Installing Language Server from requirements file "${REQUIREMENTS_PATH}"`);
-			} else {
-				version.push("inmantals");
-			}
+		if (lsPath) {
+			log(`Installing Language Server from local source "${lsPath}"`);
+			return ["-e", lsPath];
 		}
 
-		return version;
+		// Check for the presence of requirements.txt
+		if (fs.existsSync(REQUIREMENTS_PATH)) {
+			log(`Installing Language Server from requirements file "${REQUIREMENTS_PATH}"`);
+			return ["-r", REQUIREMENTS_PATH];
+		}
+
+		return ["inmantals"];
 	}
 
 	/**
@@ -118,9 +116,14 @@ export class LanguageServer {
 	 */
 	getInstalledInmantaLSVersion(): string | null {
 		try {
-			const version = cp.execSync(`${this.pythonPath} -m pip freeze | grep inmantals | cut -d'=' -f3`).toString();
-			return version;
-		} catch (_error) { }
+			const result = cp.spawnSync(this.pythonPath, ["-m", "pip", "show", "inmantals"], { encoding: "utf-8" });
+			if (result.status === 0) {
+				const match = result.stdout.match(/Version: (.+)/);
+				return match ? match[1] : null;
+			}
+		} catch (error) {
+			log(`Error getting installed Inmanta LS version: ${error.message}`);
+		}
 		return null;
 	}
 
@@ -129,7 +132,14 @@ export class LanguageServer {
 	 */
 	isEditableInstall(): boolean {
 		try {
-			const inmantals = cp.execSync(`${this.pythonPath} -m pip list --editable | grep inmantals`).toString();
+			// The os.platform() method in Node.js returns win32 for both 32-bit and 64-bit Windows systems.
+			const isWindows = os.platform() === 'win32';
+			const command = isWindows
+				? `${this.pythonPath} -m pip list --editable | findstr inmantals`
+				: `${this.pythonPath} -m pip list --editable | grep inmantals`;
+
+			const inmantals = cp.execSync(command).toString();
+
 			if (inmantals) {
 				return true;
 			}
@@ -222,19 +232,28 @@ export class LanguageServer {
 			return LanguageServerDiagnoseResult.wrongInterpreter;
 		}
 
-		const script = "import sys\n" +
-			"if sys.version_info[0] != 3 or sys.version_info[1] < 6:\n" +
-			"  sys.exit(4)\n" +
-			"try:\n" +
-			"  import inmantals\n" +
-			"  sys.exit(0)\n" +
-			"except ModuleNotFoundError:\n" +
-			"  real_prefix = getattr(sys, 'real_prefix', None)\n" +
-			"  base_prefix = getattr(sys, 'base_prefix', sys.prefix)\n" +
-			"  running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix\n" +
-			"  if not running_in_virtualenv:\n" +
-			"    sys.exit(5)\n" +
-			"  sys.exit(3)";
+		/**
+		 * Check Python Version: It checks if the Python version is 3.6 or higher. If not, it exits with status code 4
+		 * Try to Import a Module: It tries to import the inmantals module. If the import is successful, it exits with status code 0.
+		 * Check Virtual Environment: If the script is not running in a virtual environment, it exits with status code 5. Otherwise, it exits with status code 3.
+		 * 
+		 * NOTE: The indenting here is required for the script to work correctly.
+		 */
+		const script = `
+import sys
+if sys.version_info[0] != 3 or sys.version_info[1] < 6:
+    sys.exit(4)
+try:
+    import inmantals
+    sys.exit(0)
+except ModuleNotFoundError:
+    real_prefix = getattr(sys, 'real_prefix', None)
+    base_prefix = getattr(sys, 'base_prefix', sys.prefix)
+    running_in_virtualenv = (base_prefix or real_prefix) != sys.prefix
+    if not running_in_virtualenv:
+        sys.exit(5)
+    sys.exit(3)
+`;
 
 		const spawnResult = cp.spawnSync(pythonPath, ["-c", script]);
 		const stdout = spawnResult.stdout.toString();
@@ -293,12 +312,12 @@ export class LanguageServer {
 	}
 
 	/**
-	* Prompt the user to select a Python interpreter.
-	*
-	* @param {string} diagnoseId a uuid to identify the diagnose
-	* @returns {Promise<any>} A Promise that resolves to the result of startOrRestartLS() after the interpreter is selected.
-	*    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
-	*/
+	 * Prompt the user to select a Python interpreter.
+	 *
+	 * @param {string} diagnoseId a uuid to identify the diagnose
+	 * @returns {Promise<any>} A Promise that resolves to the result of startOrRestartLS() after the interpreter is selected.
+	 *    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
+	 */
 	async selectInterpreter(diagnoseId: string): Promise<any> {
 		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
 
