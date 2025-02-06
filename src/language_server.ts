@@ -116,7 +116,7 @@ export class LanguageServer {
 	 */
 	getInstalledInmantaLSVersion(): string | null {
 		try {
-			const result = cp.spawnSync(this.pythonPath, ["-m", "pip", "show", "inmanta"], { encoding: "utf-8" });
+			const result = cp.spawnSync(this.pythonPath, ["-m", "pip", "show", "inmantals"], { encoding: "utf-8" });
 			if (result.status === 0) {
 				const match = result.stdout.match(/Version: (.+)/);
 				return match ? match[1] : null;
