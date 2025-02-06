@@ -235,7 +235,6 @@ export class LanguageServer {
 		/**
 		 * Check Python Version: It checks if the Python version is 3.6 or higher. If not, it exits with status code 4
 		 * Try to Import a Module: It tries to import the inmantals module. If the import is successful, it exits with status code 0.
-		 * Try to Import a Module: It tries to import the inmantals module. If the import is successful, it exits with status code 0.
 		 * Check Virtual Environment: If the script is not running in a virtual environment, it exits with status code 5. Otherwise, it exits with status code 3.
 		 * 
 		 * NOTE: The indenting here is required for the script to work correctly.
@@ -313,12 +312,12 @@ except ModuleNotFoundError:
 	}
 
 	/**
-	* Prompt the user to select a Python interpreter.
-	*
-	* @param {string} diagnoseId a uuid to identify the diagnose
-	* @returns {Promise<any>} A Promise that resolves to the result of startOrRestartLS() after the interpreter is selected.
-	*    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
-	*/
+	 * Prompt the user to select a Python interpreter.
+	 *
+	 * @param {string} diagnoseId a uuid to identify the diagnose
+	 * @returns {Promise<any>} A Promise that resolves to the result of startOrRestartLS() after the interpreter is selected.
+	 *    If the user cancels the selection, a Promise rejection with the message "No Interpreter Selected" is returned.
+	 */
 	async selectInterpreter(diagnoseId: string): Promise<any> {
 		const response = await window.showErrorMessage(`No interpreter or invalid interpreter selected`, 'Select interpreter');
 
