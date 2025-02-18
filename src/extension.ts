@@ -5,7 +5,7 @@ import { getInterpreterDetails, updateVenvSelector, initializePython, onDidChang
 import { LanguageServer, LsErrorHandler } from './language_server';
 import { InmantaCommands } from './commands';
 import { addSetupAssistantButton } from './walkthrough_button';
-import { createOutputChannel, getConfiguration, getOuterMostWorkspaceFolder, getWorkspaceFolder, getWorkspaceFolders, onDidChangeConfiguration } from './vscode_api';
+import { createOutputChannel, getConfiguration, getOuterMostWorkspaceFolder, getWorkspaceFolder, onDidChangeConfiguration } from './vscode_api';
 import { checkIfConfigurationChanged } from './settings';
 import { registerLogger, traceLog } from './logTracer';
 
