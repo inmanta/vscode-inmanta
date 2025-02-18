@@ -1,6 +1,7 @@
-import { ExtensionContext, window, commands, workspace, TerminalOptions, Disposable, Terminal, WorkspaceFolder } from "vscode";
+import { ExtensionContext, window, workspace, TerminalOptions, Disposable, Terminal, WorkspaceFolder } from "vscode";
 import { LanguageServer } from "./language_server";
-import { fileOrDirectoryExists, log } from './utils';
+import { fileOrDirectoryExists, registerCommand } from "./vscode_api";
+import { traceLog } from "./logTracer";
 
 type DisposableDict = Record<string, Disposable>;
 
@@ -18,32 +19,29 @@ export class InmantaCommands {
 	constructor(context: ExtensionContext) {
 		this.context = context;
 	}
+
 	/**
- * Registers a command with VSCode.
- * If a command with the given ID already exists, it will be disposed before registering the new command.
- * @param {string} id The ID of the command to register.
- * @param {(...args: any[]) => void} handler The function to execute when the command is triggered.
- */
+	 * Registers a command with VSCode.
+	 * If a command with the given ID already exists, it will be disposed before registering the new command.
+	 * @param {string} id The ID of the command to register.
+	 * @param {(...args: any[]) => void} handler The function to execute when the command is triggered.
+	 */
 	registerCommand(id: string, handler: (...args: any[]) => void) {
-		log(`registering command ${id}`);
-		if (id in commands) {
-			commands[id].dispose();
-		}
-		const disposable = commands.registerCommand(id, handler);
-		commands[id] = disposable;
-		this.context.subscriptions.push(disposable);
+		this.context.subscriptions.push(registerCommand(id, handler));
 	}
 
 	registerCommands(languageServer: LanguageServer): void {
-		// We have to register these commands each time a different language server is being activated or "focused".
-		// Activation happens the first time a .cf file from this language server's folders is opened and focus
-		// happens when selecting a file from a different workspace folder
+		traceLog(`Registering inmanta commands for language server responsible for ${languageServer.rootFolder.name} using ${languageServer.pythonPath} environment.`);
+		// Register the disposable commands to the language server
+		const commands = [
+			registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(languageServer.pythonPath)),
+			registerCommand(`inmanta.activateLS`, commandActivateLSHandler(languageServer.rootFolder)),
+			registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(languageServer.pythonPath)),
+			registerCommand(`inmanta.installLS`, () => { languageServer.installLanguageServer(); })
+		];
 
-		log(`Registering inmanta commands for language server responsible for ${languageServer.rootFolder} using ${languageServer.pythonPath} environment.`);
-		this.registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(languageServer.pythonPath));
-		this.registerCommand(`inmanta.activateLS`, commandActivateLSHandler(languageServer.rootFolder));
-		this.registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(languageServer.pythonPath));
-		this.registerCommand(`inmanta.installLS`, () => { languageServer.installLanguageServer(); });
+		// Add the commands to the context subscriptions to ensure they are cleaned up when the extension is deactivated
+		this.context.subscriptions.push(...commands);
 	}
 
 }

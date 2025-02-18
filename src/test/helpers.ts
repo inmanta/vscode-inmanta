@@ -1,5 +1,4 @@
 import * as fs from 'fs-extra';
-import { log } from '../utils';
 
 /**
  * Read a lloging file waiting for a message annoucing the end of the compilation
@@ -29,7 +28,6 @@ export function waitForCompile(logPath: string, timeout: number): Promise<boolea
 						clearInterval(readLogInterval);
 						resolve(false);
 					}
-					log(`Waiting for compilation to finish, logPath: ${logPath}`);
 				});
 			}
 		}, 500);

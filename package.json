@@ -169,11 +169,19 @@
                 "description": "This walk-through helps you getting started with the development of Inmanta modules and projects.",
                 "steps": [
                     {
+                        "id": "inmanta.createVenv",
+                        "title": "Create a virtual environment",
+                        "description": "Create a virtual environment. \n[Create Environment](command:python.createEnvironment)",
+                        "media": {
+                            "markdown": "media/markdown_create_env.md"
+                        }
+                    },
+                    {
                         "id": "inmanta.setVenv",
                         "title": "Select a virtual environment",
-                        "description": "This step is to ensure a virtual environment will be used. \n[Select Environment](command:python.setInterpreter)",
+                        "description": "Select an existing or freshly created virtual environment will be used. \n[Select Environment](command:python.setInterpreter)",
                         "media": {
-                            "markdown": "media/markdown_env.md"
+                            "markdown": "media/markdown_select_env.md"
                         }
                     },
                     {
@@ -236,11 +244,12 @@
     "devDependencies": {
         "@types/fs-extra": "^11.0.4",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^22.13.1",
+        "@types/node": "^22.13.0",
         "@types/semver": "^7.5.8",
         "@types/vscode": "^1.63.2",
-        "@typescript-eslint/eslint-plugin": "^8.23.0",
-        "@typescript-eslint/parser": "^8.23.0",
+        "@typescript-eslint/eslint-plugin": "^8.22.0",
+        "@typescript-eslint/parser": "^8.22.0",
+        "@vscode/python-extension": "^1.0.5",
         "@vscode/test-cli": "^0.0.10",
         "@vscode/test-electron": "^2.4.1",
         "@vscode/vsce": "^3.2.2",
@@ -250,7 +259,7 @@
         "glob": "^11.0.1",
         "mocha": "^11.1.0",
         "rimraf": "^6.0.1",
-        "semver": "^7.7.1",
+        "semver": "^7.7.0",
         "typescript": "^5.7.3"
     },
     "main": "./out/extension"
