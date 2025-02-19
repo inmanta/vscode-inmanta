@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra';
 
 /**
- * Read a loging file waiting for a message annoucing the end of the compilation
+ * Read a loging file waiting for a message announcing the end of the compilation
  *
  * @param logPath The path to the logging file
  * @param timeout A timeout (in ms) before the end of which the compilation should be done
