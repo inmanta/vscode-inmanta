@@ -49,6 +49,7 @@ export async function initializePython(disposables: Disposable[]): Promise<void>
         }
     } catch (error) {
         traceError('Error initializing python: ', error);
+        window.showErrorMessage(`Error: Python may not be installed properly. \nCannot initialize Python extension. ${error}`);
     }
 }
 
