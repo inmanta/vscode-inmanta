@@ -169,11 +169,19 @@
                 "description": "This walk-through helps you getting started with the development of Inmanta modules and projects.",
                 "steps": [
                     {
+                        "id": "inmanta.createVenv",
+                        "title": "Create a virtual environment",
+                        "description": "Create a virtual environment. \n[Create Environment](command:python.createEnvironment)",
+                        "media": {
+                            "markdown": "media/markdown_create_env.md"
+                        }
+                    },
+                    {
                         "id": "inmanta.setVenv",
                         "title": "Select a virtual environment",
-                        "description": "This step is to ensure a virtual environment will be used. \n[Select Environment](command:python.setInterpreter)",
+                        "description": "Select an existing or freshly created virtual environment will be used. \n[Select Environment](command:python.setInterpreter)",
                         "media": {
-                            "markdown": "media/markdown_env.md"
+                            "markdown": "media/markdown_select_env.md"
                         }
                     },
                     {
@@ -239,6 +247,7 @@
         "@types/node": "^22.13.4",
         "@types/semver": "^7.5.8",
         "@types/vscode": "^1.63.2",
+        "@vscode/python-extension": "^1.0.5",
         "@typescript-eslint/eslint-plugin": "^8.24.1",
         "@typescript-eslint/parser": "^8.24.1",
         "@vscode/test-cli": "^0.0.10",

@@ -1,8 +1,12 @@
 import { StatusBarAlignment, window } from "vscode";
-import { log } from "./utils";
+import { traceLog } from "./logTracer";
 
+/**
+ * Adds the Setup assistant button to the status bar.
+ * The button is only visible when an Inmanta file is active.
+ */
 export function addSetupAssistantButton() {
-	log("add Setup assistant");
+	traceLog("add Setup assistant");
 	const inmantaWalkthroughButton = window.createStatusBarItem(StatusBarAlignment.Left);
 	inmantaWalkthroughButton.text = "$(book) Inmanta Setup assistant";
 	inmantaWalkthroughButton.command = "inmanta.openWalkthrough";
