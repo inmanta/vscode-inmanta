@@ -1,4 +1,5 @@
 import * as fs from 'fs-extra';
+import { commands } from 'vscode';
 
 /**
  * Read a loging file waiting for a message announcing the end of the compilation
@@ -34,3 +35,25 @@ export function waitForCompile(logPath: string, timeout: number): Promise<boolea
 	});
 }
 
+/**
+ * Assert with timeout
+ * @param assertion Function containing the assertion
+ * @param timeoutMs Timeout in milliseconds
+ * @param message Error message if timeout is reached
+ */
+export async function assertWithTimeout(assertion: () => Promise<void> | void, timeoutMs: number, message: string): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error(`Timeout: ${message}`));
+        }, timeoutMs);
+
+        try {
+            await assertion();
+            clearTimeout(timeout);
+            resolve();
+        } catch (error) {
+            clearTimeout(timeout);
+            reject(error);
+        }
+    });
+}

@@ -19,9 +19,11 @@ async function main() {
 		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/compile/workspace/.vscode/settings.json');
 		await fs.ensureFile(workspaceSettingsPath);
 		await fs.writeJSON(workspaceSettingsPath, settings);
+
 		const navworkspaceSettingsPath = path.resolve(__dirname, '../../src/test/navigation/workspace/.vscode/settings.json');
 		await fs.ensureFile(navworkspaceSettingsPath);
 		await fs.writeJSON(navworkspaceSettingsPath, settings);
+
 		const docstringSettingsPath = path.resolve(__dirname, '../../src/test/docstrings/workspace/.vscode/settings.json');
 		await fs.ensureFile(docstringSettingsPath);
 		await fs.writeJSON(docstringSettingsPath, settings);
@@ -42,6 +44,16 @@ async function main() {
 		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python', '--force'], {
 			encoding: 'utf-8',
 			stdio: 'inherit'
+		});
+
+		// Run install extension tests first
+		await runTests({
+			vscodeExecutablePath,
+			extensionDevelopmentPath: extensionDevelopmentPath,
+			extensionTestsPath: path.resolve(__dirname, './installExtension/index'),
+			launchArgs: ["--disable-gpu"],
+			extensionTestsEnv,
+			reuseMachineInstall: true,
 		});
 
 		await runTests({

@@ -104,7 +104,7 @@ export function pythonVersionSupported(resolved: ResolvedEnvironment | undefined
  * @param document - The active text document.
  */
 export async function updateVenvSelector(document: TextDocument) {
-    if (document.languageId === 'inmanta' || document.languageId === 'cf' || document.uri.fsPath.endsWith('.cf')) {
+    if (document && (document.languageId === 'inmanta' || document.languageId === 'cf' || document.uri.fsPath.endsWith('.cf'))) {
         const workspaceFolder = workspace.getWorkspaceFolder(document.uri);
         const settings = workspaceFolder ? await getWorkspaceSettings('inmanta', workspaceFolder, true) : await getGlobalSettings('inmanta', true);
 

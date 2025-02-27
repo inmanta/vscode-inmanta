@@ -13,6 +13,21 @@
             "preLaunchTask": "npm: watch",
         },
         {
+            "name": "Extension Test InstallExtension",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": ["${workspaceRoot}/src/test/installExtension/workspace","--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out/test/installExtension/index" ],
+            "sourceMaps": true,
+            "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
+            "preLaunchTask": "npm: pretest",
+            "env": {
+                "INMANTA_LS_PATH": "${workspaceRoot}/server",
+                "INMANTA_LS_LOG_PATH": "${workspaceRoot}/vscode-inmanta.log",
+                "INMANTA_EXTENSION_TEST_ENV":"/tmp/venv"
+            }
+        },
+        {
             "name": "Extension Test Compile",
             "type": "extensionHost",
             "request": "launch",

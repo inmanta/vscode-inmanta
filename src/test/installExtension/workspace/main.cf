@@ -1,0 +1,10 @@
+# A simple Inmanta model file to trigger extension activation
+entity Host:
+    string name
+end
+
+entity Test:
+    string name
+end
+
+implement Host using std::none 
