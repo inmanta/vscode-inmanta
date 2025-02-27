@@ -1,5 +1,4 @@
 import * as fs from 'fs-extra';
-import { commands } from 'vscode';
 
 /**
  * Read a loging file waiting for a message announcing the end of the compilation

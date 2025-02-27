@@ -5,10 +5,9 @@ import * as fs from 'fs-extra';
 import * as sinon from 'sinon';
 import * as cp from 'child_process';
 
-import { Uri, window, commands, workspace, extensions, OutputChannel, Position, Hover } from 'vscode';
+import { Uri, window, commands, workspace, extensions, OutputChannel } from 'vscode';
 import { assertWithTimeout } from '../helpers';
 import { createOutputChannel } from '../../vscode_api';
-import { getLanguageMap } from '../../extension';
 
 const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/installExtension/workspace'));
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
