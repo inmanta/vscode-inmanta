@@ -24,3 +24,7 @@ junit-*
 !.vscode/tasks.json
 *.vsix
 requirements.txt
+
+.venv*
+venv*
+__pycache__

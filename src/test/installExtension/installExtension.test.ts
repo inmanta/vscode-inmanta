@@ -15,25 +15,27 @@ const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.
 
 describe('Language Server Install Extension', () => {
     const testWorkspacePath = path.resolve(__dirname, '../../../src/test/installExtension/workspace');
-    const venvPath = path.join(testWorkspacePath, '.venv');
     let showErrorMessageSpy: sinon.SinonSpy;
     let showInfoMessageSpy: sinon.SinonSpy;
-    // let showWarningMessageSpy: sinon.SinonSpy;
+    let showWarningMessageSpy: sinon.SinonSpy;
     let testOutput: OutputChannel;
 
     before(async () => {
         // Ensure workspace directory exists with a .vscode folder
         await fs.ensureDir(path.join(testWorkspacePath, '.vscode'));
 
-        // Create a basic workspace file
-        const workspaceFile = path.join(testWorkspacePath, 'test.code-workspace');
-        await fs.writeJSON(workspaceFile, {
-            folders: [{ path: '.' }],
-            settings: {}
-        });
+        // Clean up any existing venvs
+        const venvs = ['.venv', '.venv2'];
+        for (const venv of venvs) {
+            const venvPathToDelete = path.join(testWorkspacePath, venv);
+            await fs.remove(venvPathToDelete);
+        }
 
-        // Clean up any existing venv
-        await fs.remove(venvPath);
+        // reset pythonpath in settings.json
+        const settingsPath = path.join(testWorkspacePath, '.vscode/settings.json');
+        if (await fs.pathExists(settingsPath)) {
+            await fs.remove(settingsPath);
+        }
 
         // Create a basic .cf file to work with
         const mainCfPath = path.join(testWorkspacePath, 'main.cf');
@@ -46,7 +48,7 @@ describe('Language Server Install Extension', () => {
         // Setup spies
         showErrorMessageSpy = sinon.spy(window, 'showErrorMessage');
         showInfoMessageSpy = sinon.spy(window, 'showInformationMessage');
-       // showWarningMessageSpy = sinon.spy(window, 'showWarningMessage');
+        showWarningMessageSpy = sinon.spy(window, 'showWarningMessage');
         // Create output channel
         testOutput = createOutputChannel('Inmanta Extension Tests');
 
@@ -64,6 +66,7 @@ describe('Language Server Install Extension', () => {
         // Restore spies
         showErrorMessageSpy.restore();
         showInfoMessageSpy.restore();
+        showWarningMessageSpy.restore();
 
         if (testOutput) {
             testOutput.dispose();
@@ -81,23 +84,31 @@ describe('Language Server Install Extension', () => {
             console.warn('Failed to reset Python interpreter setting:', error);
         }
 
-        // Clean up
-        await fs.remove(venvPath);
+        // Clean up all venvs
+        const venvs = ['.venv', '.venv2'];  // Add any other venv names used in tests
+        for (const venv of venvs) {
+            const venvPathToDelete = path.join(testWorkspacePath, venv);
+            await fs.remove(venvPathToDelete);
+        }
+
         await fs.writeFile(logPath, "");
     });
 
-    async function createVirtualEnv(): Promise<string> {
+    async function createVirtualEnv(name: string = '.venv'): Promise<string> {
         // Find python executable
         const pythonCmd = process.platform === 'win32' ? 'python' : 'python3.12';
 
+        // Create path for the named virtual environment
+        const venvLocation = path.join(testWorkspacePath, name);
+
         // Create virtual environment in the workspace folder
-        cp.execSync(`${pythonCmd} -m venv ${venvPath}`, {
+        cp.execSync(`${pythonCmd} -m venv ${venvLocation}`, {
             cwd: workspaceUri.fsPath  // Use workspace folder as working directory
         });
 
         // Return path to python interpreter in venv
         const pythonPath = path.join(
-            venvPath,
+            venvLocation,
             process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'
         );
         return pythonPath;
@@ -116,14 +127,7 @@ describe('Language Server Install Extension', () => {
         await window.showTextDocument(document);
         testOutput.appendLine('Opened main.cf file');
 
-        // Make sure extension is activated
-        const inmanta = extensions.getExtension('inmanta.inmanta');
-        if (!inmanta.isActive) {
-            await inmanta.activate();
-        }
-        assert.ok(inmanta.isActive, 'Extension should be activated');
-
-        // Try to open walkthrough
+        // Open walkthrough
         try {
             await commands.executeCommand('inmanta.openWalkthrough');
             testOutput.appendLine('Walkthrough command executed');
@@ -202,7 +206,84 @@ describe('Language Server Install Extension', () => {
             'Success message was not shown within 10 seconds'
         );
 
+        // Go back to the .cf file
+        await commands.executeCommand('workbench.action.closeActiveEditor');
+        await commands.executeCommand('vscode.open', modelUri);
+
+        // assert that the language server is running
+        const languageServer = extensions.getExtension('inmanta.inmanta');
+        assert.ok(languageServer.isActive, 'Language server should be activated');
+
     }).timeout(60000);
 
+    it('Should support switching between different virtual environments', async () => {
+        // Create a second virtual environment
+        const pythonPath2 = await createVirtualEnv(".venv2");
+
+        // Configure Python interpreter directly (skip interactive selection)
+        testOutput.appendLine('Configuring Python interpreter programmatically for new venv');
+
+        // Update both workspace and global settings
+        await workspace.getConfiguration('python').update('defaultInterpreterPath', pythonPath2, true); // global
+        await workspace.getConfiguration('python').update('defaultInterpreterPath', pythonPath2, false); // workspace
+
+        // Wait for Python extension to recognize the new interpreter
+        await assertWithTimeout(
+            async () => {
+                const config = workspace.getConfiguration('python');
+                const currentPath = config.get('defaultInterpreterPath');
+                testOutput.appendLine(`Current interpreter path: ${currentPath}`);
+                assert.strictEqual(currentPath, pythonPath2, 'Python interpreter should be set to the new venv');
+            },
+            5000,
+            'Python interpreter was not properly configured within 5 seconds'
+        );
+
+        // assert you get a warning message that the language server is not installed
+        const calls = showWarningMessageSpy.getCalls();
+        const messages = calls.map(call => ({
+            message: call.args[0],
+            buttons: call.args.slice(1)
+        }));
+
+        assert.ok(
+            messages.some(m => m.message === 'The language server is not installed in the current virtual environment. Please install it manually.'),
+            `Expected warning message but got:\n${messages.length ?
+                messages.map(m => `- "${m.message}" with buttons [${m.buttons.join(', ')}]`).join('\n') :
+                'No warning messages shown'
+            }`
+        );
+
+        // Install the language server
+        await commands.executeCommand('inmanta.installLS');
+
+        // Assert success message was shown
+        await assertWithTimeout(
+            async () => {
+                const calls = showInfoMessageSpy.getCalls();
+                const messages = calls.map(call => ({
+                    message: call.args[0],
+                    buttons: call.args.slice(1)
+                }));
+
+                assert.ok(
+                    messages.some(m => m.message === 'Inmanta Language server was installed successfully'),
+                    `Expected success message but got:\n${messages.length ?
+                        messages.map(m => `- "${m.message}" with buttons [${m.buttons.join(', ')}]`).join('\n') :
+                        'No info messages shown'
+                    }`
+                );
+                testOutput.appendLine('Language server installed successfully');
+            },
+            10000,
+            'Success message was not shown within 10 seconds'
+        );
+
+        // we are still on a cf file, so the language server should be active
+        const languageServer = extensions.getExtension('inmanta.inmanta');
+        assert.ok(languageServer.isActive, 'Language server should be active');
+
+
+    }).timeout(60000);
 
 });
