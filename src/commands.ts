@@ -3,14 +3,11 @@ import { LanguageServer } from "./language_server";
 import { fileOrDirectoryExists, registerCommand } from "./vscode_api";
 import { traceLog } from "./logTracer";
 
-type DisposableDict = Record<string, Disposable>;
-
 let installProjectTerminal: Terminal | undefined;
 let exportToServerTerminal: Terminal | undefined;
 
 export class InmantaCommands {
 	context: ExtensionContext;
-	commands: DisposableDict = {};
 
 	/**
 	* Creates an instance of InmantaCommands.
@@ -38,7 +35,6 @@ export class InmantaCommands {
 		this.registerCommand(`inmanta.activateLS`, commandActivateLSHandler(languageServer.rootFolder));
 		this.registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(languageServer.pythonPath));
 		this.registerCommand(`inmanta.installLS`, () => { languageServer.installLanguageServer(); });
-
 	}
 
 }
