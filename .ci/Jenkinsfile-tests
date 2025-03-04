@@ -47,12 +47,6 @@ pipeline {
             steps {
                 sh '''
                     rm -rf $INMANTA_EXTENSION_TEST_ENV
-                    python3 -m venv $INMANTA_EXTENSION_TEST_ENV
-                    source $INMANTA_EXTENSION_TEST_ENV/bin/activate
-                    pip install --upgrade pip
-                    pip install --pre ./server
-                    deactivate
-                    rm -rf node_modules
                     npm i --include=dev
                     npm run lint
                     xvfb-run npm run test
