@@ -39,7 +39,9 @@ export async function activate(context: ExtensionContext) {
     }
 
     traceLog("Activate Python extension");
-    await pythonExtension.activate();
+    if (!pythonExtension.isActive) {
+        await pythonExtension.activate();
+    }
 
     // Initialize the Python extension
     await initializePython(context.subscriptions);
@@ -194,6 +196,7 @@ export async function activate(context: ExtensionContext) {
         updateVenvSelector(window.activeTextEditor?.document);
 
         traceLog(`Restarting Language servers due to python interpreter change.`);
+        window.showInformationMessage('Restarting Language servers due to python interpreter change.');
         const promises: Thenable<void>[] = [];
         for (const ls of languageServers.values()) {
             promises.push(ls.startOrRestartLS());

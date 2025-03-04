@@ -33,15 +33,12 @@ export class InmantaCommands {
 	registerCommands(languageServer: LanguageServer): void {
 		traceLog(`Registering inmanta commands for language server responsible for ${languageServer.rootFolder.name} using ${languageServer.pythonPath} environment.`);
 		// Register the disposable commands to the language server
-		const commands = [
-			registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(languageServer.pythonPath)),
-			registerCommand(`inmanta.activateLS`, commandActivateLSHandler(languageServer.rootFolder)),
-			registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(languageServer.pythonPath)),
-			registerCommand(`inmanta.installLS`, () => { languageServer.installLanguageServer(); })
-		];
 
-		// Add the commands to the context subscriptions to ensure they are cleaned up when the extension is deactivated
-		this.context.subscriptions.push(...commands);
+		this.registerCommand(`inmanta.exportToServer`, createHandlerExportCommand(languageServer.pythonPath));
+		this.registerCommand(`inmanta.activateLS`, commandActivateLSHandler(languageServer.rootFolder));
+		this.registerCommand(`inmanta.projectInstall`, createProjectInstallHandler(languageServer.pythonPath));
+		this.registerCommand(`inmanta.installLS`, () => { languageServer.installLanguageServer(); });
+
 	}
 
 }
