@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { after, describe, it, beforeEach, afterEach } from 'mocha';
+import { after, describe, it, beforeEach, afterEach, before } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as sinon from 'sinon';
@@ -14,48 +14,77 @@ const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
 
 describe('Language Server Install Extension', () => {
-    const testWorkspacePath = path.join(__dirname, '../../workspace');
-    const venvPath = path.join(workspaceUri.fsPath, '.venv');
+    const testWorkspacePath = path.resolve(__dirname, '../../../src/test/installExtension/workspace');
+    const venvPath = path.join(testWorkspacePath, '.venv');
     let showErrorMessageSpy: sinon.SinonSpy;
     let showInfoMessageSpy: sinon.SinonSpy;
     let testOutput: OutputChannel;
+    let pythonPath: string;
+
+    before(async () => {
+        // Ensure workspace directory exists with a .vscode folder
+        await fs.ensureDir(path.join(testWorkspacePath, '.vscode'));
+
+        // Create a basic workspace file
+        const workspaceFile = path.join(testWorkspacePath, 'test.code-workspace');
+        await fs.writeJSON(workspaceFile, {
+            folders: [{ path: '.' }],
+            settings: {}
+        });
+
+        // Clean up any existing venv
+        await fs.remove(venvPath);
+
+        // Create fresh venv for the suite
+        pythonPath = await createVirtualEnv();
+
+        // Create a basic .cf file to work with
+        const mainCfPath = path.join(testWorkspacePath, 'main.cf');
+        if (!await fs.pathExists(mainCfPath)) {
+            await fs.writeFile(mainCfPath, 'entity Test:\n    string name\nend\n');
+        }
+    });
 
     beforeEach(async () => {
         // Setup spies
         showErrorMessageSpy = sinon.spy(window, 'showErrorMessage');
         showInfoMessageSpy = sinon.spy(window, 'showInformationMessage');
 
-        await commands.executeCommand('workbench.action.closeAllEditors');
-        // Clean up any existing venv
-        await fs.remove(venvPath);
-        await commands.executeCommand('workbench.action.closeActiveEditor');
-        // Reset any existing venv selection
-        await workspace.getConfiguration('python').update('defaultInterpreterPath', undefined);
-
-        // Create output channel, this can be accessed in the hosted vs-code where the tests are running
-        // This is used to debug the tests when needed
+        // Create output channel
         testOutput = createOutputChannel('Inmanta Extension Tests');
+
+        // Ensure workspace is opened before trying to modify settings
+        await commands.executeCommand('workbench.action.closeAllEditors');
+
+        // Wait a bit for VS Code to settle
+        await new Promise(resolve => setTimeout(resolve, 1000));
     });
 
     afterEach(async () => {
+        // Wait a bit before cleanup to allow pending operations to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // Restore spies
         showErrorMessageSpy.restore();
         showInfoMessageSpy.restore();
 
-        // Dispose output channel
         if (testOutput) {
             testOutput.dispose();
         }
-
-        // Clean up venv
-        await fs.remove(venvPath);
-        // Reset Python interpreter setting
-        await workspace.getConfiguration('python').update('defaultInterpreterPath', undefined);
     });
 
     after(async () => {
-        // Final cleanup
-        await fs.remove(testWorkspacePath);
+        // Wait for any pending operations
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        try {
+            // Reset Python interpreter setting
+            await workspace.getConfiguration('python').update('defaultInterpreterPath', undefined, true);
+        } catch (error) {
+            console.warn('Failed to reset Python interpreter setting:', error);
+        }
+
+        // Clean up
         await fs.remove(venvPath);
         await fs.writeFile(logPath, "");
     });
@@ -177,4 +206,6 @@ describe('Language Server Install Extension', () => {
         );
 
     }).timeout(60000);
+
+
 });

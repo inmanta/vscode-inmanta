@@ -51,7 +51,10 @@ async function main() {
 			vscodeExecutablePath,
 			extensionDevelopmentPath: extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './installExtension/index'),
-			launchArgs: ["--disable-gpu"],
+			launchArgs: [
+				path.resolve(__dirname, '../../src/test/installExtension/workspace'),
+				"--disable-gpu"
+			],
 			extensionTestsEnv,
 			reuseMachineInstall: true,
 		});
