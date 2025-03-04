@@ -46,7 +46,7 @@ describe('Language Server Install Extension', () => {
         // Setup spies
         showErrorMessageSpy = sinon.spy(window, 'showErrorMessage');
         showInfoMessageSpy = sinon.spy(window, 'showInformationMessage');
-        showWarningMessageSpy = sinon.spy(window, 'showWarningMessage');
+       // showWarningMessageSpy = sinon.spy(window, 'showWarningMessage');
         // Create output channel
         testOutput = createOutputChannel('Inmanta Extension Tests');
 
