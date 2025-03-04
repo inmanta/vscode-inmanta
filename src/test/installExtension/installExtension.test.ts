@@ -18,7 +18,7 @@ describe('Language Server Install Extension', () => {
     const venvPath = path.join(testWorkspacePath, '.venv');
     let showErrorMessageSpy: sinon.SinonSpy;
     let showInfoMessageSpy: sinon.SinonSpy;
-    let showWarningMessageSpy: sinon.SinonSpy;
+    // let showWarningMessageSpy: sinon.SinonSpy;
     let testOutput: OutputChannel;
 
     before(async () => {
