@@ -18,8 +18,8 @@ describe('Language Server Install Extension', () => {
     const venvPath = path.join(testWorkspacePath, '.venv');
     let showErrorMessageSpy: sinon.SinonSpy;
     let showInfoMessageSpy: sinon.SinonSpy;
+    let showWarningMessageSpy: sinon.SinonSpy;
     let testOutput: OutputChannel;
-    let pythonPath: string;
 
     before(async () => {
         // Ensure workspace directory exists with a .vscode folder
@@ -35,9 +35,6 @@ describe('Language Server Install Extension', () => {
         // Clean up any existing venv
         await fs.remove(venvPath);
 
-        // Create fresh venv for the suite
-        pythonPath = await createVirtualEnv();
-
         // Create a basic .cf file to work with
         const mainCfPath = path.join(testWorkspacePath, 'main.cf');
         if (!await fs.pathExists(mainCfPath)) {
@@ -49,7 +46,7 @@ describe('Language Server Install Extension', () => {
         // Setup spies
         showErrorMessageSpy = sinon.spy(window, 'showErrorMessage');
         showInfoMessageSpy = sinon.spy(window, 'showInformationMessage');
-
+        showWarningMessageSpy = sinon.spy(window, 'showWarningMessage');
         // Create output channel
         testOutput = createOutputChannel('Inmanta Extension Tests');
 
