@@ -36,6 +36,18 @@ describe('Language Server Install Extension', () => {
         if (!await fs.pathExists(mainCfPath)) {
             await fs.writeFile(mainCfPath, 'entity Test:\n    string name\nend\n');
         }
+
+        // Initialize settings.json with default values
+        const settings = {
+            "inmanta.ls.enabled": true,
+            "python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV || "/tmp/venv"
+        };
+
+        const settingsPath = path.join(testWorkspacePath, '.vscode', 'settings.json');
+        await fs.writeJSON(settingsPath, settings, { spaces: 4 });
+
+        // Wait for VS Code to detect the settings change
+        await new Promise(resolve => setTimeout(resolve, 1000));
     });
 
     beforeEach(async () => {
@@ -84,7 +96,7 @@ describe('Language Server Install Extension', () => {
             const venvPathToDelete = path.join(testWorkspacePath, venv);
             await fs.remove(venvPathToDelete);
         }
-        
+
 
         await fs.writeFile(logPath, "");
     });
@@ -211,74 +223,55 @@ describe('Language Server Install Extension', () => {
 
     }).timeout(60000);
 
-    // it('Should support switching between different virtual environments', async () => {
-    //     // Create a second virtual environment
-    //     const pythonPath2 = await createVirtualEnv(".venv2");
+    it('Should support switching between different virtual environments', async () => {
+        // Create a second virtual environment
+        const pythonPath2 = await createVirtualEnv(".venv2");
 
-    //     // Configure Python interpreter directly (skip interactive selection)
-    //     testOutput.appendLine('Configuring Python interpreter programmatically for new venv');
+        // Configure Python interpreter directly (skip interactive selection)
+        testOutput.appendLine('Configuring Python interpreter programmatically for new venv');
 
-    //     // Update both workspace and global settings
-    //     await workspace.getConfiguration('python').update('defaultInterpreterPath', pythonPath2, true); // global
-    //     await workspace.getConfiguration('python').update('defaultInterpreterPath', pythonPath2, false); // workspace
+        // Update both workspace and global settings
+        await workspace.getConfiguration('python').update('defaultInterpreterPath', pythonPath2, true); // global
+        await workspace.getConfiguration('python').update('defaultInterpreterPath', pythonPath2, false); // workspace
 
-    //     // Wait for Python extension to recognize the new interpreter
-    //     await assertWithTimeout(
-    //         async () => {
-    //             const config = workspace.getConfiguration('python');
-    //             const currentPath = config.get('defaultInterpreterPath');
-    //             testOutput.appendLine(`Current interpreter path: ${currentPath}`);
-    //             assert.strictEqual(currentPath, pythonPath2, 'Python interpreter should be set to the new venv');
-    //         },
-    //         5000,
-    //         'Python interpreter was not properly configured within 5 seconds'
-    //     );
+        // Wait for Python extension to recognize the new interpreter
+        await assertWithTimeout(
+            async () => {
+                const config = workspace.getConfiguration('python');
+                const currentPath = config.get('defaultInterpreterPath');
+                testOutput.appendLine(`Current interpreter path: ${currentPath}`);
+                assert.strictEqual(currentPath, pythonPath2, 'Python interpreter should be set to the new venv');
+            },
+            1000,
+            'Python interpreter was not properly configured within 10 seconds'
+        );
 
-    //     // assert you get a warning message that the language server is not installed
-    //     const calls = showWarningMessageSpy.getCalls();
-    //     const messages = calls.map(call => ({
-    //         message: call.args[0],
-    //         buttons: call.args.slice(1)
-    //     }));
-
-    //     assert.ok(
-    //         messages.some(m => m.message === 'The language server is not installed in the current virtual environment. Please install it manually.'),
-    //         `Expected warning message but got:\n${messages.length ?
-    //             messages.map(m => `- "${m.message}" with buttons [${m.buttons.join(', ')}]`).join('\n') :
-    //             'No warning messages shown'
-    //         }`
-    //     );
-
-    //     // Install the language server
-    //     await commands.executeCommand('inmanta.installLS');
-
-    //     // Assert success message was shown
-    //     await assertWithTimeout(
-    //         async () => {
-    //             const calls = showInfoMessageSpy.getCalls();
-    //             const messages = calls.map(call => ({
-    //                 message: call.args[0],
-    //                 buttons: call.args.slice(1)
-    //             }));
-
-    //             assert.ok(
-    //                 messages.some(m => m.message === 'Inmanta Language server was installed successfully'),
-    //                 `Expected success message but got:\n${messages.length ?
-    //                     messages.map(m => `- "${m.message}" with buttons [${m.buttons.join(', ')}]`).join('\n') :
-    //                     'No info messages shown'
-    //                 }`
-    //             );
-    //             testOutput.appendLine('Language server installed successfully');
-    //         },
-    //         10000,
-    //         'Success message was not shown within 10 seconds'
-    //     );
-
-    //     // we are still on a cf file, so the language server should be active
-    //     const languageServer = extensions.getExtension('inmanta.inmanta');
-    //     assert.ok(languageServer.isActive, 'Language server should be active');
+        // Go back to the .cf file to ensure we're in the right context
+        await commands.executeCommand('workbench.action.closeActiveEditor');
+        await commands.executeCommand('vscode.open', modelUri);
 
 
-    // }).timeout(60000);
+        // assert you get a warning message that the language server is not installed in this new venv
+        await assertWithTimeout(
+            async () => {
+                const calls = showWarningMessageSpy.getCalls();
+                const messages = calls.map(call => ({
+                    message: call.args[0],
+                    buttons: call.args.slice(1)
+                }));
+                assert.ok(
+                    messages.some(m => m.message === 'The language server is not installed in the current virtual environment. Please install it manually.'),
+                    `Expected warning about missing language server but got:\n${messages.length ?
+                        messages.map(m => `- "${m.message}" with buttons [${m.buttons.join(', ')}]`).join('\n') :
+                        'No warning messages shown'
+                    }`
+                );
+            },
+            2000,
+            'Warning about missing language server was not shown within 10 seconds'
+        );      
+
+
+    }).timeout(60000);
 
 });
