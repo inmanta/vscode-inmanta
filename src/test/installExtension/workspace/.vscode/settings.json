@@ -1,4 +1,0 @@
-{
-    "inmanta.ls.enabled": true,
-    "python.defaultInterpreterPath": "/tmp/venv"
-}
