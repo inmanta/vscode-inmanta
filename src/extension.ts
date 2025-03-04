@@ -196,9 +196,9 @@ export async function activate(context: ExtensionContext) {
         updateVenvSelector(window.activeTextEditor?.document);
 
         traceLog(`Restarting Language servers due to python interpreter change.`);
-        window.showInformationMessage('Restarting Language servers due to python interpreter change.');
         const promises: Thenable<void>[] = [];
         for (const ls of languageServers.values()) {
+            traceLog(`Restarting Language server ${ls.canServerStart()}`);
             promises.push(ls.startOrRestartLS());
         }
         await Promise.all(promises);

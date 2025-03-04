@@ -1,4 +1,4 @@
-import { ExtensionContext, window, workspace, TerminalOptions, Disposable, Terminal, WorkspaceFolder } from "vscode";
+import { ExtensionContext, window, workspace, TerminalOptions, Terminal, WorkspaceFolder } from "vscode";
 import { LanguageServer } from "./language_server";
 import { fileOrDirectoryExists, registerCommand } from "./vscode_api";
 import { traceLog } from "./logTracer";
