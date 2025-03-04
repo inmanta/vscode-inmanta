@@ -18,10 +18,11 @@ junit-*
 .idea
 .cfcache/
 
-.vscode/*
+.vscode/**
 !.vscode/settings.json.example
 !.vscode/launch.json
 !.vscode/tasks.json
+.vscode/settings.json
 *.vsix
 requirements.txt
 
