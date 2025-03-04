@@ -31,12 +31,6 @@ describe('Language Server Install Extension', () => {
             await fs.remove(venvPathToDelete);
         }
 
-        // reset pythonpath in settings.json
-        const settingsPath = path.join(testWorkspacePath, '.vscode/settings.json');
-        if (await fs.pathExists(settingsPath)) {
-            await fs.remove(settingsPath);
-        }
-
         // Create a basic .cf file to work with
         const mainCfPath = path.join(testWorkspacePath, 'main.cf');
         if (!await fs.pathExists(mainCfPath)) {
@@ -90,6 +84,7 @@ describe('Language Server Install Extension', () => {
             const venvPathToDelete = path.join(testWorkspacePath, venv);
             await fs.remove(venvPathToDelete);
         }
+        
 
         await fs.writeFile(logPath, "");
     });
