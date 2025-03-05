@@ -145,6 +145,12 @@ export class LanguageServer {
 	}
 
 	/**
+	 * Checks if the Inmanta Language Server is installed in editable mode.
+	 * the language server is installed wit pip install -e, 
+	 * which causes your checked out version of the code to be installed in the venv, without copying it.
+	 * I.e. when you edit the code, you edit the installed code, not the one coming from artifacts.
+	 * For development this is super handy, because you don't need to package it every time
+	 * 
 	 * @returns {string | null} True if inmantals is installed in editable mode, else false
 	 */
 	isEditableInstall(): boolean {
