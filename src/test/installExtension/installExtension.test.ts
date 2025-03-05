@@ -90,8 +90,8 @@ describe('Language Server Install Extension', () => {
             console.warn('Failed to reset Python interpreter setting:', error);
         }
 
-        // Clean up all venvs
-        const venvs = ['.venv', '.venv2'];  // Add any other venv names used in tests
+        // Clean up all extra venvs. the default venv is not deleted since it will be used for the rest of the suite.
+        const venvs = ['.venv2'];
         for (const venv of venvs) {
             const venvPathToDelete = path.join(testWorkspacePath, venv);
             await fs.remove(venvPathToDelete);
@@ -121,7 +121,7 @@ describe('Language Server Install Extension', () => {
         return pythonPath;
     }
 
-    it('Should guide through setup assistant when no venv is selected', async () => {
+    it('Should guide through setup assistant when no venv is selected and install succesfully', async () => {
         // Make sure Python extension is ready
         const pythonExtension = extensions.getExtension('ms-python.python');
         if (!pythonExtension.isActive) {
@@ -223,7 +223,7 @@ describe('Language Server Install Extension', () => {
 
     }).timeout(60000);
 
-    it('Should support switching between different virtual environments', async () => {
+    it('Should detect if we change venv and no server is installed', async () => {
         // Create a second virtual environment
         const pythonPath2 = await createVirtualEnv(".venv2");
 
@@ -250,28 +250,18 @@ describe('Language Server Install Extension', () => {
         await commands.executeCommand('workbench.action.closeActiveEditor');
         await commands.executeCommand('vscode.open', modelUri);
 
+        // give the editor a moment to trigger restart of the language server
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // assert you get a warning message that the language server is not installed in this new venv
+        // expect a warning message that the language server is not installed now that we changed the venv
         await assertWithTimeout(
             async () => {
                 const calls = showWarningMessageSpy.getCalls();
-                const messages = calls.map(call => ({
-                    message: call.args[0],
-                    buttons: call.args.slice(1)
-                }));
-                assert.ok(
-                    messages.some(m => m.message === 'The language server is not installed in the current virtual environment. Please install it manually.'),
-                    `Expected warning about missing language server but got:\n${messages.length ?
-                        messages.map(m => `- "${m.message}" with buttons [${m.buttons.join(', ')}]`).join('\n') :
-                        'No warning messages shown'
-                    }`
-                );
+                assert.ok(calls.length > 0, 'Warning message should be shown');
+                assert.ok(calls[0].firstArg.includes('Inmanta Language Server not installed.'), 'Warning message should mention the language server is not installed');
             },
-            2000,
-            'Warning about missing language server was not shown within 10 seconds'
-        );      
-
-
+            1000,
+            'Warning message was not shown within 10 seconds'
+        );
     }).timeout(60000);
-
 });

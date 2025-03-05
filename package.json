@@ -232,9 +232,6 @@
     "extensionDependencies": [
         "ms-python.python"
     ],
-    "activationEvents": [
-        "onCommand:inmanta.openWalkthrough"
-    ],
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "rimraf out && tsc -p ./",

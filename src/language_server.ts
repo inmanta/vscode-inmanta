@@ -239,9 +239,12 @@ export class LanguageServer {
 	async updatePythonPath(newPath: string, outermost: Uri): Promise<void> {
 		traceLog(`Comparing outermost: ${outermost} to rooturi: ${this.rootFolder.uri.toString()}`);
 
-		if (outermost === this.rootFolder.uri) {
+		// Compare URI strings instead of URI objects
+		if (outermost.toString() === this.rootFolder.uri.toString() || !outermost) {
+			const oldPath = this.pythonPath;
 			this.pythonPath = newPath;
-			traceLog(`Language server python path changed to ${newPath}`);
+			traceLog(`Language server python path changed from ${oldPath} to ${newPath}`);
+
 			const canStart = await this.canServerStart(newPath);
 
 			if (canStart === LanguageServerDiagnoseResult.ok) {
@@ -249,10 +252,11 @@ export class LanguageServer {
 			}
 			else {
 				traceWarn(`Language server can't start with interpreter ${newPath}`);
-
 				this.diagnoseId = uuidv4();
 				return this.proposeSolution(canStart, this.diagnoseId);
 			}
+		} else {
+			traceLog(`Skipping python path update for ${this.rootFolder.uri.toString()} as it doesn't match ${outermost.toString()}`);
 		}
 	}
 
@@ -284,7 +288,7 @@ export class LanguageServer {
 		if (!pythonVersionSupported(interpreter)) {
 			return LanguageServerDiagnoseResult.wrongPythonVersion;
 		}
-	
+
 		// Check if a language server is installed
 		if (!this.getInstalledInmantaLSVersion()) {
 			return LanguageServerDiagnoseResult.languageServerNotInstalled;
@@ -419,7 +423,7 @@ export class LanguageServer {
 		const child = cp.spawnSync(this.pythonPath, cmdArgs);
 
 		traceInfo(`Inmanta Language Server install exited with code ${child.status}`);
-		
+
 		if (child.status !== 0) {
 			traceError(`Can not start server and client ${child.stderr.toString()}`);
 			const response = await window.showErrorMessage(`Inmanta Language Server install failed with code ${child.status}, ${child.stderr}`, "Setup assistant");
