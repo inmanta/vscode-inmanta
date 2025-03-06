@@ -196,7 +196,7 @@ export async function activate(context: ExtensionContext) {
         updateVenvSelector(window.activeTextEditor?.document);
 
         traceLog(`Restarting Language servers due to python interpreter change.`);
-       
+
         // Get the new interpreter path
         const newInterpreter = await getInterpreterDetails(e.resource);
         const newPythonPath = newInterpreter.path ? newInterpreter.path[0] : undefined;

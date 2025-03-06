@@ -19,7 +19,7 @@
         "syntax"
     ],
     "engines": {
-        "vscode": "^1.63.0"
+        "vscode": "^1.97.2"
     },
     "categories": [
         "Programming Languages"
@@ -245,7 +245,7 @@
         "@types/mocha": "^10.0.10",
         "@types/node": "^22.13.4",
         "@types/semver": "^7.5.8",
-        "@types/vscode": "^1.63.2",
+        "@types/vscode": "^1.97.2",
         "@vscode/python-extension": "^1.0.5",
         "@typescript-eslint/eslint-plugin": "^8.24.1",
         "@typescript-eslint/parser": "^8.24.1",

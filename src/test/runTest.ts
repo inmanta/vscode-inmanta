@@ -12,7 +12,6 @@ async function main() {
 
 		const settings = {
 			"inmanta.ls.enabled": true,
-			"python.defaultInterpreterPath": process.env.INMANTA_EXTENSION_TEST_ENV || "/tmp/venv"
 		};
 
 		// Saving settings of testing workspace to file
@@ -34,17 +33,33 @@ async function main() {
 
 		// Ensure the tests don't pick up any config present in the .config
 		// in the home dir.
-		const extensionTestsEnv = {
-			HOME: tmpHomeDir,
-			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH || "./server",
-		};
-
 		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
 		const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath, "linux-x64");
-		cp.spawnSync(cliPath, ['--install-extension', 'ms-python.python', '--force'], {
+		console.warn('[TEST] CLI path:', cliPath);
+
+		// Install Python extension to the user extensions directory
+		// and specify the extensions directory in the environment
+		const userExtensionsDir = path.join(tmpHomeDir, '.vscode/extensions');
+		await fs.ensureDir(userExtensionsDir);
+
+		// Install Python extension to the temporary user directory
+		cp.spawnSync(cliPath, [
+			'--install-extension',
+			'ms-python.python',
+			'--force',
+			'--extensions-dir',
+			userExtensionsDir
+		], {
 			encoding: 'utf-8',
 			stdio: 'inherit'
 		});
+
+		// Add the extensions directory to the environment
+		const extensionTestsEnv = {
+			HOME: tmpHomeDir,
+			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH || "./server",
+			VSCODE_EXTENSIONS: userExtensionsDir, // Add this to point to the extensions directory
+		};
 
 		// Run install extension tests first
 		await runTests({
@@ -53,7 +68,8 @@ async function main() {
 			extensionTestsPath: path.resolve(__dirname, './installExtension/index'),
 			launchArgs: [
 				path.resolve(__dirname, '../../src/test/installExtension/workspace'),
-				"--disable-gpu"
+				"--disable-gpu",
+				"--extensions-dir", userExtensionsDir
 			],
 			extensionTestsEnv,
 			reuseMachineInstall: true,

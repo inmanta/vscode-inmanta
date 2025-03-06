@@ -19,7 +19,6 @@ pipeline {
 
     environment {
       INMANTA_LS_TEST_ENV="${env.WORKSPACE}/ls-venv"
-      INMANTA_EXTENSION_TEST_ENV="${env.WORKSPACE}/extension-venv"
       INMANTA_LS_PATH="${env.WORKSPACE}/server"
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
@@ -46,7 +45,6 @@ pipeline {
         stage('Extension tests') {
             steps {
                 sh '''
-                    rm -rf $INMANTA_EXTENSION_TEST_ENV
                     npm i --include=dev
                     npm run lint
                     xvfb-run npm run test
