@@ -251,12 +251,18 @@ describe('Language Server Install Extension', () => {
         await commands.executeCommand('vscode.open', modelUri);
 
         // give the editor a moment to trigger restart of the language server
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        testOutput.appendLine('Waiting for language server to restart...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        testOutput.appendLine('Continuing after wait...');
 
         // expect a warning message that the language server is not installed now that we changed the venv
         await assertWithTimeout(
             async () => {
                 const calls = showWarningMessageSpy.getCalls();
+                testOutput.appendLine(`Warning message spy calls: ${calls.length}`);
+                if (calls.length > 0) {
+                    testOutput.appendLine(`First warning message: ${calls[0].firstArg}`);
+                }
                 assert.ok(calls.length > 0, 'Warning message should be shown');
                 assert.ok(calls[0].firstArg.includes('Inmanta Language Server not installed.'), 'Warning message should mention the language server is not installed');
             },

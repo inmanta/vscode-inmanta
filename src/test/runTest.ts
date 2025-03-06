@@ -35,23 +35,28 @@ async function main() {
 		// in the home dir.
 		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
 		const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath, "linux-x64");
-		console.warn('[TEST] CLI path:', cliPath);
+		console.warn('[DEBUG] CLI path:', cliPath);
 
 		// Install Python extension to the user extensions directory
 		// and specify the extensions directory in the environment
 		const userExtensionsDir = path.join(tmpHomeDir, '.vscode/extensions');
 		await fs.ensureDir(userExtensionsDir);
 
+		console.info('[DEBUG] Temporary Home Directory:', tmpHomeDir);
+		console.info('[DEBUG] User Extensions Directory:', userExtensionsDir);
+
 		// Install Python extension to the temporary user directory
 		cp.spawnSync(cliPath, [
 			'--install-extension',
 			'ms-python.python',
-			'--force',
-			'--extensions-dir',
-			userExtensionsDir
+			'--force'
 		], {
 			encoding: 'utf-8',
-			stdio: 'inherit'
+			stdio: 'inherit',
+			env: {
+				...process.env,
+				VSCODE_EXTENSIONS: userExtensionsDir
+			}
 		});
 
 		// Add the extensions directory to the environment
