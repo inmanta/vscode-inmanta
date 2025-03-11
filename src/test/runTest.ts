@@ -4,7 +4,6 @@ import { downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath, runTest
 import * as fs from 'fs-extra';
 import * as rimraf from 'rimraf';
 
-
 async function main() {
 	const tmpHomeDir: string = fs.mkdtempSync("/tmp/vscode-tests");
 	try {
@@ -62,8 +61,8 @@ async function main() {
 		// Add the extensions directory to the environment
 		const extensionTestsEnv = {
 			HOME: tmpHomeDir,
-			INMANTA_LANGUAGE_SERVER_PATH: process.env.INMANTA_LANGUAGE_SERVER_PATH || "./server",
-			VSCODE_EXTENSIONS: userExtensionsDir, // Add this to point to the extensions directory
+			VSCODE_EXTENSIONS: userExtensionsDir,
+			DISPLAY: ':0',
 		};
 
 		// Run install extension tests first
@@ -73,7 +72,7 @@ async function main() {
 			extensionTestsPath: path.resolve(__dirname, './installExtension/index'),
 			launchArgs: [
 				path.resolve(__dirname, '../../src/test/installExtension/workspace'),
-				"--disable-gpu",
+				'--no-headless',
 				"--extensions-dir", userExtensionsDir
 			],
 			extensionTestsEnv,
