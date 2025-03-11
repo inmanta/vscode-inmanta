@@ -24,6 +24,7 @@ pipeline {
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
       INMANTA_STYLE_CHECK_ENV="${env.WORKSPACE}/style-check-venv"
       INMANTA_COMPILER_CACHE=0
+      DISPLAY=":0"
     }
 
     stages {
