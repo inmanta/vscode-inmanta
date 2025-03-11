@@ -48,6 +48,7 @@ pipeline {
                 sh '''
                     npm install
                     node --version
+                    npm ls glob
                     npm run lint
                     npm run test
                 '''
