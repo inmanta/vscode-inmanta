@@ -35,7 +35,7 @@ import { glob } from 'glob';
 export function innerRun(regexToTestFiles: string): Promise<void> {
 	// Create the mocha test
 	const mocha = new Mocha({
-		ui: 'bdd',
+		ui: 'tdd',
 		color: true
 	});
 
