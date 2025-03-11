@@ -27,7 +27,6 @@ async function main() {
 		await fs.writeJSON(docstringSettingsPath, settings);
 
 		// The folder containing the Extension Manifest package.json
-		// Passed to `--extensionDevelopmentPath`
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../');
 
 		// Ensure the tests don't pick up any config present in the .config
