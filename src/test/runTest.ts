@@ -62,7 +62,6 @@ async function main() {
 		const extensionTestsEnv = {
 			HOME: tmpHomeDir,
 			VSCODE_EXTENSIONS: userExtensionsDir,
-			DISPLAY: ':0',
 		};
 
 		// Run install extension tests first
