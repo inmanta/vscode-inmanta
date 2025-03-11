@@ -46,7 +46,7 @@ pipeline {
         stage('Extension tests') {
             steps {
                 sh '''
-                    npm i --include=dev
+                    npm install
                     npm --version
                     npm run lint
                     npm run test
