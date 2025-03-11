@@ -48,7 +48,7 @@ pipeline {
                 sh '''
                     npm install
                     node --version
-                    npm ls glob lodash.get inflight
+                    npm ls lodash.get
                     npm run lint
                     npm run test
                 '''
