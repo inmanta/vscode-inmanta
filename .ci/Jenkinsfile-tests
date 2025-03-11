@@ -47,6 +47,7 @@ pipeline {
             steps {
                 sh '''
                     npm i --include=dev
+                    npm --version
                     npm run lint
                     npm run test
                 '''
