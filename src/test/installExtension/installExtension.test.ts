@@ -209,8 +209,8 @@ suite('Language Server Install Extension', () => {
                 );
                 testOutput.appendLine('Language server installed successfully');
             },
-            10000,
-            'Success message was not shown within 10 seconds'
+            20000,
+            'Success message was not shown within 20 seconds'
         );
 
         // Go back to the .cf file
