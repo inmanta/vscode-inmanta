@@ -70,7 +70,9 @@ async function main() {
 			extensionTestsPath: path.resolve(__dirname, './installExtension/index'),
 			launchArgs: [
 				path.resolve(__dirname, '../../src/test/installExtension/workspace'),
-				"--extensions-dir", userExtensionsDir
+				"--extensions-dir",
+				userExtensionsDir,
+				"--disable-gpu"
 			],
 			extensionTestsEnv,
 			reuseMachineInstall: true,
