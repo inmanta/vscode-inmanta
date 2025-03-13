@@ -70,7 +70,6 @@ async function main() {
 			extensionTestsPath: path.resolve(__dirname, './installExtension/index'),
 			launchArgs: [
 				path.resolve(__dirname, '../../src/test/installExtension/workspace'),
-				'--no-headless',
 				"--extensions-dir", userExtensionsDir
 			],
 			extensionTestsEnv,
