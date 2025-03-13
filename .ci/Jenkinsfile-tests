@@ -23,8 +23,8 @@ pipeline {
       INMANTA_LS_LOG_PATH="${env.WORKSPACE}/server.log"
       PIP_INDEX_URL="https://artifacts.internal.inmanta.com/inmanta/dev"
       INMANTA_STYLE_CHECK_ENV="${env.WORKSPACE}/style-check-venv"
+      DISPLAY=":99"
       INMANTA_COMPILER_CACHE=0
-      DISPLAY=":0"
     }
 
     stages {
@@ -47,10 +47,8 @@ pipeline {
             steps {
                 sh '''
                     npm install
-                    node --version
-                    npm ls lodash.get
                     npm run lint
-                    npm run test
+                    xvfb-run --server-args="-screen 0 1024x768x24 -ac" npm run test
                 '''
             }
         }

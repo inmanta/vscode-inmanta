@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { after, describe, it, beforeEach, afterEach, before } from 'mocha';
+import { after, suite, test, setup, teardown, before } from 'mocha';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as sinon from 'sinon';
@@ -13,7 +13,7 @@ const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/in
 const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
 const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
 
-describe('Language Server Install Extension', () => {
+suite('Language Server Install Extension', () => {
     const testWorkspacePath = path.resolve(__dirname, '../../../src/test/installExtension/workspace');
     let showErrorMessageSpy: sinon.SinonSpy;
     let showInfoMessageSpy: sinon.SinonSpy;
@@ -50,7 +50,7 @@ describe('Language Server Install Extension', () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
     });
 
-    beforeEach(async () => {
+    setup(async () => {
         // Setup spies
         showErrorMessageSpy = sinon.spy(window, 'showErrorMessage');
         showInfoMessageSpy = sinon.spy(window, 'showInformationMessage');
@@ -65,7 +65,7 @@ describe('Language Server Install Extension', () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
     });
 
-    afterEach(async () => {
+    teardown(async () => {
         // Wait a bit before cleanup to allow pending operations to complete
         await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -121,7 +121,7 @@ describe('Language Server Install Extension', () => {
         return pythonPath;
     }
 
-    it('Should guide through setup assistant when no venv is selected and install succesfully', async () => {
+    test('Should guide through setup assistant when no venv is selected and install succesfully', async () => {
         // Make sure Python extension is ready
         const pythonExtension = extensions.getExtension('ms-python.python');
         if (!pythonExtension.isActive) {
@@ -221,9 +221,9 @@ describe('Language Server Install Extension', () => {
         const languageServer = extensions.getExtension('inmanta.inmanta');
         assert.ok(languageServer.isActive, 'Language server should be activated');
 
-    }).timeout(60000);
+    });
 
-    it('Should detect if we change venv and no server is installed', async () => {
+    test('Should detect if we change venv and no server is installed', async () => {
         // Create a second virtual environment
         const pythonPath2 = await createVirtualEnv(".venv2");
 
@@ -269,5 +269,5 @@ describe('Language Server Install Extension', () => {
             1000,
             'Warning message was not shown within 10 seconds'
         );
-    }).timeout(60000);
+    });
 });
