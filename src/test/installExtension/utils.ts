@@ -1,8 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as cp from 'child_process';
-import { Uri, workspace, OutputChannel, commands, window, extensions } from 'vscode';
-import { createOutputChannel } from '../../vscode_api';
+import { Uri, workspace, OutputChannel, commands, extensions } from 'vscode';
 
 export const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/installExtension/workspace'));
 export const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
@@ -93,7 +92,7 @@ export function createTestOutput(): OutputChannel {
             // Can't clear console in a running process
             console.log('[INMANTA TEST] --- CLEAR ---');
         },
-        show(columnOrPreserveFocus?: any, preserveFocus?: boolean): void {
+        show(): void {
             // Handle both overloads
             console.log('[INMANTA TEST] --- SHOW OUTPUT ---');
         },
@@ -117,7 +116,7 @@ export function createTestOutput(): OutputChannel {
  * @param outputChannel Optional output channel to log progress
  * @returns A promise that resolves when the installation is complete
  */
-export async function installLanguageServer(outputChannel?: OutputChannel, venvFolder: string = '.venv'): Promise<void> {
+export async function installLanguageServer(outputChannel?: OutputChannel): Promise<void> {
     const output = outputChannel || createTestOutput();
     output.appendLine('=== LANGUAGE SERVER INSTALLATION STARTED ===');
     output.appendLine(`Running in CI: ${process.env.CI === 'true' || process.env.JENKINS_URL ? 'Yes' : 'No'}`);
