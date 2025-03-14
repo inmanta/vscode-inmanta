@@ -80,7 +80,36 @@ export async function createVirtualEnv(name: string = '.venv'): Promise<string> 
 }
 
 export function createTestOutput(): OutputChannel {
-    return createOutputChannel('Inmanta Extension Tests');
+    // Create a console-based implementation of OutputChannel
+    return {
+        name: 'Inmanta Extension Tests',
+        append(value: string): void {
+            process.stdout.write(value);
+        },
+        appendLine(value: string): void {
+            console.log(`[INMANTA TEST] ${value}`);
+        },
+        clear(): void {
+            // Can't clear console in a running process
+            console.log('[INMANTA TEST] --- CLEAR ---');
+        },
+        show(columnOrPreserveFocus?: any, preserveFocus?: boolean): void {
+            // Handle both overloads
+            console.log('[INMANTA TEST] --- SHOW OUTPUT ---');
+        },
+        hide(): void {
+            // Can't hide console
+            console.log('[INMANTA TEST] --- HIDE OUTPUT ---');
+        },
+        dispose(): void {
+            // Nothing to dispose for console
+            console.log('[INMANTA TEST] --- DISPOSED ---');
+        },
+        replace(value: string): void {
+            // Can't replace in console, just append
+            console.log(`[INMANTA TEST] --- REPLACE WITH: ${value} ---`);
+        }
+    };
 }
 
 /**
@@ -88,19 +117,16 @@ export function createTestOutput(): OutputChannel {
  * @param outputChannel Optional output channel to log progress
  * @returns A promise that resolves when the installation is complete
  */
-export async function installLanguageServer(outputChannel?: OutputChannel): Promise<void> {
+export async function installLanguageServer(outputChannel?: OutputChannel, venvFolder: string = '.venv'): Promise<void> {
     const output = outputChannel || createTestOutput();
     output.appendLine('=== LANGUAGE SERVER INSTALLATION STARTED ===');
     output.appendLine(`Running in CI: ${process.env.CI === 'true' || process.env.JENKINS_URL ? 'Yes' : 'No'}`);
-    const isCI = process.env.CI === 'true' || process.env.JENKINS_URL;
 
     // Check if the Inmanta extension is available
     const inmantaExtension = extensions.getExtension('inmanta.inmanta');
     if (!inmantaExtension) {
-        output.appendLine('WARNING: Inmanta extension not found');
-        output.appendLine('Attempting to install language server using fallback method...');
-        await installLanguageServerFallback(output);
-        return;
+        output.appendLine('ERROR: Inmanta extension not found');
+        throw new Error('Inmanta extension not found');
     } else {
         output.appendLine(`Inmanta extension found, isActive: ${inmantaExtension.isActive}`);
 
@@ -112,16 +138,14 @@ export async function installLanguageServer(outputChannel?: OutputChannel): Prom
                 output.appendLine('Inmanta extension activated successfully');
             } catch (error) {
                 output.appendLine(`ERROR: Failed to activate Inmanta extension: ${error}`);
-                output.appendLine('Attempting to install language server using fallback method...');
-                await installLanguageServerFallback(output);
-                return;
+                throw new Error(`Failed to activate Inmanta extension: ${error}`);
             }
         }
     }
 
     // Wait for command to be registered
     let attempts = 0;
-    const maxAttempts = 10; // Reduced back to 10 since we have a fallback
+    const maxAttempts = 10;
     const retryDelay = 1000;
 
     output.appendLine('Checking for inmanta.installLS command...');
@@ -145,16 +169,12 @@ export async function installLanguageServer(outputChannel?: OutputChannel): Prom
             await new Promise(resolve => setTimeout(resolve, retryDelay));
 
             if (attempts >= maxAttempts) {
-                output.appendLine('Command not registered after maximum attempts');
-                output.appendLine('Attempting to install language server using fallback method...');
-                await installLanguageServerFallback(output);
-                return;
+                output.appendLine('ERROR: Command not registered after maximum attempts');
+                throw new Error('inmanta.installLS command not registered after maximum attempts');
             }
         } catch (error) {
             output.appendLine(`ERROR during command check: ${error}`);
-            output.appendLine('Attempting to install language server using fallback method...');
-            await installLanguageServerFallback(output);
-            return;
+            throw error;
         }
     }
 
@@ -169,94 +189,14 @@ export async function installLanguageServer(outputChannel?: OutputChannel): Prom
         output.appendLine('Waiting for installation to complete...');
         await new Promise(resolve => setTimeout(resolve, 10000));
 
-        // Check if we need to manually show the success message (for CI environments)
-        if (isCI) {
-            // In CI, we'll manually show the success message to ensure it's captured
-            output.appendLine('In CI environment, manually showing success message...');
-            await new Promise(resolve => setTimeout(resolve, 500));
-            window.showInformationMessage('Inmanta Language server was installed successfully');
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
         output.appendLine('=== LANGUAGE SERVER INSTALLATION COMPLETED ===');
     } catch (error) {
         output.appendLine(`ERROR executing inmanta.installLS: ${error}`);
-        output.appendLine('Attempting to install language server using fallback method...');
-        await installLanguageServerFallback(output);
+        throw error;
     } finally {
         // If this is a temporary output channel created by this function, dispose it
         if (!outputChannel) {
             output.dispose();
-        }
-    }
-}
-
-/**
- * Fallback method to install the Inmanta Language Server when the command is not available
- * This simulates what the command would do
- * @param output Output channel for logging
- */
-async function installLanguageServerFallback(output: OutputChannel): Promise<void> {
-    output.appendLine('=== USING FALLBACK INSTALLATION METHOD ===');
-    output.appendLine(`Running in CI: ${process.env.CI === 'true' || process.env.JENKINS_URL ? 'Yes' : 'No'}`);
-
-    try {
-        // Get the Python interpreter path
-        const pythonPath = workspace.getConfiguration('python').get<string>('defaultInterpreterPath');
-        if (!pythonPath) {
-            output.appendLine('ERROR: No Python interpreter configured');
-            throw new Error('No Python interpreter configured');
-        }
-
-        output.appendLine(`Using Python interpreter: ${pythonPath}`);
-
-        // Create a temporary directory for the installation
-        const tempDir = path.join(testWorkspacePath, 'temp_install');
-        await fs.ensureDir(tempDir);
-        output.appendLine(`Created temporary directory: ${tempDir}`);
-
-        // Install the language server using pip
-        output.appendLine('Installing Inmanta Language Server using pip...');
-
-        try {
-            // First try to install the language server
-            cp.execSync(`"${pythonPath}" -m pip install inmanta-lsp`, {
-                cwd: tempDir,
-                stdio: 'pipe'
-            });
-            output.appendLine('Successfully installed inmanta-lsp package');
-        } catch (error) {
-            output.appendLine(`Error installing inmanta-lsp: ${error}`);
-            output.appendLine('Continuing with test anyway as this is a fallback method');
-        }
-
-        // Clean up
-        await fs.remove(tempDir);
-        output.appendLine('Cleaned up temporary directory');
-
-        // Wait a bit to simulate the completion of the installation
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        output.appendLine('=== FALLBACK INSTALLATION COMPLETED ===');
-
-        // Show a fake success message to satisfy the test
-        // Use a small delay to ensure the message is captured by the spy
-        await new Promise(resolve => setTimeout(resolve, 500));
-        output.appendLine('Showing success message...');
-        window.showInformationMessage('Inmanta Language server was installed successfully');
-
-        // Wait a bit to ensure the message is processed
-        await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
-        output.appendLine(`ERROR in fallback installation: ${error}`);
-
-        // Even if there's an error, show the success message for CI environments
-        if (process.env.CI === 'true' || process.env.JENKINS_URL) {
-            output.appendLine('In CI environment, showing success message despite error...');
-            window.showInformationMessage('Inmanta Language server was installed successfully');
-            await new Promise(resolve => setTimeout(resolve, 500));
-        } else {
-            throw error;
         }
     }
 }

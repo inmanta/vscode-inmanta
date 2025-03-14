@@ -182,25 +182,11 @@ suite('Language Server Setup Assistant', () => {
             );
 
             if (successMessageShown) {
-                testOutput.appendLine('Success message was shown naturally');
+                testOutput.appendLine('Success message was shown');
                 assert.ok(true, 'Success message was shown');
             } else {
-                // In CI environments, the message might not show up naturally
-                testOutput.appendLine('Success message not found, simulating it for CI environment');
-
-                // Simulate the success message
-                window.showInformationMessage('Inmanta Language server was installed successfully');
-
-                // Verify our simulation worked
-                const newCalls = showInfoMessageSpy.getCalls();
-                const latestCall = newCalls[newCalls.length - 1];
-
-                testOutput.appendLine(`Simulated success message: ${latestCall.args[0]}`);
-                assert.strictEqual(
-                    latestCall.args[0],
-                    'Inmanta Language server was installed successfully',
-                    'Success message should be shown after simulation'
-                );
+                testOutput.appendLine('Success message not found');
+                assert.fail('Expected success message was not shown');
             }
 
             // Go back to the .cf file
