@@ -188,7 +188,7 @@ export async function installLanguageServer(outputChannel?: OutputChannel): Prom
         output.appendLine('Waiting for installation to complete...');
         await new Promise(resolve => setTimeout(resolve, 10000));
 
-        output.appendLine('=== LANGUAGE SERVER INSTALLATION COMPLETED ===');
+        output.appendLine('=== LANGUAGE SERVER INSTALLATION TRIGGERED ===');
     } catch (error) {
         output.appendLine(`ERROR executing inmanta.installLS: ${error}`);
         throw error;
@@ -201,47 +201,58 @@ export async function installLanguageServer(outputChannel?: OutputChannel): Prom
 }
 
 /**
- * Checks if the Inmanta Language Server is installed in the current Python environment
- * This can be used to trigger the warning message if the language server is not installed
- * @param outputChannel Optional output channel to log progress
+ * Checks if the language server is installed in the current Python environment
+ * @returns Promise that resolves to true if installed, false otherwise
  */
-export async function checkLanguageServerInstallation(outputChannel?: OutputChannel): Promise<void> {
-    const output = outputChannel || createTestOutput();
-    output.appendLine('Checking if Inmanta Language Server is installed...');
+export async function isLanguageServerInstalled(pythonPath?: string, outputChannel?: OutputChannel): Promise<boolean> {
+    const interpreter = pythonPath || workspace.getConfiguration('python').get<string>('defaultInterpreterPath');
+    if (!interpreter) {
+        outputChannel?.appendLine(`[INMANTA TEST] No interpreter found`);
+        return false;
+    }
 
     try {
-        // Try to execute a command that would check the language server
-        if (await commands.getCommands().then(cmds => cmds.includes('inmanta.checkLanguageServer'))) {
-            output.appendLine('Found inmanta.checkLanguageServer command, executing it');
-            await commands.executeCommand('inmanta.checkLanguageServer');
-        } else if (await commands.getCommands().then(cmds => cmds.includes('inmanta.restartLS'))) {
-            output.appendLine('Found inmanta.restartLS command, executing it');
-            await commands.executeCommand('inmanta.restartLS');
-        } else {
-            // If no specific command is available, try to trigger the language server by opening a .cf file
-            output.appendLine('No specific check command found, opening a .cf file to trigger language server');
+        // Use pip show instead of pip list - more reliable for checking specific packages
+        const result = cp.execSync(`"${interpreter}" -m pip show inmantals`, {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'ignore']
+        });
 
-            // First close all editors
-            await commands.executeCommand('workbench.action.closeAllEditors');
+        outputChannel?.appendLine(`[INMANTA TEST] pip show executed successfully`);
+        outputChannel?.appendLine(`[INMANTA TEST] pip show output: ${result}`);
 
-            // Then open a .cf file
-            await commands.executeCommand('vscode.open', modelUri);
-
-            // Simulate some activity to trigger language server checks
-            await commands.executeCommand('cursorMove', { to: 'right' });
-            await commands.executeCommand('cursorMove', { to: 'left' });
-        }
-
-        // Wait a bit for any warnings to appear
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        output.appendLine('Language server check completed');
+        // If we get here, the package exists
+        return true;
     } catch (error) {
-        output.appendLine(`Error checking language server: ${error}`);
-        // This error is expected if the language server is not installed
-    } finally {
-        if (!outputChannel) {
-            output.dispose();
+        // pip show returns non-zero if package is not installed
+        outputChannel?.appendLine(`[INMANTA TEST] Language server not installed: ${error}`);
+        return false;
+    }
+}
+
+/**
+ * Checks if the language server is running
+ * @returns Promise that resolves to true if running, false otherwise
+ */
+export async function isLanguageServerRunning(): Promise<boolean> {
+    // Check if there's a running language server process
+    // This is platform-specific and might need adjustment
+    try {
+        if (process.platform === 'win32') {
+            const result = cp.execSync('tasklist | findstr "inmanta-language-server"', {
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'ignore']
+            });
+            return result.includes('inmanta-language-server');
+        } else {
+            const result = cp.execSync('ps aux | grep inmanta-language-server | grep -v grep', {
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'ignore']
+            });
+            return result.trim() !== '';
         }
+    } catch (error) {
+        // If the command fails, the process is not running
+        return false;
     }
 } 
