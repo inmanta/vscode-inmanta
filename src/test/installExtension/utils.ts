@@ -251,7 +251,7 @@ export async function isLanguageServerRunning(): Promise<boolean> {
             });
             return result.trim() !== '';
         }
-    } catch (error) {
+    } catch (_error) {
         // If the command fails, the process is not running
         return false;
     }
