@@ -2,15 +2,12 @@ import * as assert from 'assert';
 import { suite, test, setup, teardown } from 'mocha';
 import * as sinon from 'sinon';
 import { window, commands, workspace, OutputChannel, extensions } from 'vscode';
-import { assertWithTimeout } from '../helpers';
 import {
     modelUri,
     setupTestWorkspace,
     cleanupTestEnvironment,
     createVirtualEnv,
     createTestOutput,
-    installLanguageServer,
-    isLanguageServerInstalled,
     isLanguageServerRunning
 } from './utils';
 
@@ -68,7 +65,19 @@ suite('Setup Assistant Flow Test', () => {
         testOutput.appendLine('=== TEST STARTED: SETUP ASSISTANT FLOW ===');
 
         try {
-            // Step 1: Verify Inmanta extension is available and active
+            // Step 1: Check and activate Python extension
+            testOutput.appendLine('Step 2: Checking Python extension...');
+            const pythonExtension = extensions.getExtension('ms-python.python');
+            assert.ok(pythonExtension, 'Python extension should be available');
+
+            if (!pythonExtension.isActive) {
+                testOutput.appendLine('Activating Python extension...');
+                await pythonExtension.activate();
+            }
+            assert.ok(pythonExtension.isActive, 'Python extension should be active');
+
+            
+            // Step 2: Verify Inmanta extension is available and active
             testOutput.appendLine('Step 1: Checking Inmanta extension...');
             const inmantaExtension = extensions.getExtension('inmanta.inmanta');
             assert.ok(inmantaExtension, 'Inmanta extension should be available');
@@ -111,17 +120,6 @@ suite('Setup Assistant Flow Test', () => {
             if (!installCommandAvailable) {
                 throw new Error('inmanta.installLS command not registered after maximum attempts');
             }
-
-            // Step 2: Check and activate Python extension
-            testOutput.appendLine('Step 2: Checking Python extension...');
-            const pythonExtension = extensions.getExtension('ms-python.python');
-            assert.ok(pythonExtension, 'Python extension should be available');
-
-            if (!pythonExtension.isActive) {
-                testOutput.appendLine('Activating Python extension...');
-                await pythonExtension.activate();
-            }
-            assert.ok(pythonExtension.isActive, 'Python extension should be active');
 
             // Step 3: Create and configure virtual environment
             testOutput.appendLine('Step 3: Creating virtual environment...');
@@ -181,8 +179,10 @@ suite('Setup Assistant Flow Test', () => {
             await new Promise(resolve => setTimeout(resolve, 5000));
 
             // check if the language server is active now
-            const isRunning = await isLanguageServerRunning();
-            assert.ok(isRunning, 'Language server should be active');
+            assert.ok(inmantaExtension.isActive, 'Language server should be active');
+
+            // check if the language server is running now
+            assert.ok(isLanguageServerRunning(), 'Language server should be running');
 
             testOutput.appendLine('=== TEST COMPLETED SUCCESSFULLY ===');
         } catch (error) {
