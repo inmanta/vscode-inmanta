@@ -7,24 +7,7 @@ import * as rimraf from 'rimraf';
 async function main() {
 	const tmpHomeDir: string = fs.mkdtempSync("/tmp/vscode-tests");
 	try {
-		console.info("Running tests");
-
-		const settings = {
-			"inmanta.ls.enabled": true,
-		};
-
-		// Saving settings of testing workspace to file
-		const workspaceSettingsPath = path.resolve(__dirname, '../../src/test/compile/workspace/.vscode/settings.json');
-		await fs.ensureFile(workspaceSettingsPath);
-		await fs.writeJSON(workspaceSettingsPath, settings);
-
-		const navworkspaceSettingsPath = path.resolve(__dirname, '../../src/test/navigation/workspace/.vscode/settings.json');
-		await fs.ensureFile(navworkspaceSettingsPath);
-		await fs.writeJSON(navworkspaceSettingsPath, settings);
-
-		const docstringSettingsPath = path.resolve(__dirname, '../../src/test/docstrings/workspace/.vscode/settings.json');
-		await fs.ensureFile(docstringSettingsPath);
-		await fs.writeJSON(docstringSettingsPath, settings);
+		console.info("=================================== TEST SUITE STARTED =============================================");
 
 		// The folder containing the Extension Manifest package.json
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../');
@@ -63,7 +46,6 @@ async function main() {
 			VSCODE_EXTENSIONS: userExtensionsDir,
 		};
 
-		// Run install extension tests first
 		await runTests({
 			vscodeExecutablePath,
 			extensionDevelopmentPath: extensionDevelopmentPath,
@@ -77,39 +59,6 @@ async function main() {
 			extensionTestsEnv,
 			reuseMachineInstall: true,
 		});
-
-		// await runTests({
-		// 	vscodeExecutablePath,
-		// 	extensionDevelopmentPath: extensionDevelopmentPath,
-		// 	extensionTestsPath: path.resolve(__dirname, './loadExtension/index'),
-		// 	launchArgs: ["--disable-gpu"],
-		// 	extensionTestsEnv,
-		// 	reuseMachineInstall: true,
-		// });
-
-		// await runTests({
-		// 	vscodeExecutablePath,
-		// 	launchArgs: [path.resolve(__dirname, '../../src/test/compile/workspace'), "--disable-gpu"],
-		// 	extensionDevelopmentPath,
-		// 	extensionTestsPath: path.resolve(__dirname, './compile/index'),
-		// 	reuseMachineInstall: true,
-		// });
-
-		// await runTests({
-		// 	vscodeExecutablePath,
-		// 	extensionDevelopmentPath: extensionDevelopmentPath,
-		// 	extensionTestsPath: path.resolve(__dirname, './navigation/index'),
-		// 	launchArgs: [path.resolve(__dirname, '../../src/test/navigation/workspace'), "--disable-gpu"],
-		// 	reuseMachineInstall: true,
-		// });
-
-		// await runTests({
-		// 	vscodeExecutablePath,
-		// 	extensionDevelopmentPath: extensionDevelopmentPath,
-		// 	extensionTestsPath: path.resolve(__dirname, './docstrings/index'),
-		// 	launchArgs: [path.resolve(__dirname, '../../src/test/docstrings/workspace'), "--disable-gpu"],
-		// 	reuseMachineInstall: true,
-		// });
 	} catch (err) {
 		console.error('Failed to run tests: ' + err);
 		process.exit(1);

@@ -5,8 +5,30 @@ import { Uri, workspace, OutputChannel, commands, extensions } from 'vscode';
 
 export const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/installExtension/workspace'));
 export const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
-export const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
 export const testWorkspacePath = path.resolve(__dirname, '../../../src/test/installExtension/workspace');
+
+/**
+ * Assert with timeout
+ * @param assertion Function containing the assertion
+ * @param timeoutMs Timeout in milliseconds
+ * @param message Error message if timeout is reached
+ */
+export async function assertWithTimeout(assertion: () => Promise<void> | void, timeoutMs: number, message: string): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error(`Timeout: ${message}`));
+        }, timeoutMs);
+
+        try {
+            await assertion();
+            clearTimeout(timeout);
+            resolve();
+        } catch (error) {
+            clearTimeout(timeout);
+            reject(error);
+        }
+    });
+}
 
 export async function setupTestWorkspace(): Promise<void> {
     // Ensure workspace directory exists with a .vscode folder
@@ -55,7 +77,6 @@ export async function cleanupTestEnvironment(venvs: string[]): Promise<void> {
         await fs.remove(venvPathToDelete);
     }
 
-    await fs.writeFile(logPath, "");
 }
 
 export async function createVirtualEnv(name: string = '.venv'): Promise<string> {
@@ -254,5 +275,127 @@ export async function isLanguageServerRunning(): Promise<boolean> {
     } catch (_error) {
         // If the command fails, the process is not running
         return false;
+    }
+}
+
+export async function setupTestEnvironment(testOutput: OutputChannel): Promise<string> {
+    testOutput.appendLine('=================================== SETUP STARTED ============================================');
+
+    try {
+        // Check if Python extension is available
+        testOutput.appendLine('Checking Python extension...');
+        const pythonExtension = extensions.getExtension('ms-python.python');
+        if (!pythonExtension) {
+            testOutput.appendLine('WARNING: Python extension not found');
+        } else {
+            // Ensure Python extension is activated
+            if (!pythonExtension.isActive) {
+                testOutput.appendLine('Activating Python extension...');
+                try {
+                    await pythonExtension.activate();
+                    testOutput.appendLine('Python extension activated successfully');
+                } catch (error) {
+                    testOutput.appendLine(`WARNING: Failed to activate Python extension: ${error}`);
+                }
+            } else {
+                testOutput.appendLine('Python extension is already active');
+            }
+        }
+
+        // Setup workspace
+        testOutput.appendLine('Setting up test workspace...');
+        try {
+            await setupTestWorkspace();
+            testOutput.appendLine('Test workspace setup completed');
+        } catch (error) {
+            testOutput.appendLine(`ERROR: Failed to setup workspace: ${error}`);
+            throw error;
+        }
+
+        // Create virtual environment
+        testOutput.appendLine('Creating virtual environment...');
+        let pythonPath;
+        try {
+            pythonPath = await createVirtualEnv();
+            testOutput.appendLine(`Created virtual environment at: ${pythonPath}`);
+        } catch (error) {
+            testOutput.appendLine(`ERROR: Failed to create virtual environment: ${error}`);
+            throw error;
+        }
+
+        // Configure Python interpreter
+        testOutput.appendLine('Configuring Python interpreter path...');
+        try {
+            await workspace.getConfiguration('python').update('defaultInterpreterPath', pythonPath, true);
+            testOutput.appendLine('Updated Python interpreter path (global)');
+
+            const updatedPath = workspace.getConfiguration('python').get('defaultInterpreterPath');
+            testOutput.appendLine(`Verified Python interpreter path is now: ${updatedPath}`);
+        } catch (error) {
+            testOutput.appendLine(`WARNING: Failed to configure Python interpreter: ${error}`);
+            throw error;
+        }
+
+        // Wait for configuration to be applied
+        testOutput.appendLine('Waiting for configuration to be applied...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        testOutput.appendLine('Wait completed');
+
+        // Open a .cf file to trigger the language server check
+        testOutput.appendLine('Opening .cf file...');
+        await commands.executeCommand('vscode.open', modelUri);
+        testOutput.appendLine('.cf file opened');
+
+        // Install language server
+        testOutput.appendLine('Installing language server...');
+        try {
+            await installLanguageServer(testOutput);
+            testOutput.appendLine('Language server installation completed');
+        } catch (error) {
+            testOutput.appendLine(`WARNING: Error during language server installation: ${error}`);
+            throw error;
+        }
+
+        // Close all editors
+        testOutput.appendLine('Closing all editors...');
+        try {
+            await commands.executeCommand('workbench.action.closeAllEditors');
+            testOutput.appendLine('All editors closed');
+        } catch (error) {
+            testOutput.appendLine(`WARNING: Failed to close editors: ${error}`);
+        }
+
+        // Wait for VS Code to settle
+        testOutput.appendLine('Waiting for VS Code to settle...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        testOutput.appendLine('=================================== SETUP COMPLETED SUCCESSFULLY ============================================');
+
+        return pythonPath;
+    } catch (error) {
+        testOutput.appendLine(`=== SETUP FAILED: ${error} ===`);
+        testOutput.appendLine(`Stack trace: ${error.stack}`);
+        throw error;
+    }
+}
+
+export async function teardownTestEnvironment(testOutput: OutputChannel, additionalVenvs: string[] = []): Promise<void> {
+    try {
+        testOutput.appendLine('Starting teardown...');
+
+        // Wait a bit before cleanup to allow pending operations to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        testOutput.appendLine('Cleaning up test environment...');
+        try {
+            await cleanupTestEnvironment(additionalVenvs);
+            testOutput.appendLine('Test environment cleanup completed');
+        } catch (error) {
+            testOutput.appendLine(`Error during cleanup: ${error}`);
+        }
+
+        testOutput.appendLine('=================================== TEARDOWN COMPLETED ============================================');
+    } catch (error) {
+        console.error('Error during teardown:', error);
+        // Don't rethrow here to avoid masking test failures
     }
 } 

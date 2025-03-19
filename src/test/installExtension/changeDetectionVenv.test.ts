@@ -1,192 +1,34 @@
 import * as assert from 'assert';
 import { suite, test, setup, teardown } from 'mocha';
-import * as sinon from 'sinon';
-import { window, commands, workspace, OutputChannel, extensions } from 'vscode';
-import { assertWithTimeout } from '../helpers';
+import { commands, workspace, OutputChannel, extensions } from 'vscode';
 import {
     modelUri,
-    setupTestWorkspace,
-    cleanupTestEnvironment,
-    createVirtualEnv,
     createTestOutput,
-    installLanguageServer,
     isLanguageServerInstalled,
-    isLanguageServerRunning
+    isLanguageServerRunning,
+    assertWithTimeout,
+    createVirtualEnv,
+    setupTestEnvironment,
+    teardownTestEnvironment
 } from './utils';
 
 suite('Language Server Venv Change Detection', () => {
-    let showErrorMessageSpy: sinon.SinonSpy;
-    let showInfoMessageSpy: sinon.SinonSpy;
-    let showWarningMessageSpy: sinon.SinonSpy;
     let testOutput: OutputChannel;
 
     setup(async function () {
-
-        try {
-            // Create output channel first
-            testOutput = createTestOutput();
-            testOutput.appendLine('=== SETUP STARTED ===');
-
-            // Check if Python extension is available
-            testOutput.appendLine('Checking Python extension...');
-            const pythonExtension = extensions.getExtension('ms-python.python');
-            if (!pythonExtension) {
-                testOutput.appendLine('WARNING: Python extension not found');
-                // We'll continue and see if we can still run the test
-            } else {
-                // Ensure Python extension is activated
-                if (!pythonExtension.isActive) {
-                    testOutput.appendLine('Activating Python extension...');
-                    try {
-                        await pythonExtension.activate();
-                        testOutput.appendLine('Python extension activated successfully');
-                    } catch (error) {
-                        testOutput.appendLine(`WARNING: Failed to activate Python extension: ${error}`);
-                        // Continue anyway
-                    }
-                } else {
-                    testOutput.appendLine('Python extension is already active');
-                }
-            }
-
-            // Setup workspace
-            testOutput.appendLine('Setting up test workspace...');
-            try {
-                await setupTestWorkspace();
-                testOutput.appendLine('Test workspace setup completed');
-            } catch (error) {
-                testOutput.appendLine(`ERROR: Failed to setup workspace: ${error}`);
-                throw error;
-            }
-
-            // Create virtual environment
-            testOutput.appendLine('Creating virtual environment...');
-            let pythonPath;
-            try {
-                pythonPath = await createVirtualEnv();
-                testOutput.appendLine(`Created virtual environment at: ${pythonPath}`);
-            } catch (error) {
-                testOutput.appendLine(`ERROR: Failed to create virtual environment: ${error}`);
-                throw error;
-            }
-
-            // Configure Python interpreter
-            testOutput.appendLine('Configuring Python interpreter path...');
-            try {
-                // Update the setting
-                await workspace.getConfiguration('python').update('defaultInterpreterPath', pythonPath, true);
-                testOutput.appendLine('Updated Python interpreter path (global)');
-
-                // Verify the update
-                const updatedPath = workspace.getConfiguration('python').get('defaultInterpreterPath');
-                testOutput.appendLine(`Verified Python interpreter path is now: ${updatedPath}`);
-            } catch (error) {
-                testOutput.appendLine(`WARNING: Failed to configure Python interpreter: ${error}`);
-                throw error;
-            }
-
-            // Wait for configuration to be applied
-            testOutput.appendLine('Waiting for configuration to be applied...');
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            testOutput.appendLine('Wait completed');
-
-            // Setup spies
-            testOutput.appendLine('Setting up message spies...');
-            try {
-                showErrorMessageSpy = sinon.spy(window, 'showErrorMessage');
-                showInfoMessageSpy = sinon.spy(window, 'showInformationMessage');
-                showWarningMessageSpy = sinon.spy(window, 'showWarningMessage');
-                testOutput.appendLine('Message spies set up successfully');
-            } catch (error) {
-                testOutput.appendLine(`ERROR: Failed to setup message spies: ${error}`);
-                throw error;
-            }
-
-            // Open a .cf file to trigger the language server check
-            testOutput.appendLine('Opening .cf file...');
-            await commands.executeCommand('vscode.open', modelUri);
-            testOutput.appendLine('.cf file opened');
-
-            // Install language server
-            testOutput.appendLine('Installing language server...');
-            try {
-                await installLanguageServer(testOutput);
-                testOutput.appendLine('Language server installation completed');
-            } catch (error) {
-                testOutput.appendLine(`WARNING: Error during language server installation: ${error}`);
-                // We can't proceed with the test if the language server is not installed!
-                throw error;
-            }
-
-            // Close all editors
-            testOutput.appendLine('Closing all editors...');
-            try {
-                await commands.executeCommand('workbench.action.closeAllEditors');
-                testOutput.appendLine('All editors closed');
-            } catch (error) {
-                testOutput.appendLine(`WARNING: Failed to close editors: ${error}`);
-
-            }
-
-            // Wait for VS Code to settle
-            testOutput.appendLine('Waiting for VS Code to settle...');
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            testOutput.appendLine('=== SETUP COMPLETED SUCCESSFULLY ===');
-        } catch (error) {
-            testOutput?.appendLine(`=== SETUP FAILED: ${error} ===`);
-            testOutput?.appendLine(`Stack trace: ${error.stack}`);
-            throw error;
-        }
+        testOutput = createTestOutput();
+        await setupTestEnvironment(testOutput);
     });
 
     teardown(async function () {
-        try {
-            testOutput?.appendLine('Starting teardown...');
-
-            // Wait a bit before cleanup to allow pending operations to complete
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Restore spies
-            if (showErrorMessageSpy) {
-                showErrorMessageSpy.restore();
-                testOutput?.appendLine('Restored error message spy');
-            }
-
-            if (showInfoMessageSpy) {
-                showInfoMessageSpy.restore();
-                testOutput?.appendLine('Restored info message spy');
-            }
-
-            if (showWarningMessageSpy) {
-                showWarningMessageSpy.restore();
-                testOutput?.appendLine('Restored warning message spy');
-            }
-
-            if (testOutput) {
-                testOutput.appendLine('Cleaning up test environment...');
-                try {
-                    await cleanupTestEnvironment(['.venv2']);
-                    testOutput.appendLine('Test environment cleanup completed');
-                } catch (error) {
-                    testOutput.appendLine(`Error during cleanup: ${error}`);
-                }
-
-                testOutput.appendLine('Teardown completed');
-            }
-        } catch (error) {
-            console.error('Error during teardown:', error);
-            // Don't rethrow here to avoid masking test failures
-        } finally {
-            testOutput.dispose();
-        }
+        await teardownTestEnvironment(testOutput, ['.venv2']);
+        testOutput.dispose();
     });
 
     // Add a simple test to verify the environment before running the main test
     test('Environment check - Inmanta extension is available', async function () {
-        testOutput = createTestOutput();
-
         try {
-            testOutput.appendLine('=== ENVIRONMENT CHECK STARTED ===');
+            testOutput.appendLine('=================================== ENVIRONMENT CHECK STARTED ============================================');
             testOutput.appendLine(`Test running at: ${new Date().toISOString()}`);
 
             // List all extensions
@@ -249,11 +91,11 @@ suite('Language Server Venv Change Detection', () => {
             }
 
             // Check workspace settings
-            testOutput.appendLine('\nChecking workspace settings:');
+            testOutput.appendLine('Checking workspace settings:');
             const inmantaSettings = workspace.getConfiguration('inmanta');
             testOutput.appendLine(`Inmanta settings: ${JSON.stringify(inmantaSettings)}`);
 
-            testOutput.appendLine('\n=== ENVIRONMENT CHECK COMPLETED ===');
+            testOutput.appendLine('=================================== ENVIRONMENT CHECK COMPLETED ============================================');
         } catch (error) {
             testOutput.appendLine(`Environment check error: ${error}`);
             testOutput.appendLine(`Stack trace: ${error.stack}`);
@@ -262,7 +104,7 @@ suite('Language Server Venv Change Detection', () => {
     });
 
     test('Should detect if we change venv and no server is installed', async function () {
-        testOutput.appendLine('Starting test: Should detect if we change venv and no server is installed');
+        testOutput.appendLine('=================================== TEST STARTED: Should detect if we change venv and no server is installed ============================================');
 
         // Create a second virtual environment
         testOutput.appendLine('Creating second virtual environment...');
@@ -317,27 +159,6 @@ suite('Language Server Venv Change Detection', () => {
         testOutput.appendLine(`Language server running: ${isRunning}`);
         assert.strictEqual(isRunning, false, 'Language server should not be running after venv change');
 
-        // We can still check for warning messages as a secondary verification,
-        // but we don't rely on them for the test to pass
-        testOutput.appendLine('Checking for warning message (secondary verification)...');
-        const calls = showWarningMessageSpy.getCalls();
-        testOutput.appendLine(`Warning message spy calls: ${calls.length}`);
-
-        if (calls.length > 0) {
-            for (let i = 0; i < calls.length; i++) {
-                testOutput.appendLine(`Warning message ${i + 1}: ${calls[i].firstArg}`);
-            }
-
-            // Check if any of the warnings match what we're looking for
-            const hasExpectedWarning = calls.some(call =>
-                call.firstArg && call.firstArg.includes('Inmanta Language Server not installed')
-            );
-
-            if (hasExpectedWarning) {
-                testOutput.appendLine('Found expected warning message (additional verification)');
-            }
-        }
-
-        testOutput.appendLine('Test completed successfully');
+        testOutput.appendLine('=================================== TEST COMPLETED SUCCESSFULLY ============================================');
     });
 }); 

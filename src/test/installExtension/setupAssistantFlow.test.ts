@@ -1,7 +1,6 @@
 import * as assert from 'assert';
 import { suite, test, setup, teardown } from 'mocha';
-import * as sinon from 'sinon';
-import { window, commands, workspace, OutputChannel, extensions } from 'vscode';
+import { commands, workspace, OutputChannel, extensions } from 'vscode';
 import {
     modelUri,
     setupTestWorkspace,
@@ -12,29 +11,20 @@ import {
 } from './utils';
 
 suite('Setup Assistant Flow Test', () => {
-    let showErrorMessageSpy: sinon.SinonSpy;
-    let showInfoMessageSpy: sinon.SinonSpy;
-    let showWarningMessageSpy: sinon.SinonSpy;
     let testOutput: OutputChannel;
 
     setup(async function () {
         testOutput = createTestOutput();
-        testOutput.appendLine('=== SETUP STARTED ===');
+        testOutput.appendLine('=================================== SETUP STARTED ============================================');
 
         try {
             // Setup workspace with necessary files
             await setupTestWorkspace();
             testOutput.appendLine('Test workspace setup completed');
 
-            // Setup message spies
-            showErrorMessageSpy = sinon.spy(window, 'showErrorMessage');
-            showInfoMessageSpy = sinon.spy(window, 'showInformationMessage');
-            showWarningMessageSpy = sinon.spy(window, 'showWarningMessage');
-            testOutput.appendLine('Message spies set up');
-
             // Close all editors to start fresh
             await commands.executeCommand('workbench.action.closeAllEditors');
-            testOutput.appendLine('=== SETUP COMPLETED ===');
+            testOutput.appendLine('=================================== SETUP COMPLETED ============================================');
         } catch (error) {
             testOutput.appendLine(`Setup failed: ${error}`);
             throw error;
@@ -45,13 +35,8 @@ suite('Setup Assistant Flow Test', () => {
         try {
             testOutput.appendLine('Starting teardown...');
 
-            // Restore spies
-            showErrorMessageSpy?.restore();
-            showInfoMessageSpy?.restore();
-            showWarningMessageSpy?.restore();
-
             // Clean up test environment
-            await cleanupTestEnvironment([]);
+            await cleanupTestEnvironment([".venv"]);
             testOutput.appendLine('Test environment cleanup completed');
 
             testOutput.appendLine('Teardown completed');
@@ -66,7 +51,7 @@ suite('Setup Assistant Flow Test', () => {
 
         try {
             // Step 1: Check and activate Python extension
-            testOutput.appendLine('Step 2: Checking Python extension...');
+            testOutput.appendLine('Step 1: Checking Python extension...');
             const pythonExtension = extensions.getExtension('ms-python.python');
             assert.ok(pythonExtension, 'Python extension should be available');
 
@@ -76,9 +61,9 @@ suite('Setup Assistant Flow Test', () => {
             }
             assert.ok(pythonExtension.isActive, 'Python extension should be active');
 
-            
+
             // Step 2: Verify Inmanta extension is available and active
-            testOutput.appendLine('Step 1: Checking Inmanta extension...');
+            testOutput.appendLine('STEP 2: Checking Inmanta extension...');
             const inmantaExtension = extensions.getExtension('inmanta.inmanta');
             assert.ok(inmantaExtension, 'Inmanta extension should be available');
 
@@ -122,7 +107,7 @@ suite('Setup Assistant Flow Test', () => {
             }
 
             // Step 3: Create and configure virtual environment
-            testOutput.appendLine('Step 3: Creating virtual environment...');
+            testOutput.appendLine('STEP 3: Creating virtual environment...');
             let pythonPath;
             try {
                 pythonPath = await createVirtualEnv();
@@ -153,7 +138,7 @@ suite('Setup Assistant Flow Test', () => {
             }
 
             // Step 4: Install language server
-            testOutput.appendLine('Step 4: Installing language server...');
+            testOutput.appendLine('STEP 4: Installing language server...');
             try {
                 // Execute the installation command
                 await commands.executeCommand('inmanta.installLS');
@@ -168,7 +153,7 @@ suite('Setup Assistant Flow Test', () => {
             await new Promise(resolve => setTimeout(resolve, 10000));
 
             // Confirm the extension is installed
-            testOutput.appendLine('Step 5: Verifying language server functionality...');
+            testOutput.appendLine('STEP 5: Verifying language server is running...');
 
             // Open a .cf file to trigger the language server
             await commands.executeCommand('vscode.open', modelUri);
@@ -184,7 +169,7 @@ suite('Setup Assistant Flow Test', () => {
             // check if the language server is running now
             assert.ok(isLanguageServerRunning(), 'Language server should be running');
 
-            testOutput.appendLine('=== TEST COMPLETED SUCCESSFULLY ===');
+            testOutput.appendLine('=================================== TEST COMPLETED SUCCESSFULLY ============================================');
         } catch (error) {
             testOutput.appendLine(`Test failed: ${error}`);
             throw error;
