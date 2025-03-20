@@ -1,9 +1,9 @@
 import testmodule
 
+entity Person:
 """
 A class to represent a person.
 """
-entity Person:
     string name
     int age
     testmodule::pet pet
@@ -15,7 +15,7 @@ index Person(name)
 
 implement Person using std::none
 
-john = Person(name="John", age=20)
+john = Person(name=2, age=20)
 mike = Person(name="Mike", age=12, pet="dinosaur")
 jane = Person(name="Jane", age=19, pet="bird")
 lucy = Person(name="Lucy", age=23)

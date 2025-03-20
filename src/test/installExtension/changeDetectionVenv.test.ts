@@ -25,18 +25,10 @@ suite('Language Server Venv Change Detection', () => {
         testOutput.dispose();
     });
 
-    // Add a simple test to verify the environment before running the main test
     test('Environment check - Inmanta extension is available', async function () {
         try {
             testOutput.appendLine('=================================== ENVIRONMENT CHECK STARTED ============================================');
             testOutput.appendLine(`Test running at: ${new Date().toISOString()}`);
-
-            // List all extensions
-            testOutput.appendLine('Listing all available extensions:');
-            const allExtensions = extensions.all;
-            for (const ext of allExtensions) {
-                testOutput.appendLine(`- ${ext.id} (${ext.isActive ? 'active' : 'inactive'})`);
-            }
 
             // Check if Inmanta extension is available
             testOutput.appendLine('\nChecking if Inmanta extension is available...');
@@ -74,7 +66,7 @@ suite('Language Server Venv Change Detection', () => {
             }
 
             // Check available commands
-            testOutput.appendLine('\nChecking available commands:');
+            testOutput.appendLine('Checking available commands:');
             const allCommands = await commands.getCommands();
             const inmantaCommands = allCommands.filter(cmd => cmd.startsWith('inmanta.'));
 
