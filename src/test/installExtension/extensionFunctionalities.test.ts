@@ -6,10 +6,9 @@ import {
     createTestOutput,
     setupTestEnvironment,
     teardownTestEnvironment,
-    assertWithTimeout
+
 } from './utils';
 import * as path from 'path';
-import * as fs from 'fs-extra';
 
 suite('Extension Functionalities Test', () => {
     let testOutput: OutputChannel;
