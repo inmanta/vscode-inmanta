@@ -365,6 +365,16 @@ export async function setupTestEnvironment(testOutput: OutputChannel): Promise<s
             testOutput.appendLine(`WARNING: Failed to close editors: ${error}`);
         }
 
+        // install the project
+        testOutput.appendLine('Installing project...');
+        try {
+            await commands.executeCommand('inmanta.projectInstall');
+            testOutput.appendLine('Project installation completed');
+        } catch (error) {
+            testOutput.appendLine(`WARNING: Failed to install project: ${error}`);
+            throw error;
+        }
+
         // Wait for VS Code to settle
         testOutput.appendLine('Waiting for VS Code to settle...');
         await new Promise(resolve => setTimeout(resolve, 3000));
@@ -399,3 +409,37 @@ export async function teardownTestEnvironment(testOutput: OutputChannel, additio
         // Don't rethrow here to avoid masking test failures
     }
 } 
+
+/**
+ * Read a loging file waiting for a message announcing the end of the compilation
+ *
+ * @param logPath The path to the logging file
+ * @param timeout A timeout (in ms) before the end of which the compilation should be done
+ *
+ * @returns whether or not the compilation suceeded
+ */
+export function waitForCompile(logPath: string, timeout: number): Promise<boolean> {
+	const start = Date.now();
+	return new Promise<boolean>((resolve, reject) => {
+		const readLogInterval = setInterval(() => {
+			if (Date.now() - start > timeout) {
+				clearInterval(readLogInterval);
+				reject(new Error(`Timeout of ${timeout}ms reached`));
+			} else {
+				fs.ensureFileSync(logPath);
+				fs.readFile(logPath, 'utf-8', (err, data) => {
+					if (err) {
+						clearInterval(readLogInterval);
+						console.log(`Got an error while waiting for compile: ${err}`);
+					} else if (data.includes('Compilation succeeded')) {
+						clearInterval(readLogInterval);
+						resolve(true);
+					} else if (data.includes('Compilation failed')) {
+						clearInterval(readLogInterval);
+						resolve(false);
+					}
+				});
+			}
+		}, 500);
+	});
+}

@@ -78,7 +78,7 @@ suite('Setup Assistant Flow Test', () => {
             testOutput.appendLine('Walkthrough opened');
 
             // Verify Inmanta commands are available
-            testOutput.appendLine('\nChecking available commands:');
+            testOutput.appendLine('Checking available commands:');
             const maxAttempts = 10;
             let attempt = 0;
             let installCommandAvailable = false;
