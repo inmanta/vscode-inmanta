@@ -36,13 +36,29 @@ suite('Extension Functionalities Test', () => {
         await window.showTextDocument(doc);
 
         // Test navigation to attribute in same file
-        const attributeInSameFile = await commands.executeCommand(
+        testOutput.appendLine('Executing definition provider command...');
+        const attributeInSameFile = await commands.executeCommand<Location[]>(
             "vscode.executeDefinitionProvider",
             modelUri,
             new Position(17, 16)
         );
+        testOutput.appendLine(`Definition provider result: ${JSON.stringify(attributeInSameFile)}`);
+        testOutput.appendLine(`Definition provider result type: ${typeof attributeInSameFile}`);
+        testOutput.appendLine(`Is array: ${Array.isArray(attributeInSameFile)}`);
+        testOutput.appendLine(`Result length: ${attributeInSameFile ? attributeInSameFile.length : 'undefined'}`);
+
         const expectedAttributeLocation = new Range(new Position(6, 11), new Position(6, 15));
-        assert.strictEqual((attributeInSameFile as Location[]).length, 1);
+
+        // Ensure we have results before proceeding
+        if (!attributeInSameFile || attributeInSameFile.length === 0) {
+            testOutput.appendLine('WARNING: No definition results returned');
+            testOutput.appendLine(`Current document text: ${doc.getText()}`);
+            testOutput.appendLine(`Trying to find definition at position line ${17}, character ${16}`);
+        }
+
+        assert.ok(attributeInSameFile, 'Definition provider should return a result');
+        assert.ok(Array.isArray(attributeInSameFile), 'Definition provider should return an array');
+        assert.strictEqual(attributeInSameFile.length, 1, 'Definition provider should return exactly one location');
 
         // Debug logging
         testOutput.appendLine(`Raw actual path: ${attributeInSameFile[0].uri.fsPath}`);
