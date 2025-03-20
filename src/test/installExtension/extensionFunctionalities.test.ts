@@ -41,7 +41,7 @@ suite('Extension Functionalities Test', () => {
         const attributeInSameFile = await commands.executeCommand<Location[]>(
             "vscode.executeDefinitionProvider",
             modelUri,
-            new Position(6, 11)
+            new Position(17, 16)
         );
         testOutput.appendLine(`Definition provider result: ${JSON.stringify(attributeInSameFile)}`);
         testOutput.appendLine(`Definition provider result type: ${typeof attributeInSameFile}`);
@@ -54,7 +54,7 @@ suite('Extension Functionalities Test', () => {
         if (!attributeInSameFile || attributeInSameFile.length === 0) {
             testOutput.appendLine('WARNING: No definition results returned');
             testOutput.appendLine(`Current document text: ${doc.getText()}`);
-            testOutput.appendLine(`Trying to find definition at position line ${6}, character ${11}`);
+            testOutput.appendLine(`Trying to find definition at position line ${17}, character ${16}`);
         }
 
         assert.ok(attributeInSameFile, 'Definition provider should return a result');
