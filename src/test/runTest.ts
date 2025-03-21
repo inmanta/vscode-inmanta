@@ -26,6 +26,11 @@ async function main() {
 		console.info('[DEBUG] Temporary Home Directory:', tmpHomeDir);
 		console.info('[DEBUG] User Extensions Directory:', userExtensionsDir);
 
+		// Create logs directory in the extension development path
+		const logsDir = path.join(extensionDevelopmentPath, 'logs');
+		await fs.ensureDir(logsDir);
+		console.info('[DEBUG] Logs Directory:', logsDir);
+
 		// Install Python extension to the temporary user directory
 		cp.spawnSync(cliPath, [
 			'--install-extension',
@@ -44,6 +49,7 @@ async function main() {
 		const extensionTestsEnv = {
 			HOME: tmpHomeDir,
 			VSCODE_EXTENSIONS: userExtensionsDir,
+			INMANTA_LS_LOG_PATH: path.join(extensionDevelopmentPath, 'logs', 'server.log'),
 		};
 
 		await runTests({

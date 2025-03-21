@@ -6,6 +6,7 @@ import {
     createTestOutput,
     setupTestEnvironment,
     teardownTestEnvironment,
+    waitForCompile,
 
 } from './utils';
 import * as path from 'path';
@@ -13,14 +14,31 @@ import * as fs from 'fs-extra';
 
 suite('Extension Functionalities Test', () => {
     let testOutput: OutputChannel;
-    const logPath: string = process.env.INMANTA_LS_LOG_PATH || '/tmp/vscode-inmanta.log';
+    const logPath: string = process.env.INMANTA_LS_LOG_PATH;
     const workspaceUri: Uri = modelUri.with({ path: path.dirname(modelUri.fsPath) });
     const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 
     setup(async function () {
         testOutput = createTestOutput();
+        testOutput.appendLine(`Log path: ${logPath}`);
+        testOutput.appendLine(`Checking if log directory exists...`);
+        const logDir = path.dirname(logPath);
+
+        try {
+            await fs.ensureDir(logDir);
+            testOutput.appendLine(`Log directory ${logDir} exists or was created`);
+
+            await fs.writeFile(logPath, ""); // Clear log file before test
+            testOutput.appendLine(`Successfully cleared/created log file at ${logPath}`);
+
+            const stats = await fs.stat(logPath);
+            testOutput.appendLine(`Log file permissions: ${stats.mode}`);
+        } catch (error) {
+            testOutput.appendLine(`Error with log file operations: ${error}`);
+            throw error;
+        }
+
         await setupTestEnvironment(testOutput);
-        await fs.writeFile(logPath, ""); // Clear log file before test
     });
 
     teardown(async function () {
@@ -38,78 +56,24 @@ suite('Extension Functionalities Test', () => {
 
         // Test navigation to attribute in same file
         testOutput.appendLine('Executing definition provider command...');
-        const attributeInSameFile = await commands.executeCommand<Location[]>(
-            "vscode.executeDefinitionProvider",
-            modelUri,
-            new Position(17, 16)
-        );
-        testOutput.appendLine(`Definition provider result: ${JSON.stringify(attributeInSameFile)}`);
-        testOutput.appendLine(`Definition provider result type: ${typeof attributeInSameFile}`);
-        testOutput.appendLine(`Is array: ${Array.isArray(attributeInSameFile)}`);
-        testOutput.appendLine(`Result length: ${attributeInSameFile ? attributeInSameFile.length : 'undefined'}`);
+        const succeeded = await waitForCompile(logPath, 25000);
+        assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 
+        const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(17, 16));
         const expectedAttributeLocation = new Range(new Position(6, 11), new Position(6, 15));
+        assert.strictEqual((attributeInSameFile as Location[]).length, 1);
+        assert.strictEqual(attributeInSameFile[0].uri.fsPath, modelUri.fsPath);
+        assert.deepStrictEqual(attributeInSameFile[0].range, expectedAttributeLocation, "Attribute location in the same file doesn't match");
 
-        // Ensure we have results before proceeding
-        if (!attributeInSameFile || attributeInSameFile.length === 0) {
-            testOutput.appendLine('WARNING: No definition results returned');
-            testOutput.appendLine(`Current document text: ${doc.getText()}`);
-            testOutput.appendLine(`Trying to find definition at position line ${17}, character ${16}`);
-        }
-
-        assert.ok(attributeInSameFile, 'Definition provider should return a result');
-        assert.ok(Array.isArray(attributeInSameFile), 'Definition provider should return an array');
-        assert.strictEqual(attributeInSameFile.length, 1, 'Definition provider should return exactly one location');
-
-        // Debug logging
-        testOutput.appendLine(`Raw actual path: ${attributeInSameFile[0].uri.fsPath}`);
-        testOutput.appendLine(`Raw expected path: ${modelUri.fsPath}`);
-        testOutput.appendLine(`Workspace URI path: ${workspaceUri.fsPath}`);
-
-        // Check if the paths point to the same file by checking the basename
-        const actualBasename = path.basename(attributeInSameFile[0].uri.fsPath);
-        const expectedBasename = path.basename(modelUri.fsPath);
-        assert.strictEqual(actualBasename, expectedBasename, 'File names should match');
-
-        assert.deepStrictEqual(attributeInSameFile[0].range, expectedAttributeLocation);
-
-        // Test navigation to type in different file
-        const typeInDifferentFile = await commands.executeCommand(
-            "vscode.executeDefinitionProvider",
-            modelUri,
-            new Position(8, 18)
-        );
+        const typeInDifferentFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(8, 18));
         assert.strictEqual((typeInDifferentFile as Location[]).length, 1);
+        assert.strictEqual(typeInDifferentFile[0].uri.fsPath, path.resolve(libsPath, "testmodule", "model", "_init.cf"));
+        assert.deepStrictEqual(typeInDifferentFile[0].range, new Range(new Position(0, 8), new Position(0, 11)), "Attribute location in different file doesn't match");
 
-        const expectedTypePath = path.resolve(libsPath, "testmodule", "model", "_init.cf");
-        assert.strictEqual(
-            path.basename(typeInDifferentFile[0].uri.fsPath),
-            path.basename(expectedTypePath),
-            'Type definition file names should match'
-        );
-        assert.deepStrictEqual(
-            typeInDifferentFile[0].range,
-            new Range(new Position(0, 8), new Position(0, 11))
-        );
-
-        // Test navigation to plugin
-        const pluginLocation = await commands.executeCommand(
-            "vscode.executeDefinitionProvider",
-            modelUri,
-            new Position(21, 15)
-        );
+        const pluginLocation = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(21, 15));
         assert.strictEqual((pluginLocation as Location[]).length, 1);
-
-        const expectedPluginPath = path.resolve(libsPath, "testmodule", "plugins", "__init__.py");
-        assert.strictEqual(
-            path.basename(pluginLocation[0].uri.fsPath),
-            path.basename(expectedPluginPath),
-            'Plugin file names should match'
-        );
-        assert.deepStrictEqual(
-            pluginLocation[0].range,
-            new Range(new Position(4, 4), new Position(4, 8))
-        );
+        assert.strictEqual(pluginLocation[0].uri.fsPath, path.resolve(libsPath, "testmodule", "plugins", "__init__.py"));
+        assert.deepStrictEqual(pluginLocation[0].range, new Range(new Position(4, 4), new Position(4, 8)), "Plugin location doesn't match");
 
         // Test hover functionality
         testOutput.appendLine('=================================== HOVER TEST STARTED ============================================');

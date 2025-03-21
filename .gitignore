@@ -11,6 +11,7 @@ server/build
 server/dist
 *.egg-info
 *.log
+logs/*
 *.orig
 .env
 junit-*
