@@ -1,2 +1,0 @@
-typedef pet as string matching
-    self == "dog" or self == "dragon" or self == "bird" or self == "dinosaur"

@@ -19,7 +19,7 @@
         "syntax"
     ],
     "engines": {
-        "vscode": "^1.63.0"
+        "vscode": "^1.97.2"
     },
     "categories": [
         "Programming Languages"
@@ -232,7 +232,6 @@
     "extensionDependencies": [
         "ms-python.python"
     ],
-    "activationEvents": [],
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "rimraf out && tsc -p ./",
@@ -246,11 +245,11 @@
         "@types/mocha": "^10.0.10",
         "@types/node": "^22.13.11",
         "@types/semver": "^7.5.8",
-        "@types/vscode": "^1.63.2",
+        "@types/sinon": "^17.0.0",
+        "@types/vscode": "^1.97.2",
+        "@typescript-eslint/eslint-plugin": "^8.24.1",
+        "@typescript-eslint/parser": "^8.24.1",
         "@vscode/python-extension": "^1.0.5",
-        "@typescript-eslint/eslint-plugin": "^8.27.0",
-        "@typescript-eslint/parser": "^8.27.0",
-        "@vscode/test-cli": "^0.0.10",
         "@vscode/test-electron": "^2.4.1",
         "@vscode/vsce": "^3.3.0",
         "eslint": "^9.22.0",
@@ -260,7 +259,8 @@
         "mocha": "^11.1.0",
         "rimraf": "^6.0.1",
         "semver": "^7.7.1",
-        "typescript": "^5.8.2"
+        "sinon": "^17.0.0",
+        "typescript": "^5.7.3"
     },
     "main": "./out/extension"
 }

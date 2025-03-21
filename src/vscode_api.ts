@@ -35,6 +35,8 @@ export function getConfiguration(config: string, scope?: ConfigurationScope): Wo
     return workspace.getConfiguration(config, scope);
 }
 
+const registeredCommands: Map<string, Disposable> = new Map();
+
 /**
  * Registers a command with the specified callback.
  * @param command - The command to register.
@@ -44,10 +46,12 @@ export function getConfiguration(config: string, scope?: ConfigurationScope): Wo
  */
 export function registerCommand(command: string, callback: (...args: any[]) => any, thisArg?: any): Disposable {
     traceInfo(`registering command ${command}`);
-    if (command in commands) {
-        commands[command].dispose();
+    if (registeredCommands.has(command)) {
+        registeredCommands.get(command)!.dispose();
     }
-    return commands.registerCommand(command, callback, thisArg);
+    const disposable = commands.registerCommand(command, callback, thisArg);
+    registeredCommands.set(command, disposable);
+    return disposable;
 }
 
 /**

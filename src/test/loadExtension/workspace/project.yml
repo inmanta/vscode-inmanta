@@ -1,5 +1,0 @@
-name: test-project
-modulepath: libs
-downloadpath: libs
-repo: https://github.com/inmanta/
-description: Test project for the vscode inmanta extension

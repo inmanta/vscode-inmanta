@@ -11,6 +11,7 @@ server/build
 server/dist
 *.egg-info
 *.log
+logs/*
 *.orig
 .env
 junit-*
@@ -18,9 +19,14 @@ junit-*
 .idea
 .cfcache/
 
-.vscode/*
-!.vscode/settings.json.example
-!.vscode/launch.json
-!.vscode/tasks.json
+**/.vscode/**
+!**/.vscode/settings.json.example
+!**/.vscode/launch.json
+!**/.vscode/tasks.json
+**/.vscode/settings.json
 *.vsix
 requirements.txt
+
+.venv*
+venv*
+__pycache__
