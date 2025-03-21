@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { suite, test } from 'mocha';
-import { commands, workspace, Uri, Position, Location, Range, OutputChannel, window } from 'vscode';
+import { commands, workspace, Uri, Position, Location, Range, OutputChannel, window} from 'vscode';
 import {
     modelUri,
     createTestOutput,
@@ -8,15 +8,17 @@ import {
     teardownTestEnvironment,
 } from './utils';
 import * as path from 'path';
+import * as fs from 'fs-extra';
 
 suite('Extension Functionalities Test', () => {
     let testOutput: OutputChannel;
-
+    const logPath: string = process.env.INMANTA_LS_LOG_PATH;
     const workspaceUri: Uri = modelUri.with({ path: path.dirname(modelUri.fsPath) });
     const libsPath: string = path.resolve(workspaceUri.fsPath, 'libs');
 
     setup(async function () {
         testOutput = createTestOutput();
+        await fs.writeFile(logPath, "starting functional test \n");
         await setupTestEnvironment(testOutput);
     });
 
@@ -31,6 +33,11 @@ suite('Extension Functionalities Test', () => {
         // Open model file 
         const doc = await workspace.openTextDocument(modelUri);
         await window.showTextDocument(doc);
+
+        // Test navigation to attribute in same file
+        testOutput.appendLine('Executing definition provider command...');
+       // const succeeded = await waitForCompile(logPath, 25000);
+       // assert.strictEqual(succeeded, true, "Compilation didn't succeed");
 
         const attributeInSameFile = await commands.executeCommand("vscode.executeDefinitionProvider", modelUri, new Position(17, 16));
         const expectedAttributeLocation = new Range(new Position(6, 11), new Position(6, 15));
