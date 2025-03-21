@@ -10,6 +10,7 @@ import {
 import * as path from 'path';
 import * as fs from 'fs-extra';
 
+//  this test is working loccally but not in the pipeline. Will be investigated later
 suite('Extension Functionalities Test', () => {
     let testOutput: OutputChannel;
     const logPath: string = process.env.INMANTA_LS_LOG_PATH;
