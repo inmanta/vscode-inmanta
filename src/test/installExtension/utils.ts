@@ -3,8 +3,19 @@ import * as fs from 'fs-extra';
 import * as cp from 'child_process';
 import { Uri, workspace, OutputChannel, commands, extensions } from 'vscode';
 
+/**
+ * Path to the test workspace directory
+ */
 export const workspaceUri: Uri = Uri.file(path.resolve(__dirname, '../../../src/test/installExtension/workspace'));
+
+/**
+ * Path to the main model file in the test workspace
+ */
 export const modelUri: Uri = Uri.file(path.resolve(workspaceUri.fsPath, 'main.cf'));
+
+/**
+ * Absolute path to the test workspace directory
+ */
 export const testWorkspacePath = path.resolve(__dirname, '../../../src/test/installExtension/workspace');
 
 /**
@@ -30,6 +41,12 @@ export async function assertWithTimeout(assertion: () => Promise<void> | void, t
     });
 }
 
+/**
+ * Sets up a test workspace with necessary configuration files and structure.
+ * Creates a .vscode directory, cleans up existing virtual environments,
+ * creates a basic .cf file, and initializes VS Code settings.
+ * @returns Promise that resolves when the workspace is set up
+ */
 export async function setupTestWorkspace(): Promise<void> {
     // Ensure workspace directory exists with a .vscode folder
     await fs.ensureDir(path.join(testWorkspacePath, '.vscode'));
@@ -60,6 +77,12 @@ export async function setupTestWorkspace(): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 1000));
 }
 
+/**
+ * Cleans up the test environment by resetting Python interpreter settings
+ * and removing specified virtual environments.
+ * @param venvs Array of virtual environment names to remove
+ * @returns Promise that resolves when cleanup is complete
+ */
 export async function cleanupTestEnvironment(venvs: string[]): Promise<void> {
     // Wait for any pending operations
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -79,6 +102,11 @@ export async function cleanupTestEnvironment(venvs: string[]): Promise<void> {
 
 }
 
+/**
+ * Creates a new Python virtual environment in the test workspace.
+ * @param name Name of the virtual environment directory (defaults to '.venv')
+ * @returns Promise that resolves to the path of the Python interpreter in the new virtual environment
+ */
 export async function createVirtualEnv(name: string = '.venv'): Promise<string> {
     // Find python executable
     const pythonCmd = process.platform === 'win32' ? 'python' : 'python3.12';
@@ -99,6 +127,11 @@ export async function createVirtualEnv(name: string = '.venv'): Promise<string> 
     return pythonPath;
 }
 
+/**
+ * Creates a test output channel that logs messages to the console.
+ * Implements the VS Code OutputChannel interface for test purposes.
+ * @returns An OutputChannel implementation that writes to console
+ */
 export function createTestOutput(): OutputChannel {
     // Create a console-based implementation of OutputChannel
     return {
@@ -222,8 +255,11 @@ export async function installLanguageServer(outputChannel?: OutputChannel): Prom
 }
 
 /**
- * Checks if the language server is installed in the current Python environment
- * @returns Promise that resolves to true if installed, false otherwise
+ * Checks if the language server is installed in the current Python environment.
+ * Uses pip to verify if the inmantals package is installed.
+ * @param pythonPath Optional path to the Python interpreter to check. If not provided, uses the VS Code Python setting
+ * @param outputChannel Optional output channel for logging the check process
+ * @returns Promise that resolves to true if the language server is installed, false otherwise
  */
 export async function isLanguageServerInstalled(pythonPath?: string, outputChannel?: OutputChannel): Promise<boolean> {
     const interpreter = pythonPath || workspace.getConfiguration('python').get<string>('defaultInterpreterPath');
@@ -252,8 +288,9 @@ export async function isLanguageServerInstalled(pythonPath?: string, outputChann
 }
 
 /**
- * Checks if the language server is running
- * @returns Promise that resolves to true if running, false otherwise
+ * Checks if the Inmanta language server process is currently running.
+ * Uses platform-specific commands (tasklist on Windows, ps on Unix) to check for the process.
+ * @returns Promise that resolves to true if the language server is running, false otherwise
  */
 export async function isLanguageServerRunning(): Promise<boolean> {
     // Check if there's a running language server process
@@ -278,6 +315,12 @@ export async function isLanguageServerRunning(): Promise<boolean> {
     }
 }
 
+/**
+ * Sets up a complete test environment including Python extension activation,
+ * workspace configuration, virtual environment creation, and language server installation.
+ * @param testOutput OutputChannel for logging the setup progress
+ * @returns Promise that resolves to the path of the created Python interpreter
+ */
 export async function setupTestEnvironment(testOutput: OutputChannel): Promise<string> {
     testOutput.appendLine('=================================== SETUP STARTED ============================================');
 
@@ -388,6 +431,13 @@ export async function setupTestEnvironment(testOutput: OutputChannel): Promise<s
     }
 }
 
+/**
+ * Performs cleanup of the test environment, including waiting for pending operations
+ * to complete and cleaning up test resources.
+ * @param testOutput OutputChannel for logging the teardown progress
+ * @param additionalVenvs Optional array of additional virtual environment names to clean up
+ * @returns Promise that resolves when teardown is complete
+ */
 export async function teardownTestEnvironment(testOutput: OutputChannel, additionalVenvs: string[] = []): Promise<void> {
     try {
         testOutput.appendLine('Starting teardown...');
@@ -408,38 +458,40 @@ export async function teardownTestEnvironment(testOutput: OutputChannel, additio
         console.error('Error during teardown:', error);
         // Don't rethrow here to avoid masking test failures
     }
-} 
+}
 
 /**
- * Read a loging file waiting for a message announcing the end of the compilation
- *
- * @param logPath The path to the logging file
- * @param timeout A timeout (in ms) before the end of which the compilation should be done
- *
- * @returns whether or not the compilation suceeded
+ * Monitors a log file for compilation status messages.
+ * Continuously reads the specified log file until it finds a message indicating
+ * that compilation has either succeeded or failed, or until the timeout is reached.
+ * 
+ * @param logPath The path to the logging file to monitor
+ * @param timeout Maximum time in milliseconds to wait for compilation to complete
+ * @returns Promise that resolves to true if compilation succeeded, false if it failed
+ * @throws Error if the timeout is reached before compilation completes
  */
 export function waitForCompile(logPath: string, timeout: number): Promise<boolean> {
-	const start = Date.now();
-	return new Promise<boolean>((resolve, reject) => {
-		const readLogInterval = setInterval(() => {
-			if (Date.now() - start > timeout) {
-				clearInterval(readLogInterval);
-				reject(new Error(`Timeout of ${timeout}ms reached`));
-			} else {
-				fs.ensureFileSync(logPath);
-				fs.readFile(logPath, 'utf-8', (err, data) => {
-					if (err) {
-						clearInterval(readLogInterval);
-						console.log(`Got an error while waiting for compile: ${err}`);
-					} else if (data.includes('Compilation succeeded')) {
-						clearInterval(readLogInterval);
-						resolve(true);
-					} else if (data.includes('Compilation failed')) {
-						clearInterval(readLogInterval);
-						resolve(false);
-					}
-				});
-			}
-		}, 500);
-	});
+    const start = Date.now();
+    return new Promise<boolean>((resolve, reject) => {
+        const readLogInterval = setInterval(() => {
+            if (Date.now() - start > timeout) {
+                clearInterval(readLogInterval);
+                reject(new Error(`Timeout of ${timeout}ms reached`));
+            } else {
+                fs.ensureFileSync(logPath);
+                fs.readFile(logPath, 'utf-8', (err, data) => {
+                    if (err) {
+                        clearInterval(readLogInterval);
+                        console.log(`Got an error while waiting for compile: ${err}`);
+                    } else if (data.includes('Compilation succeeded')) {
+                        clearInterval(readLogInterval);
+                        resolve(true);
+                    } else if (data.includes('Compilation failed')) {
+                        clearInterval(readLogInterval);
+                        resolve(false);
+                    }
+                });
+            }
+        }, 500);
+    });
 }

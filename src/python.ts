@@ -4,22 +4,50 @@ import { PythonExtension, ResolvedEnvironment } from '@vscode/python-extension';
 import { workspace } from 'vscode';
 import { getGlobalSettings, getWorkspaceSettings } from './settings';
 
+/**
+ * Interface representing details about a Python interpreter.
+ * Used for communicating interpreter changes and settings.
+ */
 export interface IInterpreterDetails {
+    /**
+     * Array containing the path to the Python interpreter.
+     * May be undefined if no interpreter is set.
+     */
     path?: string[];
+    /**
+     * The VS Code resource URI associated with this interpreter.
+     * May be undefined for global interpreter settings.
+     */
     resource?: Uri;
 }
 
+/**
+ * Event emitter for Python interpreter changes.
+ * Used to notify the extension when the Python interpreter configuration changes.
+ */
 const onDidChangePythonInterpreterEvent = new EventEmitter<IInterpreterDetails>();
 
+/**
+ * Event that fires when the Python interpreter changes.
+ * Subscribers can use this to update their interpreter-dependent functionality.
+ */
 export const onDidChangePythonInterpreter: Event<IInterpreterDetails> = onDidChangePythonInterpreterEvent.event;
 
+/**
+ * Cached instance of the Python extension API.
+ */
 let _api: PythonExtension | undefined;
 
+/**
+ * Status bar item showing the current Python environment.
+ */
 const envSelector = window.createStatusBarItem(StatusBarAlignment.Right, 100);
 
 /**
  * Gets the Python extension API.
- * @returns A promise that resolves to the Python extension API or undefined.
+ * Caches the API instance for subsequent calls.
+ * 
+ * @returns Promise that resolves to the Python extension API or undefined if not available
  */
 async function getPythonExtensionAPI(): Promise<PythonExtension | undefined> {
     if (_api) {
@@ -30,8 +58,11 @@ async function getPythonExtensionAPI(): Promise<PythonExtension | undefined> {
 }
 
 /**
- * Initializes the Python extension.
- * @param disposables An array to which disposables can be added.
+ * Initializes the Python extension integration.
+ * Sets up event listeners for interpreter changes and performs initial interpreter detection.
+ * 
+ * @param disposables Array to which event disposables will be added
+ * @throws Will show an error message if Python is not properly installed
  */
 export async function initializePython(disposables: Disposable[]): Promise<void> {
     try {
@@ -54,9 +85,10 @@ export async function initializePython(disposables: Disposable[]): Promise<void>
 }
 
 /**
- * Resolves the given interpreter.
- * @param interpreter An array containing the interpreter path.
- * @returns A promise that resolves to the resolved environment or undefined.
+ * Resolves a Python interpreter path to its full environment details.
+ * 
+ * @param interpreter Array containing the interpreter path to resolve
+ * @returns Promise that resolves to the full environment details or undefined if not found
  */
 export async function resolveInterpreter(interpreter: string[]): Promise<ResolvedEnvironment | undefined> {
     const api = await getPythonExtensionAPI();
@@ -64,9 +96,11 @@ export async function resolveInterpreter(interpreter: string[]): Promise<Resolve
 }
 
 /**
- * Gets the details of the current interpreter.
- * @param resource An optional URI of the resource.
- * @returns A promise that resolves to the interpreter details.
+ * Gets the details of the current Python interpreter.
+ * Resolves the active environment and checks if it's supported.
+ * 
+ * @param resource Optional URI to get workspace-specific interpreter details
+ * @returns Promise that resolves to the interpreter details
  */
 export async function getInterpreterDetails(resource?: Uri): Promise<IInterpreterDetails> {
     const api = await getPythonExtensionAPI();
@@ -82,9 +116,11 @@ export async function getInterpreterDetails(resource?: Uri): Promise<IInterprete
 }
 
 /**
- * Checks if the resolved Python environment version is supported.
- * @param resolved - The resolved Python environment.
- * @returns True if the version is supported, false otherwise.
+ * Checks if a Python environment version is supported by the extension.
+ * Currently supports Python 3.11 and above.
+ * 
+ * @param resolved The resolved Python environment to check
+ * @returns True if the version is supported (Python 3.11+), false otherwise
  */
 export function pythonVersionSupported(resolved: ResolvedEnvironment | undefined): boolean {
     const version = resolved?.version;
@@ -100,8 +136,11 @@ export function pythonVersionSupported(resolved: ResolvedEnvironment | undefined
 }
 
 /**
- * Toggles the interpreter selector button to the status bar.
- * @param document - The active text document.
+ * Updates the Python environment selector in the status bar.
+ * Shows the current Python version and environment name for Inmanta files,
+ * hides the selector for other file types.
+ * 
+ * @param document The active text document to check
  */
 export async function updateVenvSelector(document: TextDocument) {
     if (document && (document.languageId === 'inmanta' || document.languageId === 'cf' || document.uri.fsPath.endsWith('.cf'))) {
