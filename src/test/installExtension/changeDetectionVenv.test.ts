@@ -21,7 +21,7 @@ suite('Language Server Venv Change Detection', () => {
     });
 
     teardown(async function () {
-        await teardownTestEnvironment(testOutput, ['.venv2']);
+        await teardownTestEnvironment(testOutput);
         testOutput.dispose();
     });
 

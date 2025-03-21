@@ -36,7 +36,7 @@ suite('Setup Assistant Flow Test', () => {
             testOutput.appendLine('Starting teardown...');
 
             // Clean up test environment
-            await cleanupTestEnvironment([".venv"]);
+            await cleanupTestEnvironment();
             testOutput.appendLine('Test environment cleanup completed');
 
             testOutput.appendLine('Teardown completed');

@@ -51,11 +51,13 @@ export async function setupTestWorkspace(): Promise<void> {
     // Ensure workspace directory exists with a .vscode folder
     await fs.ensureDir(path.join(testWorkspacePath, '.vscode'));
 
-    // Clean up any existing venvs
-    const venvs = ['.venv', '.venv2'];
-    for (const venv of venvs) {
-        const venvPathToDelete = path.join(testWorkspacePath, venv);
-        await fs.remove(venvPathToDelete);
+    // Clean up all venvs that start with .venv
+    const files = await fs.readdir(testWorkspacePath);
+    for (const file of files) {
+        if (file.startsWith('.venv')) {
+            const venvPathToDelete = path.join(testWorkspacePath, file);
+            await fs.remove(venvPathToDelete);
+        }
     }
 
     // Create a basic .cf file to work with
@@ -79,11 +81,10 @@ export async function setupTestWorkspace(): Promise<void> {
 
 /**
  * Cleans up the test environment by resetting Python interpreter settings
- * and removing specified virtual environments.
- * @param venvs Array of virtual environment names to remove
+ * and removing all virtual environments that start with .venv.
  * @returns Promise that resolves when cleanup is complete
  */
-export async function cleanupTestEnvironment(venvs: string[]): Promise<void> {
+export async function cleanupTestEnvironment(): Promise<void> {
     // Wait for any pending operations
     await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -94,12 +95,14 @@ export async function cleanupTestEnvironment(venvs: string[]): Promise<void> {
         console.warn('Failed to reset Python interpreter setting:', error);
     }
 
-    // Clean up all extra venvs. the default venv is not deleted since it will be used for the rest of the suite.
-    for (const venv of venvs) {
-        const venvPathToDelete = path.join(testWorkspacePath, venv);
-        await fs.remove(venvPathToDelete);
+    // Clean up all venvs that start with .venv
+    const files = await fs.readdir(testWorkspacePath);
+    for (const file of files) {
+        if (file.startsWith('.venv')) {
+            const venvPathToDelete = path.join(testWorkspacePath, file);
+            await fs.remove(venvPathToDelete);
+        }
     }
-
 }
 
 /**
@@ -438,7 +441,7 @@ export async function setupTestEnvironment(testOutput: OutputChannel): Promise<s
  * @param additionalVenvs Optional array of additional virtual environment names to clean up
  * @returns Promise that resolves when teardown is complete
  */
-export async function teardownTestEnvironment(testOutput: OutputChannel, additionalVenvs: string[] = []): Promise<void> {
+export async function teardownTestEnvironment(testOutput: OutputChannel): Promise<void> {
     try {
         testOutput.appendLine('Starting teardown...');
 
@@ -447,7 +450,7 @@ export async function teardownTestEnvironment(testOutput: OutputChannel, additio
 
         testOutput.appendLine('Cleaning up test environment...');
         try {
-            await cleanupTestEnvironment(additionalVenvs);
+            await cleanupTestEnvironment();
             testOutput.appendLine('Test environment cleanup completed');
         } catch (error) {
             testOutput.appendLine(`Error during cleanup: ${error}`);
