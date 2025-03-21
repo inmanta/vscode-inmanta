@@ -821,7 +821,21 @@ class InmantaLSHandler(JsonRpcHandler):
     # Protocol handling
 
     def mangle(self, name):
+        """Convert LSP method names to valid Python method names."""
+        # Handle special case for $/setTrace -> dollar_setTrace
+        if name.startswith('$/'):
+            return 'dollar' + name[1:].replace("/", "_")
         return name.replace("/", "_")
+
+    async def dollar_setTrace(self, value: str) -> None:
+        """
+        Handle LSP trace configuration. Valid values are 'off', 'messages', and 'verbose'.
+        """
+        valid_levels = {'off': logging.WARNING, 'messages': logging.INFO, 'verbose': logging.DEBUG}
+        if value in valid_levels:
+            logger.setLevel(valid_levels[value])
+            logger.debug(f"Trace level set to: {value}")
+        return None
 
     async def dispatch_method(self, id, method, params):
         pymethod = self.mangle(method)
