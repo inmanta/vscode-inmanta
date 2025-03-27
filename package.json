@@ -244,7 +244,7 @@
     "devDependencies": {
         "@types/fs-extra": "^11.0.4",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^22.13.13",
+        "@types/node": "^22.13.14",
         "@types/semver": "^7.7.0",
         "@types/vscode": "^1.63.2",
         "@vscode/python-extension": "^1.0.5",
