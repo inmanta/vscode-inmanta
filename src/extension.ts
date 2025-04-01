@@ -190,14 +190,14 @@ export async function activate(context: ExtensionContext) {
     }));
 
     // Subscribe to python interpreter changes and restart the affected language server(s) if necessary
-    context.subscriptions.push(onDidChangePythonInterpreter(async (e) => {
+    context.subscriptions.push(onDidChangePythonInterpreter(async (event) => {
         traceLog('Python interpreter changed');
         updateVenvSelector(window.activeTextEditor?.document);
 
         traceLog(`Restarting Language servers due to python interpreter change.`);
 
         // Get the new interpreter path
-        const newInterpreter = await getInterpreterDetails(e.resource);
+        const newInterpreter = await getInterpreterDetails(event.resource);
         const newPythonPath = newInterpreter.path ? newInterpreter.path[0] : undefined;
 
         if (!newPythonPath) {
@@ -207,7 +207,7 @@ export async function activate(context: ExtensionContext) {
 
         for (const ls of languageServers.values()) {
             // Update the Python path for each language server before restarting
-            await ls.updatePythonPath(newPythonPath, e.resource ? e.resource : ls.rootFolder.uri);
+            await ls.updatePythonPath(newPythonPath, event.resource ? event.resource : ls.rootFolder.uri);
         }
     }));
 

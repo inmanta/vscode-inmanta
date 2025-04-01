@@ -70,8 +70,8 @@ export async function initializePython(disposables: Disposable[]): Promise<void>
 
         if (api) {
             disposables.push(
-                api.environments.onDidChangeActiveEnvironmentPath((e) => {
-                    onDidChangePythonInterpreterEvent.fire({ path: [e.path], resource: e.resource?.uri });
+                api.environments.onDidChangeActiveEnvironmentPath((event) => {
+                    onDidChangePythonInterpreterEvent.fire({ path: [event.path], resource: event.resource?.uri });
                 }),
             );
 
@@ -142,7 +142,7 @@ export function pythonVersionSupported(resolved: ResolvedEnvironment | undefined
  * 
  * @param document The active text document to check
  */
-export async function updateVenvSelector(document: TextDocument) {
+export async function updateVenvSelector(document: TextDocument | undefined) {
     if (document && (document.languageId === 'inmanta' || document.languageId === 'cf' || document.uri.fsPath.endsWith('.cf'))) {
         const workspaceFolder = workspace.getWorkspaceFolder(document.uri);
         const settings = workspaceFolder ? await getWorkspaceSettings('inmanta', workspaceFolder, true) : await getGlobalSettings('inmanta', true);
