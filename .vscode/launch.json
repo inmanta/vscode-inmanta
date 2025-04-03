@@ -2,75 +2,16 @@
 {
     "version": "0.1.0",
     "configurations": [
+        
         {
             "name": "Run Extension",
             "type": "extensionHost",
             "request": "launch",
             "runtimeExecutable": "${execPath}",
-            "args": ["${workspaceRoot}/src/test/navigation/workspace", "--extensionDevelopmentPath=${workspaceRoot}" ],
+            "args": ["${workspaceRoot}/src/test/installExtension/workspace", "--extensionDevelopmentPath=${workspaceRoot}" ],
             "sourceMaps": true,
             "outFiles": [ "${workspaceRoot}/out/**/*.js" ],
             "preLaunchTask": "npm: watch",
         },
-        {
-            "name": "Extension Test Compile",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": ["${workspaceRoot}/src/test/compile/workspace","--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out/test/compile/index" ],
-            "sourceMaps": true,
-            "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
-            "preLaunchTask": "npm: pretest",
-            "env": {
-                "INMANTA_LS_PATH": "${workspaceRoot}/server",
-                "INMANTA_LS_LOG_PATH": "${workspaceRoot}/vscode-inmanta.log",
-                "INMANTA_EXTENSION_TEST_ENV":"/tmp/venv"
-            }
-        },
-        {
-            "name": "Extension Test Navigation",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": ["${workspaceRoot}/src/test/navigation/workspace","--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out/test/navigation/index" ],
-            "sourceMaps": true,
-            "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
-            "preLaunchTask": "npm: pretest",
-            "env": {
-                "INMANTA_LS_PATH": "${workspaceRoot}/server",
-                "INMANTA_LS_LOG_PATH": "${workspaceRoot}/vscode-inmanta.log",
-                "INMANTA_EXTENSION_TEST_ENV":"/tmp/venv"
-            }
-        },
-        {
-            "name": "Extension Test LoadExtension",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": ["--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out/test/loadExtension/index" ],
-            "sourceMaps": true,
-            "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
-            "preLaunchTask": "npm: pretest",
-            "env": {
-                "INMANTA_LS_PATH": "${workspaceRoot}/server",
-                "INMANTA_LS_LOG_PATH": "${workspaceRoot}/vscode-inmanta.log",
-                "INMANTA_EXTENSION_TEST_ENV":"/tmp/venv"
-            }
-        },
-        {
-            "name": "Extension Test Docstrings",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": ["${workspaceRoot}/src/test/docstrings/workspace","--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out/test/docstrings/index" ],
-            "sourceMaps": true,
-            "outFiles": [ "${workspaceRoot}/out/test/**/*.js" ],
-            "preLaunchTask": "npm: pretest",
-            "env": {
-                "INMANTA_LS_PATH": "${workspaceRoot}/server",
-                "INMANTA_LS_LOG_PATH": "${workspaceRoot}/vscode-inmanta.log",
-                "INMANTA_EXTENSION_TEST_ENV":"/tmp/venv"
-            }
-        }
     ]
 }

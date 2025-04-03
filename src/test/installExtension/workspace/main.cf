@@ -1,19 +1,25 @@
+import testmodule
+
 entity Person:
+"""
+A class to represent a person.
+"""
     string name
     int age
+    testmodule::pet pet
 end
 
 Person.friends [0:] -- Person
 
 index Person(name)
 
-implement Person using potato
+implement Person using std::none
 
 john = Person(name="John", age=20)
-mike = Person(name="Mike", age=21)
-jane = Person(name="Jane", age=19)
+mike = Person(name="Mike", age=12, pet="dinosaur")
+jane = Person(name="Jane", age=19, pet="bird")
 lucy = Person(name="Lucy", age=23)
-
+testmodule::noop(mike.pet)
 john.friends += mike
 john.friends += jane
 

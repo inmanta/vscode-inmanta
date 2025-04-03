@@ -12,20 +12,19 @@ import { registerLogger, traceLog } from './logTracer';
 let inmantaCommands: InmantaCommands;
 let lastActiveFolder: WorkspaceFolder = undefined;
 
-/*
-    Keep track of active language servers per independant top-most folder in the workspace.
-    We lazily spin up a new language server any time a .cf file living inside a folder is opened for the first time.
-    Once the language server is up, it is added to the languageServers map with the uri of the top-most folder it is
-    responsible for as a key. This allows the servers to be properly stopped if/when the folder is removed from the
-    workspace
-*/
+/**
+ * Map of workspace folder URIs to their corresponding language servers.
+ * Each top-level workspace folder can have its own language server instance.
+ */
 export const languageServers: Map<string, LanguageServer> = new Map();
 
 /**
  * Activates the extension.
+ * This function is called when the extension is activated by VS Code.
+ * It sets up the language servers, command handlers, and event listeners.
  * 
- * @param {ExtensionContext} context - The context in which the extension is activated.
- * @throws Will throw an error if the Python extension is not found.
+ * @param {ExtensionContext} context - The context in which the extension is activated
+ * @throws Will throw an error if the Python extension is not found
  */
 export async function activate(context: ExtensionContext) {
     const outputChannel = createOutputChannel('Inmanta');
@@ -39,7 +38,9 @@ export async function activate(context: ExtensionContext) {
     }
 
     traceLog("Activate Python extension");
-    await pythonExtension.activate();
+    if (!pythonExtension.isActive) {
+        await pythonExtension.activate();
+    }
 
     // Initialize the Python extension
     await initializePython(context.subscriptions);
@@ -189,20 +190,36 @@ export async function activate(context: ExtensionContext) {
     }));
 
     // Subscribe to python interpreter changes and restart the affected language server(s) if necessary
-    context.subscriptions.push(onDidChangePythonInterpreter(async () => {
+    context.subscriptions.push(onDidChangePythonInterpreter(async (event) => {
         traceLog('Python interpreter changed');
         updateVenvSelector(window.activeTextEditor?.document);
 
         traceLog(`Restarting Language servers due to python interpreter change.`);
-        const promises: Thenable<void>[] = [];
-        for (const ls of languageServers.values()) {
-            promises.push(ls.startOrRestartLS());
+
+        // Get the new interpreter path
+        const newInterpreter = await getInterpreterDetails(event.resource);
+        const newPythonPath = newInterpreter.path ? newInterpreter.path[0] : undefined;
+
+        if (!newPythonPath) {
+            traceLog('No new Python path available, skipping language server restart');
+            return;
         }
-        await Promise.all(promises);
+
+        for (const ls of languageServers.values()) {
+            // Update the Python path for each language server before restarting
+            await ls.updatePythonPath(newPythonPath, event.resource ? event.resource : ls.rootFolder.uri);
+        }
     }));
 
 }
 
+/**
+ * Deactivates the extension.
+ * This function is called when VS Code is shutting down or the extension is being deactivated.
+ * It ensures all language servers are properly stopped.
+ * 
+ * @returns Promise that resolves when all language servers have been stopped
+ */
 export async function deactivate(): Promise<void> {
     const promises: Thenable<void>[] = [];
     for (const ls of languageServers.values()) {
@@ -211,11 +228,21 @@ export async function deactivate(): Promise<void> {
     await Promise.all(promises);
 }
 
-
+/**
+ * Gets the map of workspace folder URIs to their language server instances.
+ * 
+ * @returns Map where keys are workspace folder URIs and values are the corresponding LanguageServer instances
+ */
 export function getLanguageMap(): Map<string, LanguageServer> {
     return languageServers;
 }
 
+/**
+ * Gets the most recently active workspace folder.
+ * This is used to determine which language server should handle commands when multiple are available.
+ * 
+ * @returns The workspace folder that was most recently active, or undefined if none
+ */
 export function getLastActiveFolder(): WorkspaceFolder {
     return lastActiveFolder;
 }
