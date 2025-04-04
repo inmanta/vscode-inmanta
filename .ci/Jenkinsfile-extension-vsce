@@ -120,8 +120,10 @@ pipeline {
                             fi
 
                             echo "inmantals~=${ls_version}" > requirements.txt
+                            set +e
                             git diff --exit-code requirements.txt
                             requirements_txt_has_changed=$?
+                            set -e
                             if [ ${requirements_txt_has_changed} -ne 0 ]; then
                                 # force add requirements.txt as it is part of .gitignore
                                 git add requirements.txt -f

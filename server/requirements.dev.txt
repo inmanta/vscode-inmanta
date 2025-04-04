@@ -1,2 +1,2 @@
 inmanta-dev-dependencies[async]==1.76.0; python_version <= '3.6'
-inmanta-dev-dependencies[async]==2.114.0; python_version > '3.6'
+inmanta-dev-dependencies[async]==2.156.0; python_version > '3.6'
