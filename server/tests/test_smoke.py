@@ -1,19 +1,19 @@
 """
-    Copyright 2021 Inmanta
+Copyright 2021 Inmanta
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
-    Contact: code@inmanta.com
+Contact: code@inmanta.com
 """
 
 import json
@@ -263,12 +263,13 @@ async def test_working_on_v1_modules(client, caplog):
     with open(req_file, "r") as f:
         reqs = list(parse_requirements(f.readlines()))
 
+    str_reqs = [str(e) for e in reqs]
     venv = env.VirtualEnv(env_path)
     venv.use_virtual_env()
 
     assert Requirement.parse("inmanta-module-dummy>=3.0.8") in reqs
     # This dummy module is used because it is only present in the dev artifacts and not in pypi index.
-    assert not venv.are_installed(reqs)
+    assert not venv.are_installed(str_reqs)
 
     if CORE_VERSION < version.Version("11.0.0"):
         options = {
@@ -307,7 +308,7 @@ async def test_working_on_v1_modules(client, caplog):
     ret = await client.call("initialized")
     result = await client.assert_one(ret)
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
-    assert venv.are_installed(reqs)
+    assert venv.are_installed(str_reqs)
     assert "Anchormap took" in caplog.text
     caplog.clear()
 

@@ -94,6 +94,23 @@ manually, or when you change the path for the language server venv. To clean up 
 directory in the Inmanta project directory as well as the directory specified in the Compiler Venv option in the extension's
 settings. Then restart vscode.
 
+## Development tests
+
+If you are contributing or developing for the extention, here are the steps required to run the E2E tests.
+
+- `npm install`
+- Make certain you are running the correct python version. 3.12 or higher is required. 
+    - If you are on WSL-Ubuntu and have issues updating your python version, you can try the following: 
+        - `sudo add-apt-repository ppa:deadsnakes/ppa`
+        - `sudo apt install python3.12`
+- `python3.12 -m venv /tmp/venv`
+- `export INMANTA_EXTENSION_TEST_ENV=/tmp/venv`
+- `export INMANTA_LS_LOG_PATH=/tmp/venv/server.log`
+- `export DISPLAY=:0` (only for Windows/WSL)
+- `/tmp/venv/bin/python -m pip install ./server`
+
+You can now launch the tests either with the debugger, or with `npm run test`.
+
 ## Authors
 
 - Frank Rosquin

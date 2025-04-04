@@ -1,5 +1,6 @@
-# v 1.7.0 (?)
+# v 1.7.0 (2025-04-04)
 Changes in this release:
+- Format code using black 25.1.0
 
 # v 1.6.0 (2024-04-04)
 Changes in this release:
