@@ -1,4 +1,7 @@
-# v 1.8.0 (?)
+# v 1.9.0 (?)
+Changes in this release:
+
+# v 1.8.0 (2025-04-04)
 Changes in this release:
 - Update and apply improved linting configuration
 - Add testing procedure in the readme
