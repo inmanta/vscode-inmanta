@@ -1,6 +1,5 @@
-import { Disposable, Event, EventEmitter, StatusBarAlignment, TextDocument, Uri, window, extensions } from 'vscode';
+import { Disposable, Event, EventEmitter, StatusBarAlignment, TextDocument, Uri, window, extensions, workspace } from 'vscode';
 import { traceError, traceLog } from './logTracer';
-import { workspace } from 'vscode';
 import { getGlobalSettings, getWorkspaceSettings } from './settings';
 
 /**

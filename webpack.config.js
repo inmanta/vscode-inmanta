@@ -37,6 +37,12 @@ const extensionConfig = {
                     },
                 ],
             },
+            {
+                test: /node_modules[\\\/]vscode-languageserver-types[\\\/]lib[\\\/]umd[\\\/]main\.js$/,
+                use: {
+                    loader: 'umd-compat-loader'
+                }
+            }
         ],
     },
     devtool: 'source-map',
@@ -44,4 +50,5 @@ const extensionConfig = {
         level: 'log', // enables logging required for problem matchers
     }
 };
+
 module.exports = [extensionConfig];

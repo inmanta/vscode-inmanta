@@ -222,26 +222,28 @@
     },
     "dependencies": {
         "async-mutex": "^0.5.0",
+        "fs-extra": "^11.3.0",
         "get-port": "^5.1.1",
         "log-symbols": "^7.0.0",
         "lru-cache": "^11.1.0",
-        "fs-extra": "^11.3.0",
         "minimatch": "^10.0.1",
         "uuid": "^11.1.0",
-        "vscode-languageclient": "^9.0.1",
-        "vscode-languageserver-types": "^3.17.3"
+        "vscode-languageclient": "^9.0.1"
     },
     "extensionDependencies": [
         "ms-python.python"
     ],
     "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "webpack",
+        "clean": "rimraf out/",
+        "vscode:prepublish": "npm run clean && npm run compile",
+        "compile": "npm run clean && tsc -p ./ && webpack",
         "lint": "eslint --max-warnings 0",
-        "watch": "webpack --watch",
-        "pretest": "npm run compile",
-        "package": "webpack --mode production --devtool source-map --config ./webpack.config.js",
+        "watch": "npm run clean && tsc -w -p ./",
+        "pretest": "npm run clean && tsc -p ./",
+        "pretest:vsix": "npm run clean && tsc -p ./",
+        "package": "npm run clean && webpack --mode production --devtool source-map --config ./webpack.config.js",
         "test": "node ./out/test/runTest.js",
+        "test:vsix": "npm run pretest:vsix && npm run test --vsix",
         "vsce-package": "vsce package"
     },
     "devDependencies": {
@@ -264,6 +266,8 @@
         "sinon": "^20.0.0",
         "ts-loader": "^9.5.2",
         "typescript": "^5.8.3",
+        "umd-compat-loader": "^2.1.2",
+        "vscode-languageserver-types": "^3.17.3",
         "webpack": "^5.99.5",
         "webpack-cli": "^6.0.1"
     },
