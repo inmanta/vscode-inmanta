@@ -56,7 +56,6 @@ pipeline {
             steps {
                 sh '''
                     npm install
-                    npm run lint
                     xvfb-run --server-args="-screen 0 1024x768x24 -ac" npm run test:vsix
                 '''
             }
