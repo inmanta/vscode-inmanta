@@ -1,6 +1,5 @@
-import { Disposable, Event, EventEmitter, StatusBarAlignment, TextDocument, Uri, window } from 'vscode';
+import { Disposable, Event, EventEmitter, StatusBarAlignment, TextDocument, Uri, window, extensions } from 'vscode';
 import { traceError, traceLog } from './logTracer';
-import { PythonExtension, ResolvedEnvironment } from '@vscode/python-extension';
 import { workspace } from 'vscode';
 import { getGlobalSettings, getWorkspaceSettings } from './settings';
 
@@ -34,11 +33,6 @@ const onDidChangePythonInterpreterEvent = new EventEmitter<IInterpreterDetails>(
 export const onDidChangePythonInterpreter: Event<IInterpreterDetails> = onDidChangePythonInterpreterEvent.event;
 
 /**
- * Cached instance of the Python extension API.
- */
-let _api: PythonExtension | undefined;
-
-/**
  * Status bar item showing the current Python environment.
  */
 const envSelector = window.createStatusBarItem(StatusBarAlignment.Right, 100);
@@ -49,12 +43,15 @@ const envSelector = window.createStatusBarItem(StatusBarAlignment.Right, 100);
  * 
  * @returns Promise that resolves to the Python extension API or undefined if not available
  */
-async function getPythonExtensionAPI(): Promise<PythonExtension | undefined> {
-    if (_api) {
-        return _api;
+async function getPythonExtensionAPI(): Promise<any> {
+    const pythonExtension = extensions.getExtension('ms-python.python');
+    if (!pythonExtension) {
+        return undefined;
     }
-    _api = await PythonExtension.api();
-    return _api;
+    if (!pythonExtension.isActive) {
+        await pythonExtension.activate();
+    }
+    return pythonExtension.exports;
 }
 
 /**
@@ -70,7 +67,7 @@ export async function initializePython(disposables: Disposable[]): Promise<void>
 
         if (api) {
             disposables.push(
-                api.environments.onDidChangeActiveEnvironmentPath((event) => {
+                api.environments.onDidChangeActiveEnvironmentPath((event: any) => {
                     onDidChangePythonInterpreterEvent.fire({ path: [event.path], resource: event.resource?.uri });
                 }),
             );
@@ -90,7 +87,7 @@ export async function initializePython(disposables: Disposable[]): Promise<void>
  * @param interpreter Array containing the interpreter path to resolve
  * @returns Promise that resolves to the full environment details or undefined if not found
  */
-export async function resolveInterpreter(interpreter: string[]): Promise<ResolvedEnvironment | undefined> {
+export async function resolveInterpreter(interpreter: string[]): Promise<any> {
     const api = await getPythonExtensionAPI();
     return api?.environments.resolveEnvironment(interpreter[0]);
 }
@@ -122,7 +119,7 @@ export async function getInterpreterDetails(resource?: Uri): Promise<IInterprete
  * @param resolved The resolved Python environment to check
  * @returns True if the version is supported (Python 3.11+), false otherwise
  */
-export function pythonVersionSupported(resolved: ResolvedEnvironment | undefined): boolean {
+export function pythonVersionSupported(resolved: any): boolean {
     const version = resolved?.version;
     traceLog(`Detected Python version: ${version?.major}.${version?.minor}`);
     if (version?.major === 3 && version?.minor >= 11) {

@@ -225,20 +225,24 @@
         "get-port": "^5.1.1",
         "log-symbols": "^7.0.0",
         "lru-cache": "^11.1.0",
+        "fs-extra": "^11.3.0",
         "minimatch": "^10.0.1",
         "uuid": "^11.1.0",
-        "vscode-languageclient": "^9.0.1"
+        "vscode-languageclient": "^9.0.1",
+        "vscode-languageserver-types": "^3.17.3"
     },
     "extensionDependencies": [
         "ms-python.python"
     ],
     "scripts": {
         "vscode:prepublish": "npm run compile",
-        "compile": "rimraf out && tsc -p ./",
+        "compile": "webpack",
         "lint": "eslint --max-warnings 0",
-        "watch": "rimraf out && tsc -watch -p ./",
+        "watch": "webpack --watch",
         "pretest": "npm run compile",
-        "test": "node ./out/test/runTest.js"
+        "package": "webpack --mode production --devtool source-map --config ./webpack.config.js",
+        "test": "node ./out/test/runTest.js",
+        "vsce-package": "vsce package"
     },
     "devDependencies": {
         "@types/fs-extra": "^11.0.4",
@@ -246,7 +250,6 @@
         "@types/node": "^22.14.1",
         "@types/semver": "^7.7.0",
         "@types/vscode": "^1.97.2",
-        "@vscode/python-extension": "^1.0.5",
         "@typescript-eslint/eslint-plugin": "^8.29.1",
         "@typescript-eslint/parser": "^8.29.1",
         "@vscode/test-cli": "^0.0.10",
@@ -254,13 +257,15 @@
         "@vscode/vsce": "^3.3.2",
         "eslint": "^9.24.0",
         "eslint-config-google": "^0.14.0",
-        "fs-extra": "^11.3.0",
         "glob": "^11.0.1",
         "mocha": "^11.1.0",
         "rimraf": "^6.0.1",
         "semver": "^7.7.1",
         "sinon": "^20.0.0",
-        "typescript": "^5.8.3"
+        "ts-loader": "^9.5.2",
+        "typescript": "^5.8.3",
+        "webpack": "^5.99.5",
+        "webpack-cli": "^6.0.1"
     },
-    "main": "./out/extension"
+    "main": "./out/extension.js"
 }
