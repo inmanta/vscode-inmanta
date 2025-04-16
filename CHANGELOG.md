@@ -1,3 +1,6 @@
+# v 1.9.0 (2025-04-16)
+Changes in this release:
+
 # v 1.8.0 (2025-04-04)
 Changes in this release:
 - Update and apply improved linting configuration
