@@ -222,6 +222,7 @@
     },
     "dependencies": {
         "async-mutex": "^0.5.0",
+        "fs-extra": "^11.3.0",
         "get-port": "^5.1.1",
         "log-symbols": "^7.0.0",
         "lru-cache": "^11.1.0",
@@ -233,12 +234,17 @@
         "ms-python.python"
     ],
     "scripts": {
+        "clean": "rimraf out/",
         "vscode:prepublish": "npm run compile",
-        "compile": "rimraf out && tsc -p ./",
+        "compile": "npm run clean && tsc -p ./ && webpack",
         "lint": "eslint --max-warnings 0",
-        "watch": "rimraf out && tsc -watch -p ./",
-        "pretest": "npm run compile",
-        "test": "node ./out/test/runTest.js"
+        "watch": "npm run clean && tsc -w -p ./",
+        "pretest": "tsc -p ./",
+        "pretest:vsix": "tsc -p ./",
+        "package": "npm run clean && webpack --mode production --devtool source-map --config ./webpack.config.js",
+        "test": "node ./out/test/runTest.js",
+        "test:vsix": "npm run pretest:vsix && npm run test --vsix",
+        "vsce-package": "vsce package"
     },
     "devDependencies": {
         "@types/fs-extra": "^11.0.4",
@@ -254,13 +260,17 @@
         "@vscode/vsce": "^3.3.2",
         "eslint": "^9.24.0",
         "eslint-config-google": "^0.14.0",
-        "fs-extra": "^11.3.0",
         "glob": "^11.0.1",
         "mocha": "^11.1.0",
         "rimraf": "^6.0.1",
         "semver": "^7.7.1",
         "sinon": "^20.0.0",
-        "typescript": "^5.8.3"
+        "ts-loader": "^9.5.2",
+        "typescript": "^5.8.3",
+        "umd-compat-loader": "^2.1.2",
+        "vscode-languageserver-types": "^3.17.3",
+        "webpack": "^5.99.5",
+        "webpack-cli": "^6.0.1"
     },
-    "main": "./out/extension"
+    "main": "./out/extension.js"
 }

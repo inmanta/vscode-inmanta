@@ -9,6 +9,20 @@ async function main() {
 	try {
 		console.info("=================================== TEST SUITE STARTED =============================================");
 
+		// Parse command line arguments
+		const args = process.argv.slice(2);
+		const useVsix = args.includes('--vsix');
+		const vsixPath = args[args.indexOf('--vsix') + 1];
+
+		if (useVsix && !vsixPath) {
+			console.error('Please provide the path to the VSIX file when using --vsix flag');
+			process.exit(1);
+		}
+		if (useVsix && !fs.existsSync(vsixPath)) {
+			console.error(`VSIX file not found at: ${vsixPath}`);
+			process.exit(1);
+		}
+
 		// The folder containing the Extension Manifest package.json
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../');
 
@@ -45,6 +59,23 @@ async function main() {
 			}
 		});
 
+		if (useVsix) {
+			// Install the VSIX file
+			console.info(`Installing VSIX file from: ${vsixPath}`);
+			cp.spawnSync(cliPath, [
+				'--install-extension',
+				vsixPath,
+				'--force'
+			], {
+				encoding: 'utf-8',
+				stdio: 'inherit',
+				env: {
+					...process.env,
+					VSCODE_EXTENSIONS: userExtensionsDir
+				}
+			});
+		}
+
 		// Add the extensions directory to the environment
 		const extensionTestsEnv = {
 			HOME: tmpHomeDir,
@@ -54,13 +85,16 @@ async function main() {
 
 		await runTests({
 			vscodeExecutablePath,
-			extensionDevelopmentPath: extensionDevelopmentPath,
+			extensionDevelopmentPath: useVsix ? undefined : extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './installExtension/index'),
 			launchArgs: [
 				path.resolve(__dirname, '../../src/test/installExtension/workspace'),
 				"--extensions-dir",
 				userExtensionsDir,
-				"--disable-gpu"
+				"--disable-gpu",
+				"--disable-telemetry",
+				"--enable-proposed-api",
+				"ms-python.python"
 			],
 			extensionTestsEnv,
 			reuseMachineInstall: true,
