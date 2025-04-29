@@ -253,7 +253,7 @@
         "@types/semver": "^7.7.0",
         "@types/vscode": "^1.97.2",
         "@vscode/python-extension": "^1.0.5",
-        "@typescript-eslint/eslint-plugin": "^8.31.0",
+        "@typescript-eslint/eslint-plugin": "^8.31.1",
         "@typescript-eslint/parser": "^8.31.1",
         "@vscode/test-cli": "^0.0.10",
         "@vscode/test-electron": "^2.5.2",
