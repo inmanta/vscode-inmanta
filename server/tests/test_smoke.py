@@ -106,7 +106,7 @@ class JsonRPC(object):
 
 
 @pytest.fixture
-async def server(event_loop) -> AsyncIterator[JsonRpcServer]:
+async def server() -> AsyncIterator[JsonRpcServer]:
     server = JsonRpcServer(InmantaLSHandler)
     server.listen(6352)
     yield server
