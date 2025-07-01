@@ -25,7 +25,6 @@ junit-*
 !**/.vscode/tasks.json
 **/.vscode/settings.json
 *.vsix
-requirements.txt
 
 .venv*
 venv*
