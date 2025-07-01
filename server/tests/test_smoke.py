@@ -33,7 +33,6 @@ from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import CORE_VERSION, InmantaLSHandler
 from packaging import version
-from pkg_resources import Requirement, parse_requirements
 
 
 class JsonRPC(object):
