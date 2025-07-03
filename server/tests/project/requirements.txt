@@ -1,1 +1,2 @@
 inmanta-module-std
+inmanta-module-std<5.3; python_version < '3.12'  # compatibility with inmanta-core @ iso7
