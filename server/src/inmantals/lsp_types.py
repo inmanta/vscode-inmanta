@@ -16,25 +16,19 @@ limitations under the License.
 Contact: code@inmanta.com
 """
 
-import pkg_resources
-from packaging import version
-from pydantic import FileUrl
-
-PYDANTIC_V2_INSTALLED: bool = version.Version(pkg_resources.get_distribution("pydantic").version) >= version.Version(
-    "2.0.0.dev"
-)
-if PYDANTIC_V2_INSTALLED:
-    from pydantic import ConfigDict
-    from pydantic.alias_generators import to_camel
-
 """
     This module contains types as specified in the
     `LSP spec 3.15 <https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/>`__
 """
+
+import pydantic
+import pydantic.alias_generators
+from pydantic import BaseModel
+
 import re
 from enum import Enum
 from functools import partial
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, ClassVar, Dict, List, Optional, Union
 
 from inmanta.data.model import BaseModel
 
@@ -44,24 +38,17 @@ class LspModel(BaseModel):
     Base model for the LSP spec.
     """
 
-    if PYDANTIC_V2_INSTALLED:
-        model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
-    else:
-
-        class Config:
-            alias_generator = partial(re.sub, r"_([a-z])", lambda match: match.group(1).upper())
-            allow_population_by_field_name = True
+    model_config: ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(
+        populate_by_name=True, alias_generator=pydantic.alias_generators.to_camel
+    )
 
     def dict(self, *args: object, **kwargs: Any) -> Dict[str, object]:
-        extended_kwargs: Dict[str, Any] = {
-            "by_alias": True,
-            "exclude_none": True,
+        return super().model_dump(
+            *args,
+            by_alias=True,
+            exclude_none=True,
             **kwargs,
-        }
-        if PYDANTIC_V2_INSTALLED:
-            return super().model_dump(*args, **extended_kwargs)
-        else:
-            return super().dict(*args, **extended_kwargs)
+        )
 
 
 # Data types
@@ -210,5 +197,5 @@ class WorkspaceFolder(LspModel):
     Folder living inside a vscode workspace.
     """
 
-    uri: FileUrl
+    uri: pydantic.FileUrl
     name: str
