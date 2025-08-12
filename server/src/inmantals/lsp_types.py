@@ -21,13 +21,12 @@ Contact: code@inmanta.com
     `LSP spec 3.15 <https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/>`__
 """
 
+import enum
 import pydantic
 import pydantic.alias_generators
-from pydantic import BaseModel
-
 import re
-from enum import Enum
 from functools import partial
+from pydantic import BaseModel
 from typing import Any, ClassVar, Dict, List, Optional, Union
 
 from inmanta.data.model import BaseModel
@@ -81,14 +80,14 @@ class Location(LspModel):
     range: Range
 
 
-class DiagnosticSeverity(Enum):
+class DiagnosticSeverity(enum.IntEnum):
     Error: int = 1
     Warning: int = 2
     Information: int = 3
     Hint: int = 4
 
 
-class MessageType(Enum):
+class MessageType(enum.IntEnum):
     """
     Message type.
     """
@@ -109,7 +108,7 @@ class Diagnostic(LspModel):
     message: str
 
 
-class SymbolKind(Enum):
+class SymbolKind(enum.IntEnum):
     # supported by default
     File: int = 1
     Module: int = 2
