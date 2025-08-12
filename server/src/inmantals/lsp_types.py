@@ -22,14 +22,11 @@ Contact: code@inmanta.com
 """
 
 import enum
-import pydantic
-import pydantic.alias_generators
-import re
-from functools import partial
-from pydantic import BaseModel
 from typing import Any, ClassVar, Dict, List, Optional, Union
 
-from inmanta.data.model import BaseModel
+import pydantic
+import pydantic.alias_generators
+from pydantic import BaseModel
 
 
 class LspModel(BaseModel):
