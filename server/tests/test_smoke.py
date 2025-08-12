@@ -337,33 +337,6 @@ async def test_working_on_v2_modules(client, caplog):
     caplog.clear()
 
 
-@pytest.mark.skipif(
-    lsp_types.PYDANTIC_V2_INSTALLED,
-    reason="Only run when pydantic v1 is supported",
-)
-def test_lsp_type_serialization_pydantic_v1() -> None:
-    """
-    LSP spec names are camel case while Python conventions are to use snake case.
-    """
-
-    class MyLspType(lsp_types.LspModel):
-        snake_case_name: int
-        optional: Optional[int]
-
-    spec_compatible: Dict = {"snakeCaseName": 0}
-
-    v1 = MyLspType(snake_case_name=0)
-    v2 = MyLspType(snakeCaseName=0)
-    v3 = MyLspType.parse_obj(spec_compatible)
-
-    for v in [v1, v2, v3]:
-        assert v.dict() == spec_compatible
-
-
-@pytest.mark.skipif(
-    not lsp_types.PYDANTIC_V2_INSTALLED,
-    reason="Only run when pydantic v2 is supported",
-)
 def test_lsp_type_serialization_pydantic_v2() -> None:
     """
     LSP spec names are camel case while Python conventions are to use snake case.
