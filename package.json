@@ -269,7 +269,7 @@
         "typescript": "^5.9.2",
         "umd-compat-loader": "^2.1.2",
         "vscode-languageserver-types": "^3.17.3",
-        "webpack": "^5.101.1",
+        "webpack": "^5.101.2",
         "webpack-cli": "^6.0.1"
     },
     "main": "./out/extension.js"
