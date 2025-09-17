@@ -18,6 +18,7 @@ Contact: code@inmanta.com
 
 import asyncio
 import contextlib
+import importlib
 import json
 import logging
 import os
@@ -34,7 +35,6 @@ from urllib.parse import unquote, urlparse
 from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
-import importlib
 import yaml
 from inmanta import compiler, env, module, resources
 from inmanta.agent import handler
@@ -51,7 +51,6 @@ from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotF
 from intervaltree.interval import Interval
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
-
 
 CORE_VERSION: version.Version = version.Version(importlib.metadata.version("inmanta-core"))
 """
