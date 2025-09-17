@@ -34,7 +34,7 @@ from urllib.parse import unquote, urlparse
 from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
-import pkg_resources
+import importlib
 import yaml
 from inmanta import compiler, env, module, resources
 from inmanta.agent import handler
@@ -52,7 +52,8 @@ from intervaltree.interval import Interval
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
 
-CORE_VERSION: version.Version = version.Version(pkg_resources.get_distribution("inmanta-core").version)
+
+CORE_VERSION: version.Version = version.Version(importlib.metadata.version("inmanta-core"))
 """
 Version of the inmanta-core package.
 """
