@@ -1,5 +1,6 @@
 # v 1.8.0 (?)
 Changes in this release:
+- Drop usage of deprecated pkg_resource package.
 
 # v 1.7.0 (2025-04-04)
 Changes in this release:
