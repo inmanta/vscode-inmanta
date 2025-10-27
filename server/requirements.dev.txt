@@ -1,3 +1,3 @@
 inmanta-dev-dependencies[async]==1.76.0; python_version <= '3.6'
-inmanta-dev-dependencies[async]==2.181.0; python_version > '3.6'
+inmanta-dev-dependencies[async]==2.182.0; python_version > '3.6'
 inmanta-module-std
