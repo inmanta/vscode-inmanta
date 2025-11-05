@@ -261,7 +261,7 @@
         "eslint": "^9.39.1",
         "eslint-config-google": "^0.14.0",
         "glob": "^11.0.3",
-        "mocha": "^11.7.4",
+        "mocha": "^11.7.5",
         "rimraf": "^6.1.0",
         "semver": "^7.7.3",
         "sinon": "^21.0.0",
