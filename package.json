@@ -225,7 +225,7 @@
         "fs-extra": "^11.3.2",
         "get-port": "^5.1.1",
         "log-symbols": "^7.0.1",
-        "lru-cache": "^11.2.2",
+        "lru-cache": "^11.2.4",
         "minimatch": "^10.1.1",
         "uuid": "^13.0.0",
         "vscode-languageclient": "^9.0.1"
