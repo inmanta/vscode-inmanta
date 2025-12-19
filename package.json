@@ -264,7 +264,7 @@
         "mocha": "^11.7.5",
         "rimraf": "^6.1.2",
         "semver": "^7.7.3",
-        "sinon": "^21.0.0",
+        "sinon": "^21.0.1",
         "ts-loader": "^9.5.4",
         "typescript": "^5.9.3",
         "umd-compat-loader": "^2.1.2",
