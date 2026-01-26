@@ -268,7 +268,10 @@ async def test_working_on_v2_modules(client, caplog):
     logging.info(f"VirtualEnv setup completed in {time.time() - part_time:.2f} seconds")
     part_time = time.time()
 
-    assert "inmanta-module-module-v2" not in env.PythonWorkingSet.get_packages_in_working_set()
+    assert (
+        "inmanta-module-module-v2"
+        not in env.PythonWorkingSet.get_packages_in_working_set()
+    )
 
     if CORE_VERSION < version.Version("11.0.0"):
         options = {
@@ -307,7 +310,9 @@ async def test_working_on_v2_modules(client, caplog):
             "workspaceSymbolProvider": {"workDoneProgress": False},
         }
     }
-    logging.info(f"Initialization assert 1 completed in {time.time() - part_time:.2f} seconds")
+    logging.info(
+        f"Initialization assert 1 completed in {time.time() - part_time:.2f} seconds"
+    )
     part_time = time.time()
 
     ret = await client.call("initialized")
@@ -315,10 +320,14 @@ async def test_working_on_v2_modules(client, caplog):
     logging.info(f"Initialization 2 completed in {time.time() - part_time:.2f} seconds")
     part_time = time.time()
     result = await client.assert_one(ret)
-    logging.info(f"Initialization assert 2 completed in {time.time() - part_time:.2f} seconds")
+    logging.info(
+        f"Initialization assert 2 completed in {time.time() - part_time:.2f} seconds"
+    )
     part_time = time.time()
 
-    assert "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
+    assert (
+        "inmanta-module-module-v2" in env.PythonWorkingSet.get_packages_in_working_set()
+    )
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
     assert "Anchormap took" in caplog.text
 
@@ -366,10 +375,13 @@ async def test_diagnostics(client: JsonRPC) -> None:
 
     notification: Dict = json.loads(await client.read_one())
     assert notification["method"] == "textDocument/publishDiagnostics"
-    diagnostics: lsp_types.PublishDiagnosticsParams = lsp_types.PublishDiagnosticsParams(**notification["params"])
+    diagnostics: lsp_types.PublishDiagnosticsParams = (
+        lsp_types.PublishDiagnosticsParams(**notification["params"])
+    )
 
     assert diagnostics == lsp_types.PublishDiagnosticsParams(
-        uri="file://%s" % os.path.join(os.path.dirname(__file__), project_name, "main.cf"),
+        uri="file://%s"
+        % os.path.join(os.path.dirname(__file__), project_name, "main.cf"),
         diagnostics=[
             lsp_types.Diagnostic(
                 range=lsp_types.Range(
@@ -398,13 +410,21 @@ async def test_symbol_provider(client: JsonRPC) -> None:
     ret = await client.call("workspace/symbol", query="symbol")
     result = await client.assert_one(ret)
     assert isinstance(result, list)
-    symbol_info: List[lsp_types.SymbolInformation] = [lsp_types.SymbolInformation.parse_obj(symbol) for symbol in result]
+    symbol_info: List[lsp_types.SymbolInformation] = [
+        lsp_types.SymbolInformation.parse_obj(symbol) for symbol in result
+    ]
 
-    project_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "project"))
+    project_dir: str = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "project")
+    )
     uri_main: str = "file://%s" % os.path.join(project_dir, "main.cf")
     testmodule_dir: str = os.path.join(project_dir, "libs", "testmodule")
-    uri_testmodule_model: str = "file://%s" % os.path.join(testmodule_dir, "model", "_init.cf")
-    uri_testmodule_plugins: str = "file://%s" % os.path.join(testmodule_dir, "plugins", "__init__.py")
+    uri_testmodule_model: str = "file://%s" % os.path.join(
+        testmodule_dir, "model", "_init.cf"
+    )
+    uri_testmodule_plugins: str = "file://%s" % os.path.join(
+        testmodule_dir, "plugins", "__init__.py"
+    )
 
     assert symbol_info == [
         lsp_types.SymbolInformation(

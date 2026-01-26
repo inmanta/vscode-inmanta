@@ -47,12 +47,18 @@ from inmanta.module import Project
 from inmanta.plugins import Plugin, PluginMeta
 from inmanta.util import groupby
 from inmantals import lsp_types
-from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
+from inmantals.jsonrpc import (
+    InvalidParamsException,
+    JsonRpcHandler,
+    MethodNotFoundException,
+)
 from intervaltree.interval import Interval
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
 
-CORE_VERSION: version.Version = version.Version(importlib.metadata.version("inmanta-core"))
+CORE_VERSION: version.Version = version.Version(
+    importlib.metadata.version("inmanta-core")
+)
 """
 Version of the inmanta-core package.
 """
@@ -63,7 +69,9 @@ Older versions of inmanta-core work with a separate compiler venv and install mo
 Recent versions use the encapsulating environment and require explicit project installation as a safeguard.
 """
 
-SUPPORTS_PROJECT_PIP_INDEX: bool = CORE_VERSION is not None and CORE_VERSION >= version.Version("11.0.0.dev")
+SUPPORTS_PROJECT_PIP_INDEX: bool = (
+    CORE_VERSION is not None and CORE_VERSION >= version.Version("11.0.0.dev")
+)
 
 
 if SUPPORTS_PROJECT_PIP_INDEX:
@@ -194,12 +202,18 @@ class Folder:
             with env_vars(
                 {
                     "PIP_INDEX_URL": urls[0],
-                    "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
+                    "PIP_PRE": (
+                        "0"
+                        if project.install_mode == module.InstallMode.release
+                        else "1"
+                    ),
                     "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
                 }
             ):
                 logger.info("Installing modules from source: %s", mod.name)
-                project.virtualenv.install_from_source([env.LocalPackagePath(mod.path, editable=True)])
+                project.virtualenv.install_from_source(
+                    [env.LocalPackagePath(mod.path, editable=True)]
+                )
 
         project.install_modules()
 
@@ -222,25 +236,41 @@ class Folder:
             module_name: Optional[str] = None
             libs_folder = os.path.join(inmanta_project_dir, "libs")
             if CORE_VERSION < version.Version("5.dev"):
-                v1_metadata_file: str = os.path.join(self.folder_path, module.Module.MODULE_FILE)
+                v1_metadata_file: str = os.path.join(
+                    self.folder_path, module.Module.MODULE_FILE
+                )
 
                 if os.path.exists(v1_metadata_file):
                     mv1 = module.Module(project=None, path=self.folder_path)
                     module_name = mv1.name
-                    os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
+                    os.symlink(
+                        self.folder_path,
+                        os.path.join(libs_folder, module_name),
+                        target_is_directory=True,
+                    )
                     self.kind = module.Module
             else:
-                v2_metadata_file: str = os.path.join(folder_path, module.ModuleV2.MODULE_FILE)
-                v1_metadata_file: str = os.path.join(folder_path, module.ModuleV1.MODULE_FILE)
+                v2_metadata_file: str = os.path.join(
+                    folder_path, module.ModuleV2.MODULE_FILE
+                )
+                v1_metadata_file: str = os.path.join(
+                    folder_path, module.ModuleV1.MODULE_FILE
+                )
 
                 if os.path.exists(unquote(v1_metadata_file)):
                     mv1 = module.ModuleV1(project=None, path=folder_path)
                     module_name = mv1.name
-                    os.symlink(folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
+                    os.symlink(
+                        folder_path,
+                        os.path.join(libs_folder, module_name),
+                        target_is_directory=True,
+                    )
                     self.kind = module.ModuleV1
 
                 elif os.path.exists(unquote(v2_metadata_file)):
-                    mv2 = module.ModuleV2(project=None, path=folder_path, is_editable_install=True)
+                    mv2 = module.ModuleV2(
+                        project=None, path=folder_path, is_editable_install=True
+                    )
                     module_name = mv2.name
                     self.kind = module.ModuleV2
             return module_name
@@ -314,16 +344,22 @@ class Folder:
         compiled_pattern = re.compile(re.escape(pattern))
 
         # Register this temporary project in the InmantaLSHandler so that it gets properly cleaned up on server shutdown.
-        self.handler.register_tmp_project(tmp_project=tmp_dir, module_in_tmp_libs=compiled_pattern)
+        self.handler.register_tmp_project(
+            tmp_project=tmp_dir, module_in_tmp_libs=compiled_pattern
+        )
         return inmanta_project_dir
 
     def install_project(self, attach_cf_cache: bool):
         """
         This method is assumed to be called in an iso6+ context
         """
-        module.Project.set(module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache))
+        module.Project.set(
+            module.Project(self.inmanta_project_dir, attach_cf_cache=attach_cf_cache)
+        )
         env_path = module.Project.get().virtualenv.env_path
-        logger.info("Installing project at %s in env %s.", self.inmanta_project_dir, env_path)
+        logger.info(
+            "Installing project at %s in env %s.", self.inmanta_project_dir, env_path
+        )
         if self.kind == module.ModuleV2:
             # If the open folder is a v2 module we must install it in editable mode in the temporary project using the pip
             # indexes set in the "repos" extension setting for its dependencies.
@@ -333,7 +369,11 @@ class Folder:
             module.Project.get().install_modules()
 
     def __str__(self):
-        return f"Folder opened at {self.folder_path}" + " with a project at " + self.inmanta_project_dir
+        return (
+            f"Folder opened at {self.folder_path}"
+            + " with a project at "
+            + self.inmanta_project_dir
+        )
 
 
 class InmantaLSHandler(JsonRpcHandler):
@@ -373,13 +413,17 @@ class InmantaLSHandler(JsonRpcHandler):
         logger.debug("kwargs=%s", kwargs)
 
         if rootPath:
-            logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
+            logger.warning(
+                "The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter."
+            )
 
         if workspaceFolders is None:
             if rootUri is None:
                 raise InvalidExtensionSetup("No workspace folder or rootUri specified.")
             workspaceFolders = [rootUri]
-            workspace_folder = lsp_types.WorkspaceFolder(uri=rootUri, name=os.path.dirname(urlparse(rootUri).path))
+            workspace_folder = lsp_types.WorkspaceFolder(
+                uri=rootUri, name=os.path.dirname(urlparse(rootUri).path)
+            )
         else:
             workspace_folder = lsp_types.WorkspaceFolder(**workspaceFolders[0])
 
@@ -393,13 +437,19 @@ class InmantaLSHandler(JsonRpcHandler):
 
         if init_options:
             self.compiler_venv_path = init_options.get(
-                "compilerVenv", os.path.join(os.path.abspath(urlparse(str(workspace_folder.uri)).path), ".env-ls-compiler")
+                "compilerVenv",
+                os.path.join(
+                    os.path.abspath(urlparse(str(workspace_folder.uri)).path),
+                    ".env-ls-compiler",
+                ),
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
             # Make sure we leave pip config options that are unset in the Inmanta extension's config (i.e. null values
             # from the settings.json) out of the pipconfig, so the default behaviour from core is followed.
-            self.pipconfig = {k: v for k, v in init_options.get("pip", {}).items() if v is not None}
+            self.pipconfig = {
+                k: v for k, v in init_options.get("pip", {}).items() if v is not None
+            }
 
             logger.debug("self.pipconfig= %s", self.pipconfig)
 
@@ -418,7 +468,9 @@ class InmantaLSHandler(JsonRpcHandler):
                 logging.warning("Client specified unsupported symbol kind %s" % value)
                 return None
 
-        self.supported_symbol_kinds = {symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None}
+        self.supported_symbol_kinds = {
+            symbol for symbol in map(to_symbol_kind, value_set) if symbol is not None
+        }
 
         return {
             "capabilities": {
@@ -454,7 +506,11 @@ class InmantaLSHandler(JsonRpcHandler):
 
         :param path: The path in which the replacement should occur.
         """
-        return re.sub(pattern=self.module_in_tmp_libs, repl=self.root_folder.folder_path, string=path)
+        return re.sub(
+            pattern=self.module_in_tmp_libs,
+            repl=self.root_folder.folder_path,
+            string=path,
+        )
 
     async def compile_and_anchor(self) -> None:
         """
@@ -472,7 +528,12 @@ class InmantaLSHandler(JsonRpcHandler):
 
                 if LEGACY_MODE_COMPILER_VENV:
                     if self.compiler_venv_path:
-                        module.Project.set(module.Project(folder.inmanta_project_dir, venv_path=self.compiler_venv_path))
+                        module.Project.set(
+                            module.Project(
+                                folder.inmanta_project_dir,
+                                venv_path=self.compiler_venv_path,
+                            )
+                        )
                     else:
                         module.Project.set(module.Project(folder.inmanta_project_dir))
                 else:
@@ -482,7 +543,9 @@ class InmantaLSHandler(JsonRpcHandler):
             resources.resource.reset()
             handler.Commander.reset()
             PluginMeta.clear()
-            if hasattr(Exporter, "clear"):  # Remain backwards-compatible with older version of inmanta-core
+            if hasattr(
+                Exporter, "clear"
+            ):  # Remain backwards-compatible with older version of inmanta-core
                 Exporter.clear()
 
             setup_project(self.root_folder)
@@ -490,7 +553,7 @@ class InmantaLSHandler(JsonRpcHandler):
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
 
             compiler_instance: compiler.Compiler = compiler.Compiler()
-            (statements, blocks) = compiler_instance.compile()
+            statements, blocks = compiler_instance.compile()
             scheduler_instance = scheduler.Scheduler()
             # call anchormap_extended if it exists, otherwise call anchormap to stay backward compatible.
             anchormap: Sequence[Tuple[Location, AnchorTarget]] = (
@@ -499,7 +562,9 @@ class InmantaLSHandler(JsonRpcHandler):
                 else [
                     # Make sure everything is an AnchorTarget: this is for backward compatibility
                     (s, AnchorTarget(t)) if isinstance(t, Location) else (s, t)
-                    for s, t in scheduler_instance.anchormap(compiler_instance, statements, blocks)
+                    for s, t in scheduler_instance.anchormap(
+                        compiler_instance, statements, blocks
+                    )
                 ]
             )
             self.types = scheduler_instance.get_types()
@@ -525,8 +590,12 @@ class InmantaLSHandler(JsonRpcHandler):
                 tree = IntervalTree()
                 for f, t in iterator:
                     if isinstance(t.location, Range):
-                        start = self.flatten(t.location.lnr - 1, t.location.start_char - 1)
-                        end = self.flatten(t.location.end_lnr - 1, t.location.end_char - 1)
+                        start = self.flatten(
+                            t.location.lnr - 1, t.location.start_char - 1
+                        )
+                        end = self.flatten(
+                            t.location.end_lnr - 1, t.location.end_char - 1
+                        )
                         if start <= end:
                             tree[start:end] = f
                 return tree
@@ -544,7 +613,9 @@ class InmantaLSHandler(JsonRpcHandler):
             if self.shutdown_requested:
                 return
             # run synchronous part in executor to allow context switching while awaiting
-            await asyncio.get_event_loop().run_in_executor(self.threadpool, sync_compile_and_anchor)
+            await asyncio.get_event_loop().run_in_executor(
+                self.threadpool, sync_compile_and_anchor
+            )
             await self.publish_diagnostics(None)
             logger.info("Compilation succeeded")
         except asyncio.CancelledError:
@@ -615,7 +686,11 @@ class InmantaLSHandler(JsonRpcHandler):
             self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern):
+    def register_tmp_project(
+        self,
+        tmp_project: tempfile.TemporaryDirectory,
+        module_in_tmp_libs: typing.Pattern,
+    ):
         """
         Bookkeeping method to keep track of things related to the currently opened module
 
@@ -649,7 +724,13 @@ class InmantaLSHandler(JsonRpcHandler):
         if match:
             start_pos = match.start(1)
             end_pos = match.end(1)
-            return Range(file=filename, start_lnr=line_number, end_lnr=line_number, start_char=start_pos, end_char=end_pos)
+            return Range(
+                file=filename,
+                start_lnr=line_number,
+                end_lnr=line_number,
+                start_char=start_pos,
+                end_char=end_pos,
+            )
         return None
 
     def convert_location(self, location: Location):
@@ -662,8 +743,14 @@ class InmantaLSHandler(JsonRpcHandler):
             return {
                 "uri": uri,
                 "range": {
-                    "start": {"line": location.lnr - 1, "character": location.start_char - 1},
-                    "end": {"line": location.end_lnr - 1, "character": location.end_char - 1},
+                    "start": {
+                        "line": location.lnr - 1,
+                        "character": location.start_char - 1,
+                    },
+                    "end": {
+                        "line": location.end_lnr - 1,
+                        "character": location.end_char - 1,
+                    },
                 },
             }
 
@@ -701,7 +788,9 @@ class InmantaLSHandler(JsonRpcHandler):
         else:
             return ""
 
-    def get_range_from_position(self, textDocument, position, anchormap) -> Optional[Interval]:
+    def get_range_from_position(
+        self, textDocument, position, anchormap
+    ) -> Optional[Interval]:
         uri = textDocument["uri"]
         url = os.path.realpath(uri.replace("file://", ""))
 
@@ -726,8 +815,12 @@ class InmantaLSHandler(JsonRpcHandler):
 
         return self.convert_location(target.location)
 
-    async def textDocument_references(self, textDocument, position, context):  # noqa: N802, N803  # noqa: N802, N803
-        range = self.get_range_from_position(textDocument, position, self.reverse_anchormap)
+    async def textDocument_references(
+        self, textDocument, position, context
+    ):  # noqa: N802, N803  # noqa: N802, N803
+        range = self.get_range_from_position(
+            textDocument, position, self.reverse_anchormap
+        )
         if not range:
             return {}
 
@@ -739,7 +832,9 @@ class InmantaLSHandler(JsonRpcHandler):
             return {}
 
         data = list(range)[0].data
-        docstring = textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
+        docstring = (
+            textwrap.dedent(data.docstring.strip("\n")) if data.docstring else ""
+        )
         docstring = docstring.replace(" ", "&nbsp;").replace("\n", "\n\n").strip()
         try:
             definition = self.get_definition(data).strip()
@@ -774,14 +869,23 @@ class InmantaLSHandler(JsonRpcHandler):
         ]
 
         def get_symbol_kind(tp: inmanta_type.NamedType) -> lsp_types.SymbolKind:
-            def if_supported(then: lsp_types.SymbolKind, otherwise: lsp_types.SymbolKind) -> lsp_types.SymbolKind:
+            def if_supported(
+                then: lsp_types.SymbolKind, otherwise: lsp_types.SymbolKind
+            ) -> lsp_types.SymbolKind:
                 """
                 Returns `then` iff the client can handle it, otherwise returns `otherwise`.
                 If the client explicitly specifies its supported symbol kinds, it is expected to gracefully handle symbol kinds
                 outside of this set. If it doesn't specify its supported symbol kinds, it must support all symbol kinds up to
                 Array.
                 """
-                return then if (self.supported_symbol_kinds is not None and then in self.supported_symbol_kinds) else otherwise
+                return (
+                    then
+                    if (
+                        self.supported_symbol_kinds is not None
+                        and then in self.supported_symbol_kinds
+                    )
+                    else otherwise
+                )
 
             if isinstance(tp, Plugin):
                 return lsp_types.SymbolKind.Function
@@ -793,7 +897,9 @@ class InmantaLSHandler(JsonRpcHandler):
                 return lsp_types.SymbolKind.Constructor
 
             logger.warning("Unknown type %s, using default symbol kind", tp)
-            return if_supported(lsp_types.SymbolKind.Object, lsp_types.SymbolKind.Variable)
+            return if_supported(
+                lsp_types.SymbolKind.Object, lsp_types.SymbolKind.Variable
+            )
 
         type_symbols: Iterator[lsp_types.SymbolInformation] = (
             lsp_types.SymbolInformation(
@@ -848,9 +954,13 @@ class InmantaLSHandler(JsonRpcHandler):
         """
         Show a pop up message to the user, type gives the level of the message, message is the content
         """
-        await self.send_notification("window/showMessage", {"type": type.value, "message": message})
+        await self.send_notification(
+            "window/showMessage", {"type": type.value, "message": message}
+        )
 
-    async def publish_diagnostics(self, params: Optional[lsp_types.PublishDiagnosticsParams]) -> None:
+    async def publish_diagnostics(
+        self, params: Optional[lsp_types.PublishDiagnosticsParams]
+    ) -> None:
         """
         Publishes supplied diagnostics and caches it. If params is None, clears previously published diagnostics.
         """
@@ -859,8 +969,12 @@ class InmantaLSHandler(JsonRpcHandler):
             if params is None:
                 if self.diagnostics_cache is None:
                     return
-                publish_params = lsp_types.PublishDiagnosticsParams(uri=self.diagnostics_cache.uri, diagnostics=[])
+                publish_params = lsp_types.PublishDiagnosticsParams(
+                    uri=self.diagnostics_cache.uri, diagnostics=[]
+                )
             else:
                 publish_params = params
-            await self.send_notification("textDocument/publishDiagnostics", publish_params.dict())
+            await self.send_notification(
+                "textDocument/publishDiagnostics", publish_params.dict()
+            )
             self.diagnostics_cache = params
