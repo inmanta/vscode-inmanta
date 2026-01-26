@@ -32,8 +32,6 @@ from itertools import chain
 from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type
 from urllib.parse import unquote, urlparse
 
-from tornado.iostream import BaseIOStream
-
 import inmanta.ast.type as inmanta_type
 import yaml
 from inmanta import compiler, env, module, resources
@@ -47,14 +45,11 @@ from inmanta.module import Project
 from inmanta.plugins import Plugin, PluginMeta
 from inmanta.util import groupby
 from inmantals import lsp_types
-from inmantals.jsonrpc import (
-    InvalidParamsException,
-    JsonRpcHandler,
-    MethodNotFoundException,
-)
+from inmantals.jsonrpc import InvalidParamsException, JsonRpcHandler, MethodNotFoundException
 from intervaltree.interval import Interval
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
+from tornado.iostream import BaseIOStream
 
 CORE_VERSION: version.Version = version.Version(
     importlib.metadata.version("inmanta-core")
