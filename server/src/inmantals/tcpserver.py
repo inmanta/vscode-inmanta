@@ -19,9 +19,10 @@ Contact: code@inmanta.com
 import os
 import sys
 
+from tornado.ioloop import IOLoop
+
 from inmantals.jsonrpc import JsonRpcServer
 from inmantals.server import InmantaLSHandler
-from tornado.ioloop import IOLoop
 
 
 def main():
