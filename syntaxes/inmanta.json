@@ -244,7 +244,7 @@
         },
         {
           "name": "keyword.operator.new.inmanta",
-          "match": "\\b(in|or|and|is defined)\\b"
+          "match": "\\b(in|or|and|is defined|not)\\b"
         }
       ]
     },
