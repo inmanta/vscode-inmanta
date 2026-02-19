@@ -1,2 +1,2 @@
 inmanta-core
-intervaltree==3.1.0
+intervaltree==3.2.1

@@ -18,6 +18,7 @@ Contact: code@inmanta.com
 
 import asyncio
 import contextlib
+import importlib
 import json
 import logging
 import os
@@ -34,7 +35,6 @@ from urllib.parse import unquote, urlparse
 from tornado.iostream import BaseIOStream
 
 import inmanta.ast.type as inmanta_type
-import pkg_resources
 import yaml
 from inmanta import compiler, env, module, resources
 from inmanta.agent import handler
@@ -52,7 +52,7 @@ from intervaltree.interval import Interval
 from intervaltree.intervaltree import IntervalTree
 from packaging import version
 
-CORE_VERSION: version.Version = version.Version(pkg_resources.get_distribution("inmanta-core").version)
+CORE_VERSION: version.Version = version.Version(importlib.metadata.version("inmanta-core"))
 """
 Version of the inmanta-core package.
 """
@@ -194,7 +194,7 @@ class Folder:
             with env_vars(
                 {
                     "PIP_INDEX_URL": urls[0],
-                    "PIP_PRE": "0" if project.install_mode == module.InstallMode.release else "1",
+                    "PIP_PRE": ("0" if project.install_mode == module.InstallMode.release else "1"),
                     "PIP_EXTRA_INDEX_URL": " ".join(urls[1:]),
                 }
             ):
@@ -227,7 +227,11 @@ class Folder:
                 if os.path.exists(v1_metadata_file):
                     mv1 = module.Module(project=None, path=self.folder_path)
                     module_name = mv1.name
-                    os.symlink(self.folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
+                    os.symlink(
+                        self.folder_path,
+                        os.path.join(libs_folder, module_name),
+                        target_is_directory=True,
+                    )
                     self.kind = module.Module
             else:
                 v2_metadata_file: str = os.path.join(folder_path, module.ModuleV2.MODULE_FILE)
@@ -236,7 +240,11 @@ class Folder:
                 if os.path.exists(unquote(v1_metadata_file)):
                     mv1 = module.ModuleV1(project=None, path=folder_path)
                     module_name = mv1.name
-                    os.symlink(folder_path, os.path.join(libs_folder, module_name), target_is_directory=True)
+                    os.symlink(
+                        folder_path,
+                        os.path.join(libs_folder, module_name),
+                        target_is_directory=True,
+                    )
                     self.kind = module.ModuleV1
 
                 elif os.path.exists(unquote(v2_metadata_file)):
@@ -393,7 +401,11 @@ class InmantaLSHandler(JsonRpcHandler):
 
         if init_options:
             self.compiler_venv_path = init_options.get(
-                "compilerVenv", os.path.join(os.path.abspath(urlparse(str(workspace_folder.uri)).path), ".env-ls-compiler")
+                "compilerVenv",
+                os.path.join(
+                    os.path.abspath(urlparse(str(workspace_folder.uri)).path),
+                    ".env-ls-compiler",
+                ),
             )
             self.repos = init_options.get("repos", None)
             logger.debug("self.repos= %s", self.repos)
@@ -454,7 +466,11 @@ class InmantaLSHandler(JsonRpcHandler):
 
         :param path: The path in which the replacement should occur.
         """
-        return re.sub(pattern=self.module_in_tmp_libs, repl=self.root_folder.folder_path, string=path)
+        return re.sub(
+            pattern=self.module_in_tmp_libs,
+            repl=self.root_folder.folder_path,
+            string=path,
+        )
 
     async def compile_and_anchor(self) -> None:
         """
@@ -472,7 +488,12 @@ class InmantaLSHandler(JsonRpcHandler):
 
                 if LEGACY_MODE_COMPILER_VENV:
                     if self.compiler_venv_path:
-                        module.Project.set(module.Project(folder.inmanta_project_dir, venv_path=self.compiler_venv_path))
+                        module.Project.set(
+                            module.Project(
+                                folder.inmanta_project_dir,
+                                venv_path=self.compiler_venv_path,
+                            )
+                        )
                     else:
                         module.Project.set(module.Project(folder.inmanta_project_dir))
                 else:
@@ -490,7 +511,7 @@ class InmantaLSHandler(JsonRpcHandler):
             # can't call compiler.anchormap and compiler.get_types_and_scopes directly because of inmanta/inmanta#2471
 
             compiler_instance: compiler.Compiler = compiler.Compiler()
-            (statements, blocks) = compiler_instance.compile()
+            statements, blocks = compiler_instance.compile()
             scheduler_instance = scheduler.Scheduler()
             # call anchormap_extended if it exists, otherwise call anchormap to stay backward compatible.
             anchormap: Sequence[Tuple[Location, AnchorTarget]] = (
@@ -615,7 +636,11 @@ class InmantaLSHandler(JsonRpcHandler):
             self.threadpool.shutdown(cancel_futures=True)
         self.shutdown_requested = True
 
-    def register_tmp_project(self, tmp_project: tempfile.TemporaryDirectory, module_in_tmp_libs: typing.Pattern):
+    def register_tmp_project(
+        self,
+        tmp_project: tempfile.TemporaryDirectory,
+        module_in_tmp_libs: typing.Pattern,
+    ):
         """
         Bookkeeping method to keep track of things related to the currently opened module
 
@@ -649,7 +674,13 @@ class InmantaLSHandler(JsonRpcHandler):
         if match:
             start_pos = match.start(1)
             end_pos = match.end(1)
-            return Range(file=filename, start_lnr=line_number, end_lnr=line_number, start_char=start_pos, end_char=end_pos)
+            return Range(
+                file=filename,
+                start_lnr=line_number,
+                end_lnr=line_number,
+                start_char=start_pos,
+                end_char=end_pos,
+            )
         return None
 
     def convert_location(self, location: Location):
@@ -662,8 +693,14 @@ class InmantaLSHandler(JsonRpcHandler):
             return {
                 "uri": uri,
                 "range": {
-                    "start": {"line": location.lnr - 1, "character": location.start_char - 1},
-                    "end": {"line": location.end_lnr - 1, "character": location.end_char - 1},
+                    "start": {
+                        "line": location.lnr - 1,
+                        "character": location.start_char - 1,
+                    },
+                    "end": {
+                        "line": location.end_lnr - 1,
+                        "character": location.end_char - 1,
+                    },
                 },
             }
 
