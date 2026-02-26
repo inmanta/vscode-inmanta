@@ -1,1 +1,1 @@
-inmantals~=1.7.0
+inmantals~=1.8.0
