@@ -1,4 +1,7 @@
-# v 1.10.0 (?)
+# v 1.11.0 (?)
+Changes in this release:
+
+# v 1.10.0 (2026-02-19)
 Changes in this release:
 - The 'not' operator now has proper syntax highlighting.
 
