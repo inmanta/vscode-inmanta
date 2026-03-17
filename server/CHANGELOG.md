@@ -1,5 +1,6 @@
 # v 1.9.0 (?)
 Changes in this release:
+- Remove deprecation warning rootPath parameter.
 
 # v 1.8.0 (2026-02-19)
 Changes in this release:
