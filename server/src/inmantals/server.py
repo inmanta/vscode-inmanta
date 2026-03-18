@@ -374,14 +374,14 @@ class InmantaLSHandler(JsonRpcHandler):
         rootUri=None,
         **kwargs,
     ):  # noqa: N803
+        """
+        :param rootPath: This argument is deprecated and is no longer used.
+                         It is defined for backwards compatibility reasons only.
+        """
         logger.debug("Init: %s", json.dumps(kwargs))
         logger.debug("workspaceFolders=%s", workspaceFolders)
-        logger.debug("rootPath=%s", rootPath)
         logger.debug("rootUri=%s", rootUri)
         logger.debug("kwargs=%s", kwargs)
-
-        if rootPath:
-            logger.warning("The rootPath parameter has been deprecated in favour of the 'workspaceFolders' parameter.")
 
         if workspaceFolders is None:
             if rootUri is None:
