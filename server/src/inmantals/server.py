@@ -575,7 +575,9 @@ class InmantaLSHandler(JsonRpcHandler):
             logger.exception(str(e))
             await self.send_show_message(
                 lsp_types.MessageType.Warning,
-                "Installation failed for some python packages. Make sure the correct pip index is set in the [inmanta.pip.index_url](command:workbench.action.openSettings?%5B%22%40id%3Ainmanta.pip.index_url%22%5D) option and reload the window (Ctrl + R).",
+                "Installation failed for some python packages. Make sure the correct pip index is set in the "
+                "[inmanta.pip.index_url](command:workbench.action.openSettings?%5B%22%40id%3Ainmanta.pip.index_url%22%5D) "
+                "option and reload the window (Ctrl + R).",
             )
         except CompilerException as e:
             params: Optional[lsp_types.PublishDiagnosticsParams]
