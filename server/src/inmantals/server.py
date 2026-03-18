@@ -597,7 +597,7 @@ class InmantaLSHandler(JsonRpcHandler):
                 )
             await self.publish_diagnostics(params)
             await self.handle_module_loading_exception(e)
-            logger.exception("Compilation failed:\n%s", str(e))
+            logger.exception("Compilation failed:")
         except InvalidExtensionSetup as e:
             await self.handle_invalid_extension_setup(e)
             logger.exception(str(e))

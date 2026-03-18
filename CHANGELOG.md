@@ -1,6 +1,6 @@
 # v 1.11.0 (?)
 Changes in this release:
-- Minor improvements to the inmanta extension setup walkthrough.
+- Update Walkthrough/setup assistant to be in line with v2 modules install flow. (#2291)
 
 # v 1.10.0 (2026-02-19)
 Changes in this release:
