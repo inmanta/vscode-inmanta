@@ -1,5 +1,6 @@
 # v 1.11.0 (?)
 Changes in this release:
+- Minor improvements to the inmanta extension setup walkthrough.
 
 # v 1.10.0 (2026-02-19)
 Changes in this release:
