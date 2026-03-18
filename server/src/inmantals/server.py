@@ -595,14 +595,14 @@ class InmantaLSHandler(JsonRpcHandler):
                         )
                     ],
                 )
+            logger.exception("Compilation failed:")
             await self.publish_diagnostics(params)
             await self.handle_module_loading_exception(e)
-            logger.exception("Compilation failed:")
         except InvalidExtensionSetup as e:
+            logger.exception("Invalid extension setup:")
             await self.handle_invalid_extension_setup(e)
-            logger.exception(str(e))
-        except Exception as e:
-            logger.exception(str(e))
+        except Exception:
+            logger.exception("An unexpected error during compilation and anchor map computation:")
             await self.publish_diagnostics(None)
 
     async def handle_invalid_extension_setup(self, e: InvalidExtensionSetup):
