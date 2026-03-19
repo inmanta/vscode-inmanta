@@ -70,7 +70,7 @@
                 "inmanta.pip.index_url": {
                     "type": "string",
                     "default": null,
-                    "description": "Pip index to use for this project. Will only be used by language server if inmanta-core>=11.0.0",
+                    "description": "Pip index to use to install inmanta modules and python dependencies. Will only be used by language server if inmanta-core>=11.0.0",
                     "scope": "resource"
                 },
                 "inmanta.pip.extra_index_url": {
@@ -193,9 +193,9 @@
                         }
                     },
                     {
-                        "id": "inmanta.setModuleDependencyLocations",
-                        "title": "Setup module dependency locations",
-                        "description": "Edit setting.\n[Go to setting](command:workbench.action.openSettings?%5B%22inmanta%3A%20Repos%22%5D)",
+                        "id": "inmanta.setPipIndex",
+                        "title": "Setup inmanta.pip.index_url",
+                        "description": "Edit the setting and reload the window (Ctrl + R).\n[Go to setting](command:workbench.action.openSettings?%5B%22%40id%3Ainmanta.pip.index_url%22%5D)",
                         "media": {
                             "markdown": "media/markdown_set_module_dependency.md"
                         }

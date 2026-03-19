@@ -571,6 +571,14 @@ class InmantaLSHandler(JsonRpcHandler):
         except asyncio.CancelledError:
             # Language server is shutting down. Tasks in threadpool were cancelled.
             pass
+        except env.PackageNotFound as e:
+            logger.exception(str(e))
+            await self.send_show_message(
+                lsp_types.MessageType.Warning,
+                "Installation failed for some python packages. Make sure the correct pip index is set in the "
+                "[inmanta.pip.index_url](command:workbench.action.openSettings?%5B%22%40id%3Ainmanta.pip.index_url%22%5D) "
+                "option and reload the window (Ctrl + R).",
+            )
         except CompilerException as e:
             params: Optional[lsp_types.PublishDiagnosticsParams]
             if e.location is None:
@@ -587,17 +595,15 @@ class InmantaLSHandler(JsonRpcHandler):
                         )
                     ],
                 )
+            logger.exception("Compilation failed:")
             await self.publish_diagnostics(params)
             await self.handle_module_loading_exception(e)
-            logger.exception("Compilation failed")
         except InvalidExtensionSetup as e:
+            logger.exception("Invalid extension setup:")
             await self.handle_invalid_extension_setup(e)
-            logger.error(e)
-        except Exception as e:
-            logger.debug(e)
-
+        except Exception:
+            logger.exception("An unexpected error during compilation and anchor map computation:")
             await self.publish_diagnostics(None)
-            logger.exception("Compilation failed")
 
     async def handle_invalid_extension_setup(self, e: InvalidExtensionSetup):
         await self.send_show_message(

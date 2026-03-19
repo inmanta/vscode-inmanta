@@ -22,7 +22,7 @@ export const languageServers: Map<string, LanguageServer> = new Map();
  * Activates the extension.
  * This function is called when the extension is activated by VS Code.
  * It sets up the language servers, command handlers, and event listeners.
- * 
+ *
  * @param {ExtensionContext} context - The context in which the extension is activated
  * @throws Will throw an error if the Python extension is not found
  */
@@ -93,11 +93,11 @@ export async function activate(context: ExtensionContext) {
 
     /**
      * Handles the opening of a text document.
-     * 
+     *
      * If the document is a .cf file, a new language server is started for the folder that contains the document.
      * If a language server already exists for the folder, it is reused.
      * If the folder doesn't have a language server yet, a new one is started.
-     * 
+     *
      * @param {TextDocument} document - The text document that was opened.
      * @returns A promise that resolves when the text document is opened.
      */
@@ -217,7 +217,7 @@ export async function activate(context: ExtensionContext) {
  * Deactivates the extension.
  * This function is called when VS Code is shutting down or the extension is being deactivated.
  * It ensures all language servers are properly stopped.
- * 
+ *
  * @returns Promise that resolves when all language servers have been stopped
  */
 export async function deactivate(): Promise<void> {
@@ -230,7 +230,7 @@ export async function deactivate(): Promise<void> {
 
 /**
  * Gets the map of workspace folder URIs to their language server instances.
- * 
+ *
  * @returns Map where keys are workspace folder URIs and values are the corresponding LanguageServer instances
  */
 export function getLanguageMap(): Map<string, LanguageServer> {
@@ -240,7 +240,7 @@ export function getLanguageMap(): Map<string, LanguageServer> {
 /**
  * Gets the most recently active workspace folder.
  * This is used to determine which language server should handle commands when multiple are available.
- * 
+ *
  * @returns The workspace folder that was most recently active, or undefined if none
  */
 export function getLastActiveFolder(): WorkspaceFolder {

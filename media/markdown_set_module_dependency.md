@@ -1,23 +1,11 @@
 ### Set module dependency locations
 
-
-Indicate the Inmanta extension where to look for dependency modules when working on an individual module.
-
-When working on a project, this option is ignored and the Inmanta extension will look for modules in the repositories and pip indexes defined in the repo section of the [project.yaml](https://docs.inmanta.com/community/latest/reference/projectyml.html#project-yml) file.
-
-These module dependencies follow this scheme:
-
-```json
-    {"type": "git", "url": "https://github.com/inmanta/"}
-```
-
-The type property can have two values:
-# Type "git"
-
-The url property holds the URI of the parent location for a v1 module. (Organization url for github, Group url for gitlab, parent folder for a local repository...)
+When working on an individual module, set the "inmanta.pip.index_url" config option to tell the extension which
+pip index to use to install dependencies on v2 modules.
 
 
-# Type "package"
+It is possible to configure extra indexes via the "inmanta.pip.extra_index_url" option, but be mindful of potential security risks when using more than one index. Please refer to the [documentation](https://docs.inmanta.com/community/latest/reference/projectyml.html#inmanta.module.ProjectPipConfig) for more information.
+
+When working on a project, this option is ignored and the Inmanta extension will look for modules in the pip index set in the `pip.index_url` [section](https://docs.inmanta.com/community/latest/reference/projectyml.html#inmanta.module.ProjectPipConfig) of the project.yaml file.
 
 
-The url property holds the pip index url in which to look for v2 modules. ⚠️Be mindful of potential security risks when using more than one index. Please refer to the [documentation](https://docs.inmanta.com/community/latest/reference/projectyml.html#inmanta.module.ProjectMetadata) for more information.
