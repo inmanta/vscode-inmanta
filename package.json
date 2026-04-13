@@ -265,7 +265,7 @@
         "semver": "^7.7.4",
         "sinon": "^21.1.2",
         "ts-loader": "^9.5.7",
-        "typescript": "^5.9.3",
+        "typescript": "^6.0.2",
         "umd-compat-loader": "^2.1.2",
         "vscode-languageserver-types": "^3.17.3",
         "webpack": "^5.106.1",
