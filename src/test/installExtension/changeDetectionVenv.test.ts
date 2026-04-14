@@ -90,7 +90,7 @@ suite('Language Server Venv Change Detection', () => {
             testOutput.appendLine('=================================== ENVIRONMENT CHECK COMPLETED ============================================');
         } catch (error) {
             testOutput.appendLine(`Environment check error: ${error}`);
-            testOutput.appendLine(`Stack trace: ${error.stack}`);
+            testOutput.appendLine(`Stack trace: ${(error as Error).stack}`);
             // Don't throw here, just log the error
         }
     });

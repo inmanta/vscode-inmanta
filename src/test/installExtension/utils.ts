@@ -429,7 +429,7 @@ export async function setupTestEnvironment(testOutput: OutputChannel): Promise<s
         return pythonPath;
     } catch (error) {
         testOutput.appendLine(`=== SETUP FAILED: ${error} ===`);
-        testOutput.appendLine(`Stack trace: ${error.stack}`);
+        testOutput.appendLine(`Stack trace: ${(error as Error).stack || 'No stack trace available'}`);
         throw error;
     }
 }
