@@ -10,7 +10,7 @@ import { checkIfConfigurationChanged } from './settings';
 import { registerLogger, traceLog } from './logTracer';
 
 let inmantaCommands: InmantaCommands;
-let lastActiveFolder: WorkspaceFolder = undefined;
+let lastActiveFolder: WorkspaceFolder | undefined;
 
 /**
  * Map of workspace folder URIs to their corresponding language servers.
@@ -59,7 +59,7 @@ export async function activate(context: ExtensionContext) {
      * Handles the change of the active text editor.
      * @param {TextEditor} event - The text editor that is currently active.
      */
-    function changeActiveTextEditor(event: TextEditor) {
+    function changeActiveTextEditor(event: TextEditor | undefined) {
         // Any time we select a .cf file from another folder in the workspace we have to override the already registered commands
         // so that they operate on the desired folders, with the correct virtual environment.
         if (event === undefined) {
@@ -88,7 +88,9 @@ export async function activate(context: ExtensionContext) {
         lastActiveFolder = folder;
         const languageServer = languageServers.get(folder.uri.toString());
 
-        inmantaCommands.registerCommands(languageServer);
+        if (languageServer) {
+            inmantaCommands.registerCommands(languageServer);
+        }
     }
 
     /**
@@ -141,7 +143,7 @@ export async function activate(context: ExtensionContext) {
 
             const errorHandler = new LsErrorHandler(folder);
 
-            const languageserver = new LanguageServer(context, newPythonPath, folder, errorHandler);
+            const languageserver = new LanguageServer(context, newPythonPath ?? '', folder, errorHandler);
             traceLog("created LanguageServer");
 
             inmantaCommands.registerCommands(languageserver);
@@ -164,7 +166,7 @@ export async function activate(context: ExtensionContext) {
     workspace.onDidOpenTextDocument(didOpenTextDocument);
     workspace.textDocuments.forEach(didOpenTextDocument);
 
-    window.onDidChangeActiveTextEditor((event: TextEditor) => changeActiveTextEditor(event));
+    window.onDidChangeActiveTextEditor((event) => changeActiveTextEditor(event));
 
     workspace.onDidChangeWorkspaceFolders((event) => {
         traceLog("workspaces changed" + String(event));
@@ -243,6 +245,6 @@ export function getLanguageMap(): Map<string, LanguageServer> {
  *
  * @returns The workspace folder that was most recently active, or undefined if none
  */
-export function getLastActiveFolder(): WorkspaceFolder {
+export function getLastActiveFolder(): WorkspaceFolder | undefined {
     return lastActiveFolder;
 }

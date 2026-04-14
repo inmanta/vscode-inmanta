@@ -85,7 +85,7 @@ async function main() {
 
 		await runTests({
 			vscodeExecutablePath,
-			extensionDevelopmentPath: useVsix ? undefined : extensionDevelopmentPath,
+			extensionDevelopmentPath: useVsix ? "" : extensionDevelopmentPath,
 			extensionTestsPath: path.resolve(__dirname, './installExtension/index'),
 			launchArgs: [
 				path.resolve(__dirname, '../../src/test/installExtension/workspace'),
