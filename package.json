@@ -257,7 +257,7 @@
         "@vscode/python-extension": "^1.0.6",
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.5.2",
-        "@vscode/vsce": "^3.8.0",
+        "@vscode/vsce": "^3.9.0",
         "eslint": "^10.2.0",
         "glob": "^13.0.5",
         "mocha": "^11.7.5",
