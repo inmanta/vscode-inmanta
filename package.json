@@ -269,7 +269,7 @@
         "umd-compat-loader": "^2.1.2",
         "vscode-languageserver-types": "^3.17.3",
         "webpack": "^5.107.2",
-        "webpack-cli": "^7.0.2"
+        "webpack-cli": "^7.0.3"
     },
     "main": "./out/extension.js"
 }
