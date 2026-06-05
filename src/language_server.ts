@@ -7,7 +7,7 @@ import * as path from "path";
 import * as fs from "fs";
 import getPort from 'get-port';
 
-import { commands, ExtensionContext, OutputChannel, window, workspace, Uri, WorkspaceFolder, Location, Definition, Position, TextDocument } from 'vscode';
+import { commands, ExtensionContext, LogOutputChannel, window, workspace, Uri, WorkspaceFolder, Location, Definition, Position, TextDocument } from 'vscode';
 import { RevealOutputChannelOn, LanguageClientOptions, ErrorHandler, Message, ErrorHandlerResult, ErrorAction, CloseHandlerResult, CloseAction, ProvideDefinitionSignature, CancellationToken } from 'vscode-languageclient';
 import { LanguageClient, ServerOptions } from 'vscode-languageclient/node';
 import { Mutex } from 'async-mutex';
@@ -77,7 +77,7 @@ export class LsErrorHandler implements ErrorHandler {
 export class LanguageServer {
 	mutex = new Mutex();
 	client: LanguageClient | undefined;
-	lsOutputChannel: OutputChannel | null = null;
+	lsOutputChannel: LogOutputChannel | null = null;
 	serverProcess: cp.ChildProcess | undefined;
 	context: ExtensionContext;
 	pythonPath: string;
@@ -506,7 +506,7 @@ export class LanguageServer {
 		}
 
 		if (this.lsOutputChannel === null) {
-			this.lsOutputChannel = window.createOutputChannel(`Inmanta Language Server[${this.rootFolder.uri.toString()}]`);
+			this.lsOutputChannel = window.createOutputChannel(`Inmanta Language Server[${this.rootFolder.uri.toString()}]`, { log: true });
 		}
 
 		const clientOptions: LanguageClientOptions = {
