@@ -256,7 +256,7 @@
         "@typescript-eslint/parser": "^8.60.0",
         "@vscode/python-extension": "^1.0.6",
         "@vscode/test-cli": "^0.0.12",
-        "@vscode/test-electron": "^2.5.2",
+        "@vscode/test-electron": "^3.0.0",
         "@vscode/vsce": "^3.9.2",
         "eslint": "^10.4.1",
         "glob": "^13.0.5",
