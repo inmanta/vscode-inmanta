@@ -255,7 +255,7 @@
         "@typescript-eslint/eslint-plugin": "^8.61.1",
         "@typescript-eslint/parser": "^8.60.0",
         "@vscode/python-extension": "^1.0.6",
-        "@vscode/test-cli": "^0.0.12",
+        "@vscode/test-cli": "^0.0.15",
         "@vscode/test-electron": "^3.0.0",
         "@vscode/vsce": "^3.9.2",
         "eslint": "^10.5.0",
