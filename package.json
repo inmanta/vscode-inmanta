@@ -265,7 +265,6 @@
         "semver": "^7.8.5",
         "sinon": "^22.0.0",
         "ts-loader": "^9.6.2",
-        "//typescript": "Workaround until Typescript 7 has an API in Typescript 7.1 (https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6.0)",
         "@typescript/native": "npm:typescript@^7.0.2",
         "typescript": "npm:@typescript/typescript6@^6.0.2",
         "umd-compat-loader": "^2.1.2",
