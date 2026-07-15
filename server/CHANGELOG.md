@@ -1,6 +1,7 @@
 # v 1.9.0 (?)
 Changes in this release:
 - Remove deprecation warning rootPath parameter.
+- Fix memory leak: remove stale sys.meta_path finders left behind by repeated editable installs of a standalone v2 module.
 
 # v 1.8.0 (2026-02-19)
 Changes in this release:
