@@ -21,6 +21,7 @@ import logging
 import os
 import shutil
 import socket
+import sys
 import time
 from typing import AsyncIterator, Dict, List, Optional
 
@@ -335,6 +336,62 @@ async def test_working_on_v2_modules(client, caplog):
     # find DEBUG inmanta.execute.scheduler:scheduler.py:196 Anchormap took 0.006730 seconds
     assert "Anchormap took" in caplog.text
     caplog.clear()
+
+
+@pytest.mark.timeout(30)
+@pytest.mark.asyncio
+async def test_v2_module_editable_install_does_not_leak_meta_path_finders(client, caplog) -> None:
+    """
+    Opening a standalone v2 module reinstalls it in editable mode on every save (see
+    Folder.install_v2_module_editable_mode). Each editable (PEP 660) install registers a new finder on sys.meta_path
+    that is never removed by pip/setuptools when the same module is reinstalled in the same process. Without the
+    cleanup in install_v2_module_editable_mode, sys.meta_path would grow by one stale finder per save.
+    """
+    if CORE_VERSION < version.Version("5"):
+        pytest.skip("Feature not supported below iso5")
+
+    caplog.set_level(logging.DEBUG)
+
+    module_name = "module-v2"
+    path_to_module = os.path.join(os.path.dirname(__file__), "modules", module_name)
+
+    env_path = os.path.join(path_to_module, ".env")
+    if os.path.isdir(env_path):
+        shutil.rmtree(env_path)
+        os.makedirs(env_path)
+
+    venv = env.VirtualEnv(env_path)
+    venv.use_virtual_env()
+
+    def count_editable_finders() -> int:
+        prefix = "__editable___inmanta_module_"
+        return len([f for f in sys.meta_path if getattr(f, "__module__", "").startswith(prefix)])
+
+    if CORE_VERSION < version.Version("11.0.0"):
+        options = {"repos": [{"url": "https://pypi.org/simple", "type": "package"}]}
+    else:
+        options = {"pip": {"index_url": "https://pypi.org/simple"}}
+
+    path_uri = {"uri": f"file://{path_to_module}", "name": module_name}
+    ret = await client.call(
+        "initialize",
+        workspaceFolders=[path_uri],
+        rootUri=f"file://{path_to_module}",
+        capabilities={},
+        initializationOptions=options,
+    )
+    await client.assert_one(ret)
+
+    ret = await client.call("initialized")
+    await client.assert_one(ret)
+
+    finder_count_after_first_install = count_editable_finders()
+    assert finder_count_after_first_install <= 1
+
+    for _ in range(3):
+        ret = await client.call("textDocument/didSave")
+        await client.assert_one(ret)
+        assert count_editable_finders() == finder_count_after_first_install
 
 
 def test_lsp_type_serialization_pydantic_v2() -> None:
