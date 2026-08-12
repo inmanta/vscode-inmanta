@@ -1,5 +1,5 @@
 # The latest stable release of inmanta-core is not compatible with pip>=26.2.
 # Constraint the version of pip here until inmanta-core 15.5.7 is released. 
-pip<26.2
+pip<26.3
 inmanta-core
 intervaltree==3.2.1
