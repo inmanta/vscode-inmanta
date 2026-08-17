@@ -790,6 +790,10 @@ class InmantaLSHandler(JsonRpcHandler):
             # Certain keywords e.g. "Entity" are defined internally in virtual files (e.g. 'internal').
             # Display nothing on hover if the hovered symbol is defined in a file that doesn't exist:
             return {}
+        except IndexError:
+            # The anchor's location can point at a line number that no longer exists in its file,
+            # e.g. because of a stale anchormap. Display nothing on hover instead of crashing.
+            return {}
 
         language = self.get_file_type(data.location.file)
         definition_md = f"""
