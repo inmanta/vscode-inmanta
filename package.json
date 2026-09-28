@@ -268,7 +268,7 @@
         "@typescript/native": "npm:typescript@^7.0.2",
         "typescript": "npm:@typescript/typescript6@^6.0.2",
         "umd-compat-loader": "^2.1.2",
-        "vscode-languageserver-types": "^3.18.3",
+        "vscode-languageserver-types": "^3.18.4",
         "webpack": "^5.111.1",
         "webpack-cli": "^7.2.3"
     },
