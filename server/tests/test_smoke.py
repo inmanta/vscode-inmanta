@@ -29,9 +29,12 @@ from tornado.iostream import IOStream
 from tornado.tcpclient import TCPClient
 
 from inmanta import env
+from inmanta.ast import Location
 from inmantals import lsp_types
 from inmantals.jsonrpc import JsonRpcServer
-from inmantals.server import CORE_VERSION, InmantaLSHandler
+from inmantals.server import CORE_VERSION, AnchorTarget, InmantaLSHandler
+from intervaltree.interval import Interval
+from intervaltree.intervaltree import IntervalTree
 from packaging import version
 
 
@@ -478,3 +481,37 @@ async def test_unspecified_workspace_folder(client: JsonRPC) -> None:
     """
     await client.call("initialize", workspaceFolders=None, capabilities={})
     await client.assert_error(message="No workspace folder or rootUri specified.")
+
+
+@pytest.mark.timeout(5)
+@pytest.mark.asyncio
+async def test_hover_definition_out_of_range(tmp_path) -> None:
+    """
+    The hover handler should degrade gracefully (return no hover result) instead of raising an
+    unhandled IndexError when the anchor target it resolves to points at a line number beyond
+    the end of its own file.
+
+    This reproduces the "list index out of range" crash reported in
+    https://github.com/inmanta/vscode-inmanta/issues/1219, where the client received:
+        Request textDocument/hover failed.
+        Message: list index out of range
+    """
+    definition_file = tmp_path / "definition.cf"
+    definition_file.write_text("entity Foo:\nend\n")
+
+    hovered_file = tmp_path / "hovered.cf"
+    hovered_file.write_text("Foo()\n")
+    hovered_path = os.path.realpath(str(hovered_file))
+    hovered_uri = f"file://{hovered_path}"
+
+    # Points at line 100 of a 2-line file: out of range for readlines()[start_line].
+    target = AnchorTarget(location=Location(str(definition_file), 100), docstring=None)
+
+    handler = InmantaLSHandler.__new__(InmantaLSHandler)
+    handler.anchormap = {hovered_path: IntervalTree([Interval(handler.flatten(0, 0), handler.flatten(0, 5) + 1, target)])}
+
+    result = await handler.textDocument_hover(
+        textDocument={"uri": hovered_uri},
+        position={"line": 0, "character": 0},
+    )
+    assert result == {}
