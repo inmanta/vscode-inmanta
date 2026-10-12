@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import re
+import sys
 import tempfile
 import textwrap
 import typing
@@ -177,6 +178,13 @@ class Folder:
         logger.info(f"Module {mod.name} is v2, we will attempt to install it")
 
         logger.debug(f"{project.__dict__=}")
+
+        # Every editable (PEP 660) install registers a new finder on sys.meta_path. Unlike the V1 case, where
+        # inmanta.loader.PluginModuleFinder.reset() removes the stale finder before reinstalling, core has no equivalent
+        # cleanup for editable-installed V2 modules. Since this method reinstalls the module on every save, this would leak
+        # one finder per save. Strip any stale finders left over from a previous install before reinstalling.
+        editable_finder_prefix = "__editable___inmanta_module_"
+        sys.meta_path = [f for f in sys.meta_path if not getattr(f, "__module__", "").startswith(editable_finder_prefix)]
 
         if SUPPORTS_PROJECT_PIP_INDEX:
             project.virtualenv.install_for_config(
