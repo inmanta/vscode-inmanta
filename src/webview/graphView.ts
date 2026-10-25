@@ -45,8 +45,12 @@ const KIND_ORDER: EdgeKind[] = ["create", "auto", "update", "delete", "set", "va
 const DASHED: ReadonlySet<EdgeKind> = new Set(["failed", "non_compliant", "rejected"]);
 
 function nodeWidth(node: GraphNode): number {
-    return Math.min(300, Math.max(130, node.id.length * 7.2 + 34));
+    return Math.min(420, Math.max(130, node.id.length * 7.2 + 34));
 }
+
+// Generated states are stacked under their parent state, indented
+const CHILD_INDENT = 18;
+const CHILD_GAP = 8;
 
 function primaryKind(edge: GraphEdge, hidden: ReadonlySet<EdgeKind>): EdgeKind | null {
     const kinds = edge.details.map((d) => d.kind).filter((k) => !hidden.has(k));
@@ -223,8 +227,29 @@ export class GraphView {
      */
     private async layout(graph: Graph): Promise<{ boxes: Map<string, Box>; empty: Map<string, Box> }> {
         const stageOf = new Map(graph.nodes.map((n) => [n.id, n.stage]));
+        const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+        // A state with its generated states is laid out as one block
+        const rootOf = (id: string) => {
+            const parent = byId.get(id)?.parent;
+            return parent !== undefined && byId.has(parent) ? parent : id;
+        };
+        const children = new Map<string, GraphNode[]>();
+        for (const node of graph.nodes.filter((n) => rootOf(n.id) !== n.id)) {
+            children.set(rootOf(node.id), [...(children.get(rootOf(node.id)) ?? []), node]);
+        }
+        const blockSize = (node: GraphNode) => {
+            const kids = children.get(node.id) ?? [];
+            return { width: Math.max(nodeWidth(node), ...kids.map((k) => CHILD_INDENT + nodeWidth(k))), height: NODE_H + kids.length * (NODE_H + CHILD_GAP) };
+        };
+        const blockEdges = (keep: (id: string) => boolean, unit: (id: string) => string) => {
+            const seen = new Set<string>();
+            return graph.edges
+                .filter((e) => keep(e.source) && keep(e.target))
+                .map((e) => [unit(e.source), unit(e.target)])
+                .filter(([a, b]) => a !== b && !seen.has(`${a}>${b}`) && seen.add(`${a}>${b}`));
+        };
         const nodesByStage = new Map<string, GraphNode[]>();
-        for (const node of graph.nodes) {
+        for (const node of graph.nodes.filter((n) => rootOf(n.id) === n.id)) {
             nodesByStage.set(node.stage, [...(nodesByStage.get(node.stage) ?? []), node]);
         }
 
@@ -246,8 +271,8 @@ export class GraphView {
                     "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
                     "elk.padding": "[top=36,left=14,bottom=14,right=14]",
                 },
-                children: members.map((n) => ({ id: n.id, width: nodeWidth(n), height: NODE_H })),
-                edges: graph.edges.filter((e) => ids.has(e.source) && ids.has(e.target)).map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })),
+                children: members.map((n) => ({ id: n.id, ...blockSize(n) })),
+                edges: blockEdges((id) => ids.has(rootOf(id)), rootOf).map(([a, b], i) => ({ id: `e${i}`, sources: [a], targets: [b] })),
             });
             const boxes = new Map<string, Box>();
             for (const c of result.children ?? []) {
@@ -257,7 +282,7 @@ export class GraphView {
         }
 
         // Pass 2: the stages and the states outside of any stage
-        const unit = (id: string) => (stageOf.get(id) ? `stage:${stageOf.get(id)}` : id);
+        const unit = (id: string) => (stageOf.get(rootOf(id)) ? `stage:${stageOf.get(rootOf(id))}` : rootOf(id));
         const placed = new Map<string, { x: number; y: number }>();
         const definitions = this.stageDefinitions;
         // Declared stages go left to right in their order, or on the cell of their column and row
@@ -284,13 +309,10 @@ export class GraphView {
             for (const node of nodesByStage.get("") ?? []) {
                 const side = node.initial || !graph.edges.some((e) => e.target === node.id && staged.has(e.source)) ? "left" : "right";
                 placed.set(node.id, { x: side === "left" ? 0 : right, y: y[side] });
-                y[side] += NODE_H + 20;
+                y[side] += blockSize(node).height + 20;
             }
         } else {
-            const seen = new Set<string>();
-            const edges = graph.edges
-                .map((e) => [unit(e.source), unit(e.target)])
-                .filter(([a, b]) => a !== b && !seen.has(`${a}>${b}`) && seen.add(`${a}>${b}`));
+            const edges = blockEdges(() => true, unit);
             const result = await this.elk.layout({
                 id: "root",
                 layoutOptions: {
@@ -303,7 +325,7 @@ export class GraphView {
                 },
                 children: [
                     ...[...inner].map(([id, size]) => ({ id: `stage:${id}`, width: size.w, height: size.h })),
-                    ...(nodesByStage.get("") ?? []).map((n) => ({ id: n.id, width: nodeWidth(n), height: NODE_H })),
+                    ...(nodesByStage.get("") ?? []).map((n) => ({ id: n.id, ...blockSize(n) })),
                 ].sort((a, b) => this.modelOrder(graph, a.id) - this.modelOrder(graph, b.id)),
                 edges: edges.map(([a, b], i) => ({ id: `e${i}`, sources: [a], targets: [b] })),
             });
@@ -318,15 +340,19 @@ export class GraphView {
             const p = placed.get(`stage:${stage.id}`) ?? { x: 0, y: 0 };
             empty.set(stage.id, { x: p.x, y: p.y, w: EMPTY_STAGE.w, h: EMPTY_STAGE.h });
         }
-        for (const node of graph.nodes) {
+        for (const node of graph.nodes.filter((n) => rootOf(n.id) === n.id)) {
+            let p: { x: number; y: number };
             if (node.stage === "") {
-                const p = placed.get(node.id) ?? { x: 0, y: 0 };
-                boxes.set(node.id, { x: p.x, y: p.y, w: nodeWidth(node), h: NODE_H });
+                p = placed.get(node.id) ?? { x: 0, y: 0 };
             } else {
                 const origin = placed.get(`stage:${node.stage}`) ?? { x: 0, y: 0 };
                 const b = inner.get(node.stage)!.boxes.get(node.id)!;
-                boxes.set(node.id, { ...b, x: b.x + origin.x, y: b.y + origin.y });
+                p = { x: b.x + origin.x, y: b.y + origin.y };
             }
+            boxes.set(node.id, { x: p.x, y: p.y, w: nodeWidth(node), h: NODE_H });
+            (children.get(node.id) ?? []).forEach((child, i) => {
+                boxes.set(child.id, { x: p.x + CHILD_INDENT, y: p.y + (i + 1) * (NODE_H + CHILD_GAP), w: nodeWidth(child), h: NODE_H });
+            });
         }
         return { boxes, empty };
     }

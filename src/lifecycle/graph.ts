@@ -49,6 +49,8 @@ export interface GraphNode {
     selfLoops: EdgeKind[];
     desiredState: string | null;
     title: string;
+    /** The state a generated state is laid out under: the source of its validate() transfer */
+    parent?: string;
 }
 
 export interface GraphEdge {
@@ -214,6 +216,7 @@ export function buildGraph(view: View, xStates: readonly XState[], lifecycle: Ls
                 selfLoops: [],
                 desiredState: state.desiredState.onExport,
                 title: state.annotations.web_label ?? state.name,
+                parent: origin.kind !== "csv" ? origin.source : undefined,
             });
         }
         const index = new Map(nodes.map((n) => [n.id, n]));
