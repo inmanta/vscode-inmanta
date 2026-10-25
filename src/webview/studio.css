@@ -57,9 +57,10 @@ input.invalid { border-color: var(--vscode-inputValidation-errorBorder, #be1100)
 /* main */
 .main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
 #app[data-mode="simulate"] .main { grid-template-columns: 250px minmax(0, 1fr) 340px; }
+#app[data-mode="edit"] .main { grid-template-columns: 220px minmax(0, 1fr) 340px; }
 .panel { overflow: auto; padding: 8px 12px 24px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); min-width: 0; }
 .left { border-right: 1px solid var(--border); overflow-x: hidden; }
-#app:not([data-mode="simulate"]) .left { display: none; }
+#app[data-mode="view"] .left { display: none; }
 .inspector { border-left: 1px solid var(--border); }
 .panel section { margin-bottom: 14px; }
 .panel h3 { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 10px 0 6px; font-weight: 600; }
@@ -102,7 +103,18 @@ input.invalid { border-color: var(--vscode-inputValidation-errorBorder, #be1100)
 svg.graph { width: 100%; height: 100%; display: block; cursor: grab; user-select: none; }
 svg.graph:active { cursor: grabbing; }
 .stage rect { fill: var(--vscode-editorWidget-background, rgba(128,128,128,0.06)); fill-opacity: 0.55; stroke: var(--border); }
-.stage-title { fill: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; }
+.stage-title { fill: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; cursor: pointer; }
+.stage-title.grip { cursor: move; }
+.stage-title:hover { fill: var(--vscode-textLink-foreground); }
+.stage-empty { fill: var(--muted); font-size: 11px; font-style: italic; }
+.stage.selected rect { stroke: var(--vscode-focusBorder); stroke-width: 2; }
+.stage.drop-target rect { stroke: var(--vscode-focusBorder); stroke-width: 2; stroke-dasharray: 6 4; fill-opacity: 0.9; }
+.stage-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 2px; }
+.stage-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 4px; }
+.stage-list li.on { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
+.stage-list .link { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stage-list .order { display: inline-flex; gap: 1px; }
+button.icon { padding: 0 4px; min-width: 0; line-height: 1.3; }
 .edge .line { fill: none; stroke-width: 1.3; opacity: 0.65; }
 .edge .hit { fill: none; stroke: transparent; stroke-width: 10; cursor: pointer; }
 .edge.dashed .line { stroke-dasharray: 5 3; }
@@ -190,15 +202,16 @@ svg.graph:active { cursor: grabbing; }
 .transfer > *, .wrap > * { min-width: 0; overflow-wrap: anywhere; }
 
 /* web console preview: PatternFly light look, independent of the VS Code theme */
-.pf { --pf-text: #151515; --pf-muted: #4d4d4d; --pf-border: #c7c7c7; --pf-blue: #0066cc; background: #f2f2f2; color: var(--pf-text); border-radius: 6px; padding: 10px; font-family: "Red Hat Text", "RedHatText", "Overpass", Helvetica, Arial, sans-serif; font-size: 13px; display: grid; gap: 8px; }
+.pf { --pf-text: #151515; --pf-muted: #4d4d4d; --pf-border: #c7c7c7; --pf-blue: #0066cc; background: #f2f2f2; color: var(--pf-text); border-radius: 6px; padding: 10px; font-family: "RedHatTextVF", "RedHatText", "Overpass", Helvetica, Arial, sans-serif; font-size: 13px; display: grid; gap: 8px; }
 .pf-crumb { color: var(--pf-muted); font-size: 11.5px; }
 .pf-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.pf-title { font-weight: 600; font-size: 15px; }
+.pf-title { font-family: "RedHatDisplayVF", "RedHatDisplay", "Overpass", Helvetica, Arial, sans-serif; font-weight: 500; font-size: 18px; }
 .pf-toggle { margin-left: auto; background: var(--pf-blue); color: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12.5px; }
 .pf-label { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--st, #8a8d90); color: var(--st-text, #151515); background: #fff; border-radius: 999px; padding: 1px 9px; font-size: 12.5px; }
 .pf-label.s-success { --st: #3d7317; --st-text: #204d00; } .pf-label.s-info { --st: #5e40be; --st-text: #3d2785; } .pf-label.s-warning { --st: #dca614; --st-text: #73480b; } .pf-label.s-danger { --st: #b1380b; --st-text: #731f00; }
 .pf-plain { color: var(--pf-text); }
-.pf-icon { display: inline-grid; place-items: center; width: 14px; font-size: 11px; color: inherit; }
+.pf-icon { display: inline-grid; place-items: center; width: 14px; font-size: 12px; color: inherit; }
+.pf-toggle .pf-icon { width: auto; vertical-align: -2px; }
 .pf-tooltip { background: #151515; color: #fff; border-radius: 4px; padding: 5px 8px; font-size: 12px; }
 .pf-tooltip span { opacity: 0.6; }
 .pf-menu { list-style: none; margin: 0; padding: 6px 0; background: #fff; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
@@ -211,7 +224,7 @@ svg.graph:active { cursor: grabbing; }
 .pf-modal { background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); padding: 12px 14px; display: grid; gap: 8px; }
 .pf-modal p { margin: 0; }
 .pf-modal-title { font-weight: 600; font-size: 14px; display: flex; gap: 6px; align-items: center; }
-.pf-warn { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #b1380b; color: #fff; font-size: 11px; }
+.pf-warn { display: inline-grid; place-items: center; color: #dca614; font-size: 15px; }
 .pf-modal-actions { display: flex; gap: 8px; }
 .pf-primary { background: var(--pf-blue); color: #fff; border-radius: 999px; padding: 4px 14px; }
 .pf-primary:hover:not(:disabled) { background: #004d99; }

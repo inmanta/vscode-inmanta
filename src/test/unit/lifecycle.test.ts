@@ -4,12 +4,22 @@ import * as path from "path";
 import { parseCsv, writeCsv } from "../../lifecycle/csv";
 import { applyEdit, referencesTo } from "../../lifecycle/edit";
 import { expand, LsmLifecycle } from "../../lifecycle/expand";
-import { buildGraph } from "../../lifecycle/graph";
+import { buildGraph, stageOf } from "../../lifecycle/graph";
 import { lint } from "../../lifecycle/lint";
-import { deleteStateInMetadata, emptyMetadata, parseMetadata, renameStateInMetadata, setLayout, upsertScenario } from "../../lifecycle/metadata";
+import {
+    applyMetadataOp,
+    deleteStateInMetadata,
+    emptyMetadata,
+    metadataIssues,
+    parseMetadata,
+    renameStateInMetadata,
+    setLayout,
+    upsertScenario,
+} from "../../lifecycle/metadata";
 import { isFlagColumn, parseLifecycleCsv, parseStatesCsv, parseTransfer } from "../../lifecycle/model";
 import { compileContexts, runScenario, Simulator } from "../../lifecycle/simulator";
 import { consoleView } from "../../lifecycle/console";
+import { addStage, deleteStage, moveToStage, renameStage, StageChange } from "../../lifecycle/stages";
 
 const fixtures = path.resolve(__dirname, "../../../src/test/unit/fixtures");
 const lifecycleText = fs.readFileSync(path.join(fixtures, "lifecycle.csv"), "utf8");
@@ -266,5 +276,120 @@ suite("lifecycle web console preview", () => {
         // cancel goes back to up, whose web_label is Up
         assert.deepStrictEqual(view.setState.map((a) => a.label), ["Up"]);
         assert.ok(view.edit.enabled);
+    });
+});
+
+suite("lifecycle stages", () => {
+    // The states of desired state up get the stage running from the states csv
+    const statesWithStage = statesText.replace("web_icon\n", "web_icon,web_stage\n").replace("Deployed,\n", "Deployed,,running\n");
+
+    function apply(change: StageChange, csv = lifecycleText, states = statesWithStage): { csv: string; states: string } {
+        return { csv: change.csv.reduce(applyEdit, csv), states: change.states.reduce(applyEdit, states) };
+    }
+
+    function stages(texts: { csv: string; states: string }): Record<string, string> {
+        const lifecycle = parseLifecycleCsv(texts.csv, parseStatesCsv(texts.states));
+        return Object.fromEntries(lifecycle.states.map((x) => [x.name, stageOf(x)]));
+    }
+
+    const lifecycle = () => parseLifecycleCsv(lifecycleText, parseStatesCsv(statesWithStage));
+
+    test("move a state to a stage and back", () => {
+        const moved = apply(moveToStage(lifecycle(), parseStatesCsv(statesWithStage), "failed", "creating"));
+        assert.strictEqual(stages(moved).failed, "creating");
+        const states = parseStatesCsv(moved.states);
+        const back = apply(moveToStage(parseLifecycleCsv(moved.csv, states), states, "failed", "running"), moved.csv, moved.states);
+        // Back in its default stage, the cell is empty again
+        const failed = parseLifecycleCsv(back.csv).states.find((x) => x.name === "failed")!;
+        assert.deepStrictEqual(failed.ownAnnotations, {});
+        assert.strictEqual(stages(back).failed, "running");
+    });
+
+    test("rename a stage set in the states csv and a stage defaulting to the desired state", () => {
+        const states = parseStatesCsv(statesWithStage);
+        const running = renameStage(lifecycle(), states, [], "running", "operational");
+        assert.deepStrictEqual(running.csv, []);
+        assert.deepStrictEqual(running.metadata, [{ kind: "renameStage", from: "running", to: "operational" }]);
+        const renamed = stages(apply(running));
+        assert.deepStrictEqual(["up", "failed", "degraded"].map((s) => renamed[s]), ["operational", "operational", "operational"]);
+
+        const creating = stages(apply(renameStage(lifecycle(), states, [], "creating", "provisioning")));
+        assert.strictEqual(creating.creating, "provisioning");
+        assert.strictEqual(creating.creating_failed, "provisioning");
+        assert.strictEqual(creating.updating, "updating");
+
+        assert.throws(() => renameStage(lifecycle(), states, [], "creating", "running"), /already exists/);
+        assert.throws(() => renameStage(lifecycle(), states, [{ id: "spare" }], "creating", "spare"), /already exists/);
+        assert.throws(() => renameStage(lifecycle(), states, [], "creating", "a stage"), /can only hold/);
+    });
+
+    test("delete a stage", () => {
+        const states = parseStatesCsv(statesWithStage);
+        const moved = apply(moveToStage(lifecycle(), states, "deleting", "running"));
+        const deleted = apply(deleteStage(parseLifecycleCsv(moved.csv, states), states, "running"), moved.csv, moved.states);
+        const result = stages(deleted);
+        assert.strictEqual(result.deleting, "deleting");
+        assert.strictEqual(result.up, "up");
+    });
+
+    test("add a stage", () => {
+        assert.deepStrictEqual(addStage(lifecycle(), [], "spare", "Spare").metadata, [{ kind: "upsertStage", stage: { id: "spare", name: "Spare" } }]);
+        assert.throws(() => addStage(lifecycle(), [], "running", "Running"), /already exists/);
+        assert.throws(() => addStage(lifecycle(), [{ id: "spare" }], "spare", "Spare"), /already exists/);
+    });
+
+    test("stage definitions in the metadata file", () => {
+        let text = applyMetadataOp("", { kind: "setStages", stages: [{ id: "creating", name: "Creating" }, { id: "up", name: "Up" }] });
+        text = applyMetadataOp(text, { kind: "upsertStage", stage: { id: "deleting", name: "Deleting", description: "Going away" } });
+        text = applyMetadataOp(text, { kind: "moveStage", id: "deleting", delta: -1 });
+        text = applyMetadataOp(text, { kind: "renameStage", from: "up", to: "running" });
+        text = applyMetadataOp(text, { kind: "upsertStage", stage: { id: "creating", name: "Provisioning", column: 0 } });
+        assert.deepStrictEqual(parseMetadata(text).metadata.stages, [
+            { id: "creating", name: "Provisioning", column: 0, row: undefined, description: undefined },
+            { id: "deleting", name: "Deleting", column: undefined, row: undefined, description: "Going away" },
+            { id: "running", name: "Up", column: undefined, row: undefined, description: undefined },
+        ]);
+        text = applyMetadataOp(text, { kind: "deleteStage", id: "deleting" });
+        // Redeclaring keeps the definitions
+        text = applyMetadataOp(text, { kind: "setStages", stages: [{ id: "running", name: "Up" }, { id: "creating", name: "Creating" }] });
+        assert.deepStrictEqual(parseMetadata(text).metadata.stages.map((st) => [st.id, st.name, st.column]), [["running", "Up", undefined], ["creating", "Creating", 0]]);
+
+        text = setLayout(text, { up: { x: 1, y: 2 }, failed: { x: 3, y: 4 } });
+        text = applyMetadataOp(text, { kind: "removeLayout", states: ["up"] });
+        assert.deepStrictEqual(Object.keys(parseMetadata(text).metadata.layout), ["failed"]);
+    });
+
+    test("long entries of the metadata file stay on one line", () => {
+        const entry = `  - {source: up, trigger: on_update, target: updating, web_confirm: "${"x".repeat(120)}"}`;
+        const text = applyMetadataOp(`version: 1\ntransfers:\n${entry}\n`, { kind: "upsertStage", stage: { id: "up" } });
+        assert.strictEqual(text.split("\n").filter((line) => line.includes("web_confirm")).length, 1);
+        assert.ok(text.includes('web_confirm: "' + "x".repeat(120)));
+    });
+
+    test("empty declared stages are shown in the csv view", () => {
+        const metadata = emptyMetadata();
+        metadata.stages.push({ id: "spare", name: "Spare" });
+        const graph = buildGraph("csv", lifecycle().states, load(), metadata);
+        assert.ok(graph.stages.some((st) => st.id === "spare" && st.declared));
+        assert.ok(!buildGraph("lsm", lifecycle().states, load(), metadata).stages.some((st) => st.id === "spare"));
+    });
+
+    test("transfer annotations must match a transfer the factory annotates", () => {
+        const metadata = emptyMetadata();
+        const entry = (source: string, trigger: string, target: string) => ({ source, trigger, target, annotations: { web_button_label: "x" } }) as (typeof metadata.transfers)[number];
+        metadata.transfers.push(
+            entry("updating_failed", "on_api_set_state", "up"),
+            entry("updating_failed", "on_api_set_state", "rolling_back"),
+            entry("up", "on_update", "updating"),
+            entry("up", "on_deployed", "up"),
+            entry("nope", "on_update", "up"),
+            entry("up", "on_failed", "failed"),
+            entry("up", "on_update", "up"),
+        );
+        assert.deepStrictEqual(metadataIssues(metadata, lifecycle().states), [
+            "transfer nope.on_update -> up: no state nope",
+            "transfer up.on_failed -> failed: the factory doesn't annotate on_failed transfers",
+            "transfer up.on_update -> up: up has no such transfer",
+        ]);
     });
 });

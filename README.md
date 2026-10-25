@@ -53,11 +53,12 @@ Open a csv lifecycle of `future::lsm::fsm` (a `lifecycle.csv` with `name`, `desi
 
 - **View**: the lifecycle as a graph, grouped in stages (the `web_stage` annotation, or the desired state). Switch between the states of the csv, the lsm states including the generated validation states, and the desired states.
 - **Edit**: change states and transfers in the inspector, or drag the handle of the selected state onto another state to add a transfer. Every edit is a normal edit of the csv, so undo, save and diff work as usual.
+  The stages panel adds, names, orders and deletes stages. Drop a state on a stage to set its `web_stage`, drag a stage by its title to arrange the canvas. Once declared, the stages are laid out left to right in their order.
 - **Simulate**: create an instance or start in any state, then send updates, deletes, set state calls, validation results and resource outcomes. The studio shows the attribute sets, the desired state and the `states.csv` options the model sees in each kind of compile, and saves runs as scenarios.
 
 For every state, the inspector previews what the web console shows: the state badge (`web_label`, `web_icon`, `web_description`) and the Actions menu with the set state buttons and their transfer annotations (`web_button_label`, `web_confirm`, `web_advanced_state`, ...). In Simulate mode these buttons drive the simulation.
 
-The `states.csv` next to the lifecycle csv is picked up automatically. What the csv can't hold (stage definitions, transfer annotations, layout and scenarios) is stored in `<name>.lifecycle.yml` next to the csv. The lifecycle checks are also reported in the Problems panel for any open lifecycle csv. The studio works without the language server.
+The `states.csv` next to the lifecycle csv is picked up automatically. What the csv can't hold (stage definitions, transfer annotations, layout and scenarios) is stored in `<name>.lifecycle.yml` next to the csv. Pass this file as the `metadata_file` of `future::lsm::fsm::LifecycleFactory` to set the transfer annotations in the lifecycle. The lifecycle checks are also reported in the Problems panel for any open lifecycle csv. The studio works without the language server.
 
 ## Requirements
 

@@ -63,6 +63,8 @@ export interface Stage {
     name: string;
     description?: string;
     order: number;
+    /** Defined in the metadata file */
+    declared: boolean;
 }
 
 export interface Graph {
@@ -103,14 +105,15 @@ function addEdge(edges: Map<string, GraphEdge>, source: string, target: string, 
     edges.set(id, edge);
 }
 
-function stagesFor(allUsed: string[], metadata: Metadata): Stage[] {
+/** The stages in use, and the empty ones of the metadata file when includeEmpty is set */
+function stagesFor(allUsed: string[], metadata: Metadata, includeEmpty = false): Stage[] {
     const used = allUsed.filter((id) => id !== "");
     const declared = metadata.stages;
     const result: Stage[] = declared
-        .filter((s) => used.includes(s.id))
-        .map((s, i) => ({ id: s.id, name: s.name ?? s.id, description: s.description, order: s.column !== undefined ? s.column * 100 + (s.row ?? 0) : i }));
+        .filter((s) => includeEmpty || used.includes(s.id))
+        .map((s, i) => ({ id: s.id, name: s.name ?? s.id, description: s.description, order: s.column !== undefined ? s.column * 100 + (s.row ?? 0) : i, declared: true }));
     const offset = result.length;
-    used.filter((id) => !declared.some((s) => s.id === id)).forEach((id, i) => result.push({ id, name: id, order: 1000 + offset + i }));
+    used.filter((id) => !declared.some((s) => s.id === id)).forEach((id, i) => result.push({ id, name: id, order: 1000 + offset + i, declared: false }));
     return result.sort((a, b) => a.order - b.order);
 }
 
@@ -192,7 +195,7 @@ export function buildGraph(view: View, xStates: readonly XState[], lifecycle: Ls
             });
         }
         const used = [...new Set(nodes.map((n) => n.stage))];
-        return { view, nodes, edges: [...edges.values()], stages: stagesFor(used, metadata) };
+        return { view, nodes, edges: [...edges.values()], stages: stagesFor(used, metadata, true) };
     }
 
     if (view === "lsm") {

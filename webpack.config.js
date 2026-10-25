@@ -3,6 +3,7 @@
 'use strict';
 
 const path = require('path');
+const webpack = require('webpack');
 
 //@ts-check
 /** @typedef {import('webpack').Configuration} WebpackConfig **/
@@ -62,7 +63,12 @@ const webviewConfig = {
     },
     resolve: {
         extensions: ['.ts', '.js'],
+        alias: { 'fa-icon-trees$': 'react-icons/fa' },
     },
+    plugins: [
+        // The icons of react-icons without React: GenIcon hands back the svg tree of the icon
+        new webpack.NormalModuleReplacementPlugin(/react-icons[\\/]lib[\\/]index\.mjs$/, path.resolve(__dirname, 'src/webview/iconShim.js')),
+    ],
     module: {
         rules: [
             {
@@ -73,6 +79,10 @@ const webviewConfig = {
             {
                 test: /\.css$/,
                 type: 'asset/source',
+            },
+            {
+                test: /\.woff2$/,
+                type: 'asset/inline',
             },
         ],
     },

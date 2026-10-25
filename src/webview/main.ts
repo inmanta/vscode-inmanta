@@ -1,8 +1,8 @@
 import { ConsoleAction, consoleView } from "../lifecycle/console";
-import { EDGE_KINDS, EdgeKind, Graph, GraphEdge, View, buildGraph } from "../lifecycle/graph";
+import { EDGE_KINDS, EdgeKind, Graph, GraphEdge, View, buildGraph, stageOf } from "../lifecycle/graph";
 import { expand, LsmLifecycle, LsmState } from "../lifecycle/expand";
 import { Issue, lint } from "../lifecycle/lint";
-import { emptyMetadata, Metadata, parseMetadata, Scenario } from "../lifecycle/metadata";
+import { emptyMetadata, Metadata, metadataIssues, parseMetadata, Scenario, StageDefinition, TRANSFER_ANNOTATION_TRIGGERS } from "../lifecycle/metadata";
 import {
     ATTRIBUTE_SETS,
     formatTransfer,
@@ -22,7 +22,11 @@ import {
 import { CompileContext, compileContexts, EventOption, eventLabel, formatEvent, Instance, parseEvent, runScenario, ScenarioResult, SimEvent, Simulator, Step } from "../lifecycle/simulator";
 import { add, clear, h } from "./dom";
 import { GraphSelection, GraphView } from "./graphView";
+import { faIcon } from "./icons";
+import { addStage, deleteStage, moveToStage, renameStage, StageChange } from "../lifecycle/stages";
 import css from "./studio.css";
+import redHatDisplay from "@fontsource-variable/red-hat-display/files/red-hat-display-latin-wght-normal.woff2";
+import redHatText from "@fontsource-variable/red-hat-text/files/red-hat-text-latin-wght-normal.woff2";
 
 interface VsCodeApi {
     postMessage(message: unknown): void;
@@ -119,7 +123,10 @@ function persist(): void {
 // ---------- layout ----------
 
 const style = document.createElement("style");
-style.textContent = css;
+// The fonts of PatternFly, for the web console preview
+style.textContent = `@font-face { font-family: "RedHatTextVF"; src: url(${redHatText}) format("woff2"); font-weight: 300 700; }
+@font-face { font-family: "RedHatDisplayVF"; src: url(${redHatDisplay}) format("woff2"); font-weight: 300 900; }
+${css}`;
 document.head.appendChild(style);
 
 const app = document.getElementById("app")!;
@@ -149,6 +156,7 @@ const graphView = new GraphView(canvas, {
     },
     move: (positions) => post({ type: "metadata", op: { kind: "setLayout", positions } }),
     connect: (source, target, x, y) => showConnectMenu(source, target, x, y),
+    restage: (id, stage) => changeStages(() => moveToStage(data!.lifecycle, data!.states, id, stage)),
     activate: (id) => {
         const line = data?.lifecycle.states.find((s) => s.name === csvStateOf(id))?.line;
         if (line !== undefined) {
@@ -170,7 +178,7 @@ function load(message: { csv: string; states: string | null; metadata: string | 
         lifecycle,
         states,
         metadata: parsed.metadata,
-        metadataErrors: parsed.errors,
+        metadataErrors: [...parsed.errors, ...metadataIssues(parsed.metadata, lifecycle.states)],
         lsm,
         issues: lint(lifecycle, states, lsm),
     };
@@ -179,7 +187,11 @@ function load(message: { csv: string; states: string | null; metadata: string | 
     if (sim.steps.length > 0 || sim.start) {
         replay(sim.start, sim.steps.map((s) => s.event));
     }
-    if (ui.selection?.type === "node" && !graphFor(ui.view).nodes.some((n) => n.id === ui.selection!.id)) {
+    const graph = graphFor(ui.view);
+    if (ui.selection?.type === "node" && !graph.nodes.some((n) => n.id === ui.selection!.id)) {
+        ui.selection = null;
+    }
+    if (ui.selection?.type === "stage" && !graph.stages.some((s) => s.id === ui.selection!.id)) {
         ui.selection = null;
     }
     renderAll(true);
@@ -469,6 +481,10 @@ function renderInspector(): void {
             return;
         }
     }
+    if (selection?.type === "stage") {
+        add(inspector, ...stageInspector(selection.id));
+        return;
+    }
     if (selection?.type === "node") {
         if (ui.view === "desired") {
             add(inspector, ...desiredStateInspector(selection.id));
@@ -486,33 +502,6 @@ function renderInspector(): void {
         }
     }
     add(inspector, ...overview());
-}
-
-const ICON_GLYPHS: Record<string, string> = {
-    FaBan: "⊘",
-    FaClipboardCheck: "☑",
-    FaCheck: "✓",
-    FaPlus: "+",
-    FaTrash: "✕",
-    FaTimes: "✕",
-    FaExclamationTriangle: "!",
-    FaUndo: "↺",
-    FaSync: "⟳",
-    FaPause: "❚❚",
-    FaPlay: "▶",
-    FaWrench: "⚒",
-    FaRegCircle: "○",
-    FaRocket: "↑",
-    FaCheckCircle: "✓",
-    FaSyncAlt: "⟳",
-    FaTrashAlt: "✕",
-    FaTimesCircle: "⊗",
-    FaCogs: "⚙",
-    FaPowerOff: "⏻",
-};
-
-function faIcon(name: string | null): HTMLElement | null {
-    return name ? h("span", { class: "pf-icon", title: `Font Awesome ${name}` }, ICON_GLYPHS[name] ?? "●") : null;
 }
 
 /**
@@ -561,19 +550,19 @@ function consolePreview(stateName: string): HTMLElement {
         view.setState.map(action),
         view.advanced.length
             ? h("li", null, h("button", { class: "pf-item", onclick: () => { consoleUi.advanced = !consoleUi.advanced; renderInspector(); } },
-                h("span", { class: "pf-icon" }, consoleUi.advanced ? "▾" : "▸"), "Advanced"))
+                faIcon(consoleUi.advanced ? "FaAngleDown" : "FaAngleRight"), "Advanced"))
             : null,
         consoleUi.advanced ? view.advanced.map(action) : null);
 
     const confirm = consoleUi.confirm;
     return h("div", { class: "pf" },
         h("div", { class: "pf-crumb" }, `Service inventory / ${d.files.csv.replace(/\.csv$/, "")} / my-instance`),
-        h("div", { class: "pf-head" }, h("span", { class: "pf-title" }, "my-instance"), badgeEl, h("span", { class: "pf-toggle" }, "Actions ▾")),
+        h("div", { class: "pf-head" }, h("span", { class: "pf-title" }, "my-instance"), badgeEl, h("span", { class: "pf-toggle" }, "Actions ", faIcon("FaAngleDown"))),
         badge.description ? h("div", { class: "pf-tooltip" }, h("span", null, "Tooltip: "), badge.description) : null,
         menu,
         confirm
             ? h("div", { class: "pf-modal", role: "dialog" },
-                h("div", { class: "pf-modal-title" }, h("span", { class: "pf-warn" }, "!"), confirm.title),
+                h("div", { class: "pf-modal-title" }, h("span", { class: "pf-warn" }, faIcon("FaExclamationTriangle")), confirm.title),
                 h("p", null, confirm.body),
                 h("div", { class: "pf-modal-actions" },
                     h("button", {
@@ -609,11 +598,12 @@ function overview(): HTMLElement[] {
             ])),
         section("Stages",
             h("p", { class: "muted" }, d.metadata.stages.length ? "From the metadata file and the web_stage annotations." : "No web_stage annotations, states are grouped by desired state."),
-            h("ul", { class: "plain" }, stages.map((s) => h("li", null, s.name, s.description ? h("span", { class: "muted" }, ` - ${s.description}`) : null)))),
+            h("ul", { class: "plain" }, stages.map((s) => h("li", null, stageLink(s.id, s.name), s.description ? h("span", { class: "muted" }, ` - ${s.description}`) : null)))),
         section("How to use",
             h("ul", { class: "plain muted" },
                 h("li", null, "Click a state or transfer to inspect it, double click a state to open its csv row."),
                 h("li", null, "Edit: change a state in the inspector, drag the handle of the selected state onto another state to add a transfer, drag states to arrange them."),
+                h("li", null, "Stages: in Edit, drop a state on a stage to move it there, drag a stage by its title, click a title to rename or delete the stage."),
                 h("li", null, "Simulate: create an instance or start from any state, then send events."))),
     ];
 }
@@ -723,7 +713,8 @@ function edgeInspector(edge: GraphEdge): HTMLElement[] {
             const target = parseTransfer(detail.raw)?.target ?? edge.target;
             const entry = d.metadata.transfers.find((t) => t.source === detail.state && t.trigger === detail.trigger && t.target === target);
             const annotations = entry?.annotations ?? {};
-            const editable = ui.mode === "edit" && ui.view === "csv";
+            const annotatable = TRANSFER_ANNOTATION_TRIGGERS.includes(detail.trigger);
+            const editable = ui.mode === "edit" && ui.view === "csv" && annotatable;
             const update = (key: string, value: string | boolean) => {
                 const next = { ...annotations };
                 if (value === "" || value === false) {
@@ -752,7 +743,7 @@ function edgeInspector(edge: GraphEdge): HTMLElement[] {
                         h("label", { class: "check" }, h("input", { type: "checkbox", checked: annotations.web_advanced_state === true, onchange: (e: Event) => update("web_advanced_state", (e.target as HTMLInputElement).checked) }), "web_advanced_state"))
                     : Object.keys(annotations).length
                         ? kv(Object.entries(annotations).map(([k, v]) => [k, String(v)]))
-                        : h("p", { class: "muted" }, "None, switch to Edit to add them."));
+                        : h("p", { class: "muted" }, annotatable ? "None, switch to Edit to add them." : `The factory doesn't annotate ${detail.trigger} transfers.`));
         }),
     ];
 }
@@ -867,11 +858,13 @@ function editInspector(x: XState): HTMLElement[] {
             h("div", { class: "form" },
                 annotationColumns.map((column) => field(column, h("input", {
                     value: x.ownAnnotations[column] ?? "",
+                    list: column === "web_stage" ? "stage-ids" : undefined,
                     placeholder: inherited(column) || (column === "web_stage" ? x.desiredState : ""),
                     "data-key": `a-${column}`,
                     onchange: (e: Event) => set(column, (e.target as HTMLInputElement).value),
                 }), inherited(column) ? "(default from states csv)" : column === "web_stage" ? "(default: desired_state)" : undefined)),
                 h("datalist", { id: "annotation-keys" }, ANNOTATION_SUGGESTIONS.map((k) => h("option", { value: k }))),
+                h("datalist", { id: "stage-ids" }, allStages().map((st) => h("option", { value: st.id }, st.name))),
                 addAnnotation(x))),
         section("State actions",
             h("div", { class: "actions" },
@@ -936,10 +929,161 @@ function showConnectMenu(source: string, target: string, x: number, y: number): 
     popup.hidden = false;
 }
 
+// ---------- stages ----------
+
+function changeStages(plan: () => StageChange): void {
+    try {
+        post({ type: "stages", change: plan() });
+    } catch (e) {
+        post({ type: "warn", message: e instanceof Error ? e.message : String(e) });
+    }
+}
+
+/** The stages of the csv states, with the empty ones of the metadata file */
+function allStages(): { id: string; name: string; declared: boolean }[] {
+    return buildGraph("csv", data!.lifecycle.states, data!.lsm, data!.metadata).stages;
+}
+
+/**
+ * Write a stage definition.  While some stages are not declared, declare them all in their
+ * current order, as the declared stages go first.
+ */
+function saveStage(stage: StageDefinition): void {
+    const stages = allStages();
+    if (stages.every((st) => st.declared)) {
+        post({ type: "metadata", op: { kind: "upsertStage", stage } });
+        return;
+    }
+    const definitions = stages.map((st): StageDefinition => (st.id === stage.id ? stage : { id: st.id, name: st.name }));
+    if (!stages.some((st) => st.id === stage.id)) {
+        definitions.push(stage);
+    }
+    post({ type: "metadata", op: { kind: "setStages", stages: definitions } });
+}
+
+function stageMembers(id: string): XState[] {
+    return data!.lifecycle.states.filter((x) => stageOf(x) === id);
+}
+
+function stageLink(id: string, label?: string): HTMLElement {
+    return h("button", {
+        class: "link",
+        onclick: () => {
+            ui.selection = { type: "stage", id };
+            renderAll(false);
+        },
+    }, label ?? id);
+}
+
+function stagesPanel(): HTMLElement {
+    const d = data!;
+    const stages = allStages();
+    const undeclared = stages.filter((st) => !st.declared);
+    const definition = (id: string) => d.metadata.stages.find((st) => st.id === id);
+    const idInput = h("input", { placeholder: "new_stage", "data-key": "new-stage" });
+    const addNew = () => {
+        const id = idInput.value.trim();
+        if (id) {
+            const name = id.replace(/[_-]+/g, " ").replace(/^./, (c) => c.toUpperCase());
+            changeStages(() => {
+                const change = addStage(d.lifecycle, d.metadata.stages, id, name);
+                // Declare the other stages too, so the new one goes last
+                return undeclared.length ? { ...change, metadata: [{ kind: "setStages", stages: [...stages.map((st) => ({ id: st.id, name: st.name })), { id, name }] }] } : change;
+            });
+            ui.selection = { type: "stage", id };
+        }
+    };
+    idInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            addNew();
+        }
+    });
+    return section("Stages",
+        h("ol", { class: "stage-list" },
+            stages.map((st, i) => {
+                const gridded = definition(st.id)?.column !== undefined;
+                const movable = st.declared;
+                const selected = ui.selection?.type === "stage" && ui.selection.id === st.id;
+                return h("li", { class: selected ? "on" : "" },
+                    h("span", { class: "order" },
+                        h("button", { class: "icon", title: "Move up", disabled: !movable || i === 0, onclick: () => post({ type: "metadata", op: { kind: "moveStage", id: st.id, delta: -1 } }) }, "↑"),
+                        h("button", { class: "icon", title: "Move down", disabled: !movable || i === stages.length - 1, onclick: () => post({ type: "metadata", op: { kind: "moveStage", id: st.id, delta: 1 } }) }, "↓")),
+                    stageLink(st.id, st.name),
+                    h("span", { class: "muted small" }, `${stageMembers(st.id).length}${gridded ? ` · col ${definition(st.id)!.column}` : ""}${st.declared ? "" : " · not declared"}`));
+            })),
+        undeclared.length
+            ? h("div", { class: "actions" },
+                h("button", {
+                    title: "Write the stages to the metadata file in this order, to name and reorder them",
+                    onclick: () => post({ type: "metadata", op: { kind: "setStages", stages: stages.map((st): StageDefinition => ({ id: st.id, name: st.name })) } }),
+                }, `Declare ${undeclared.length === stages.length ? "the" : `${undeclared.length} more`} stages`))
+            : null,
+        h("div", { class: "add-annotation" }, idInput, h("button", { onclick: addNew }, "+ Stage")),
+        h("p", { class: "muted small" }, "Drop a state on a stage to move it there. Drag a stage by its title to arrange the canvas."));
+}
+
+function stageInspector(id: string): HTMLElement[] {
+    const d = data!;
+    const stage = allStages().find((st) => st.id === id);
+    const definition: StageDefinition = d.metadata.stages.find((st) => st.id === id) ?? { id };
+    const members = stageMembers(id);
+    const editable = ui.mode === "edit";
+    const viaStates = members.filter((x) => !x.ownAnnotations.web_stage && x.annotations.web_stage === id);
+    const viaDesired = members.filter((x) => !x.annotations.web_stage);
+    const update = (patch: Partial<StageDefinition>) => saveStage({ ...definition, name: definition.name ?? stage?.name, ...patch });
+    const number = (value: string) => (value.trim() === "" ? undefined : Number(value));
+    const result: HTMLElement[] = [
+        h("header", { class: "title" }, h("span", { class: "badge l-none" }, stage?.name ?? id), h("span", { class: "muted mono" }, id)),
+    ];
+    if (editable) {
+        result.push(section("Stage",
+            h("div", { class: "form grid2" },
+                field("id", h("input", {
+                    value: id,
+                    "data-key": "stage-id",
+                    onchange: (e: Event) => {
+                        const to = (e.target as HTMLInputElement).value.trim();
+                        if (to && to !== id) {
+                            changeStages(() => renameStage(d.lifecycle, d.states, d.metadata.stages, id, to));
+                            ui.selection = { type: "stage", id: to };
+                        }
+                    },
+                })),
+                field("name", h("input", { value: definition.name ?? stage?.name ?? "", "data-key": "stage-name", onchange: (e: Event) => update({ name: (e.target as HTMLInputElement).value }) })),
+                field("column", h("input", { type: "number", min: "0", value: definition.column ?? "", "data-key": "stage-column", onchange: (e: Event) => update({ column: number((e.target as HTMLInputElement).value) }) })),
+                field("row", h("input", { type: "number", min: "0", value: definition.row ?? "", "data-key": "stage-row", onchange: (e: Event) => update({ row: number((e.target as HTMLInputElement).value) }) }))),
+            h("div", { class: "form" },
+                field("description", h("input", { value: definition.description ?? "", "data-key": "stage-description", onchange: (e: Event) => update({ description: (e.target as HTMLInputElement).value }) }))),
+            h("p", { class: "muted small" }, "Once declared, the stages go left to right in their order, a column and row put the stage on that cell instead. Renaming the id rewrites web_stage in the csv files.")));
+    } else {
+        result.push(section("Stage", kv([
+            ["name", stage?.name ?? id],
+            ["description", definition.description ?? null],
+            ["grid", definition.column !== undefined ? `column ${definition.column}, row ${definition.row ?? 0}` : null],
+            ["declared", stage?.declared ? "in the metadata file" : "no, only used by web_stage or a desired state"],
+        ])));
+    }
+    result.push(section(`States (${members.length})`,
+        members.length ? h("div", { class: "wrap" }, members.map((x) => stateLink(x.name))) : h("p", { class: "muted" }, editable ? "Drop states on this stage in the canvas." : "None"),
+        viaStates.length ? h("p", { class: "muted small" }, `${viaStates.length} get this stage from ${d.files.states}.`) : null,
+        viaDesired.length ? h("p", { class: "muted small" }, `${viaDesired.length} are here because their desired state is ${id}, they have no web_stage.`) : null));
+    if (editable) {
+        result.push(section("Stage actions", h("div", { class: "actions" },
+            pendingDelete === `stage:${id}`
+                ? h("button", { class: "danger", onclick: () => { pendingDelete = null; ui.selection = null; changeStages(() => deleteStage(d.lifecycle, d.states, id)); } }, members.length ? `Delete, ${members.length} states go back to their default stage` : "Confirm delete")
+                : h("button", { onclick: () => { pendingDelete = `stage:${id}`; renderAll(false); } }, "Delete stage"))));
+    }
+    return result;
+}
+
 // ---------- simulate ----------
 
 function renderLeft(): void {
     clear(left);
+    if (ui.mode === "edit") {
+        add(left, stagesPanel());
+        return;
+    }
     if (ui.mode !== "simulate") {
         return;
     }

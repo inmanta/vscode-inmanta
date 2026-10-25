@@ -265,6 +265,8 @@
         ]
     },
     "dependencies": {
+        "@fontsource-variable/red-hat-display": "^5.3.0",
+        "@fontsource-variable/red-hat-text": "^5.3.0",
         "async-mutex": "^0.5.0",
         "elkjs": "^0.12.0",
         "fs-extra": "^11.4.1",
@@ -272,6 +274,7 @@
         "log-symbols": "^7.0.1",
         "lru-cache": "^11.5.3",
         "minimatch": "^10.2.6",
+        "react-icons": "^5.7.0",
         "uuid": "^14.0.3",
         "vscode-languageclient": "^10.1.2",
         "yaml": "^2.9.1"

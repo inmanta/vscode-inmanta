@@ -2,7 +2,7 @@ import ELK, { ElkNode } from "elkjs/lib/elk.bundled.js";
 import { EDGE_KINDS, EdgeKind, Graph, GraphEdge, GraphNode } from "../lifecycle/graph";
 import { clear, s } from "./dom";
 
-export type GraphSelection = { type: "node"; id: string } | { type: "edge"; id: string } | null;
+export type GraphSelection = { type: "node"; id: string } | { type: "edge"; id: string } | { type: "stage"; id: string } | null;
 
 export interface GraphStyle {
     selection: GraphSelection;
@@ -21,6 +21,8 @@ export interface GraphCallbacks {
     select(selection: GraphSelection): void;
     move(positions: Record<string, { x: number; y: number }>): void;
     connect(source: string, target: string, x: number, y: number): void;
+    /** A state was dropped in another stage */
+    restage(id: string, stage: string): void;
     activate(id: string): void;
 }
 
@@ -32,6 +34,7 @@ interface Box {
 }
 
 const NODE_H = 30;
+const EMPTY_STAGE = { w: 220, h: 90 };
 const KIND_ORDER: EdgeKind[] = ["create", "auto", "update", "delete", "set", "validated", "rejected", "deployed", "failed", "non_compliant"];
 const DASHED: ReadonlySet<EdgeKind> = new Set(["failed", "non_compliant", "rejected"]);
 
@@ -84,10 +87,12 @@ export class GraphView {
     private layoutKey = "";
     private boxes = new Map<string, Box>();
     private stageBoxes = new Map<string, Box>();
+    /** The stages without states, placed by the layout */
+    private emptyStageBoxes = new Map<string, Box>();
     private transform = { k: 1, x: 20, y: 20 };
     private style: GraphStyle | null = null;
     private drag: {
-        kind: "pan" | "node" | "connect";
+        kind: "pan" | "node" | "connect" | "stage";
         id?: string;
         startX: number;
         startY: number;
@@ -98,6 +103,8 @@ export class GraphView {
         hit: GraphSelection;
     } | null = null;
     private tempLine: SVGPathElement | null = null;
+    /** The stage the dragged state would be dropped in */
+    private dropStage: string | null = null;
     private readonly elk = new ELK();
     private stageDefinitions = new Map<string, { column?: number; row?: number }>();
     private layoutVersion = 0;
@@ -138,13 +145,14 @@ export class GraphView {
         if (relayout) {
             const version = ++this.layoutVersion;
             this.container.classList.add("busy");
-            const boxes = await this.layout(graph);
+            const { boxes, empty } = await this.layout(graph);
             if (version !== this.layoutVersion) {
                 return;
             }
             this.container.classList.remove("busy");
             const previous = this.layoutKey;
             this.boxes = boxes;
+            this.emptyStageBoxes = empty;
             this.layoutKey = key;
             this.applyOverrides(overrides);
             this.render();
@@ -173,7 +181,7 @@ export class GraphView {
      * Two passes: the states of each stage are layered top to bottom, then the stages are placed
      * left to right, on the grid of the stage definitions when every stage has a column.
      */
-    private async layout(graph: Graph): Promise<Map<string, Box>> {
+    private async layout(graph: Graph): Promise<{ boxes: Map<string, Box>; empty: Map<string, Box> }> {
         const stageOf = new Map(graph.nodes.map((n) => [n.id, n.stage]));
         const nodesByStage = new Map<string, GraphNode[]>();
         for (const node of graph.nodes) {
@@ -182,6 +190,9 @@ export class GraphView {
 
         // Pass 1: inside each stage
         const inner = new Map<string, { boxes: Map<string, Box>; w: number; h: number }>();
+        for (const stage of graph.stages.filter((s) => !nodesByStage.has(s.id))) {
+            inner.set(stage.id, { boxes: new Map(), ...EMPTY_STAGE });
+        }
         for (const stage of graph.stages.filter((s) => nodesByStage.has(s.id))) {
             const members = nodesByStage.get(stage.id)!;
             const ids = new Set(members.map((n) => n.id));
@@ -209,25 +220,31 @@ export class GraphView {
         const unit = (id: string) => (stageOf.get(id) ? `stage:${stageOf.get(id)}` : id);
         const placed = new Map<string, { x: number; y: number }>();
         const definitions = this.stageDefinitions;
-        const grid = graph.stages.length > 0 && graph.stages.every((s) => definitions.get(s.id)?.column !== undefined);
+        // Declared stages go left to right in their order, or on the cell of their column and row
+        const grid = graph.stages.length > 0 && graph.stages.every((s) => definitions.has(s.id));
         if (grid) {
+            const cell = new Map(graph.stages.map((s, i) => [s.id, { column: definitions.get(s.id)!.column ?? i, row: definitions.get(s.id)!.row ?? 0 }]));
             const columns = new Map<number, number>();
             const rows = new Map<number, number>();
             for (const [id, size] of inner) {
-                const d = definitions.get(id)!;
-                columns.set(d.column!, Math.max(columns.get(d.column!) ?? 0, size.w));
-                rows.set(d.row ?? 0, Math.max(rows.get(d.row ?? 0) ?? 0, size.h));
+                const c = cell.get(id)!;
+                columns.set(c.column, Math.max(columns.get(c.column) ?? 0, size.w));
+                rows.set(c.row, Math.max(rows.get(c.row) ?? 0, size.h));
             }
             const offset = (sizes: Map<number, number>, index: number, gap: number) =>
                 [...sizes.keys()].filter((k) => k < index).reduce((sum, k) => sum + sizes.get(k)! + gap, 0);
             for (const id of inner.keys()) {
-                const d = definitions.get(id)!;
-                placed.set(`stage:${id}`, { x: 200 + offset(columns, d.column!, 110), y: offset(rows, d.row ?? 0, 70) });
+                const c = cell.get(id)!;
+                placed.set(`stage:${id}`, { x: 200 + offset(columns, c.column, 110), y: offset(rows, c.row, 70) });
             }
-            let y = 0;
+            // States outside of the stages: the entry ones left of the grid, the others right of it
+            const staged = new Set(graph.nodes.filter((n) => n.stage !== "").map((n) => n.id));
+            const right = 200 + offset(columns, Math.max(...columns.keys()) + 1, 110);
+            const y = { left: 0, right: 0 };
             for (const node of nodesByStage.get("") ?? []) {
-                placed.set(node.id, { x: 0, y });
-                y += NODE_H + 20;
+                const side = node.initial || !graph.edges.some((e) => e.target === node.id && staged.has(e.source)) ? "left" : "right";
+                placed.set(node.id, { x: side === "left" ? 0 : right, y: y[side] });
+                y[side] += NODE_H + 20;
             }
         } else {
             const seen = new Set<string>();
@@ -256,6 +273,11 @@ export class GraphView {
         }
 
         const boxes = new Map<string, Box>();
+        const empty = new Map<string, Box>();
+        for (const stage of graph.stages.filter((s) => !nodesByStage.has(s.id))) {
+            const p = placed.get(`stage:${stage.id}`) ?? { x: 0, y: 0 };
+            empty.set(stage.id, { x: p.x, y: p.y, w: EMPTY_STAGE.w, h: EMPTY_STAGE.h });
+        }
         for (const node of graph.nodes) {
             if (node.stage === "") {
                 const p = placed.get(node.id) ?? { x: 0, y: 0 };
@@ -266,20 +288,22 @@ export class GraphView {
                 boxes.set(node.id, { ...b, x: b.x + origin.x, y: b.y + origin.y });
             }
         }
-        return boxes;
+        return { boxes, empty };
     }
 
-    /** Position of the first state of a layout unit in the csv, to keep the csv order */
+    /** Position of the first state of a layout unit in the csv, to keep the csv order, empty stages go last */
     private modelOrder(graph: Graph, unit: string): number {
         const stage = unit.startsWith("stage:") ? unit.slice(6) : null;
-        return graph.nodes.findIndex((n) => (stage === null ? n.id === unit : n.stage === stage));
+        const index = graph.nodes.findIndex((n) => (stage === null ? n.id === unit : n.stage === stage));
+        return index >= 0 ? index : graph.nodes.length + graph.stages.findIndex((s) => s.id === stage);
     }
 
-    private computeStageBoxes(): void {
+    /** The boxes around the states of each stage, leaving out the state being dragged */
+    private computeStageBoxes(dragged?: string): void {
         this.stageBoxes.clear();
         for (const node of this.graph?.nodes ?? []) {
             const b = this.boxes.get(node.id);
-            if (!b || node.stage === "") {
+            if (!b || node.stage === "" || node.id === dragged) {
                 continue;
             }
             const current = this.stageBoxes.get(node.stage);
@@ -289,6 +313,33 @@ export class GraphView {
             const y1 = Math.max(current ? current.y + current.h : -Infinity, b.y + b.h + 14);
             this.stageBoxes.set(node.stage, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
         }
+        for (const stage of this.graph?.stages ?? []) {
+            const b = this.emptyStageBoxes.get(stage.id);
+            if (b && !this.stageBoxes.has(stage.id)) {
+                this.stageBoxes.set(stage.id, b);
+            }
+        }
+    }
+
+    /** The stage, other than its own, the center of the dragged state is in */
+    private stageUnder(id: string): string | null {
+        const b = this.boxes.get(id);
+        const own = this.graph?.nodes.find((n) => n.id === id)?.stage;
+        if (!b) {
+            return null;
+        }
+        const cx = b.x + b.w / 2;
+        const cy = b.y + b.h / 2;
+        const ownBox = own ? this.stageBoxes.get(own) : undefined;
+        if (ownBox && cx >= ownBox.x && cx <= ownBox.x + ownBox.w && cy >= ownBox.y && cy <= ownBox.y + ownBox.h) {
+            return null;
+        }
+        for (const [stage, box] of this.stageBoxes) {
+            if (stage !== own && cx >= box.x && cx <= box.x + box.w && cy >= box.y && cy <= box.y + box.h) {
+                return stage;
+            }
+        }
+        return null;
     }
 
     /** The current center positions of all nodes */
@@ -379,6 +430,8 @@ export class GraphView {
             if (e) {
                 neighbours.add(e.source).add(e.target);
             }
+        } else if (selected?.type === "stage") {
+            graph.nodes.filter((n) => n.stage === selected.id).forEach((n) => neighbours.add(n.id));
         }
         const simulating = style.current !== null;
         const routePairs = new Set<string>();
@@ -391,16 +444,26 @@ export class GraphView {
 
         // Stages
         const stagesLayer = s("g", { class: "stages" });
+        const editableStages = style.editable && graph.view === "csv";
         for (const stage of graph.stages) {
             const b = this.stageBoxes.get(stage.id);
             if (!b) {
                 continue;
             }
+            let cls = "stage";
+            if (this.dropStage === stage.id) {
+                cls += " drop-target";
+            }
+            if (selected?.type === "stage" && selected.id === stage.id) {
+                cls += " selected";
+            }
+            const empty = !graph.nodes.some((n) => n.stage === stage.id);
             stagesLayer.appendChild(
-                s("g", { class: "stage" },
+                s("g", { class: cls },
                     s("rect", { x: b.x, y: b.y, width: b.w, height: b.h, rx: 8 }),
-                    s("text", { x: b.x + 12, y: b.y + 21, class: "stage-title" }, stage.name.toUpperCase()),
-                    stage.description ? s("title", {}, stage.description) : null),
+                    s("text", { x: b.x + 12, y: b.y + 21, class: `stage-title${editableStages ? " grip" : ""}`, "data-stage": stage.id }, stage.name.toUpperCase(),
+                        s("title", {}, `${stage.description ? `${stage.description}\n` : ""}stage ${stage.id}${editableStages ? "\nDrag to move the stage, click to edit it" : ""}`)),
+                    empty ? s("text", { x: b.x + 12, y: b.y + 52, class: "stage-empty" }, editableStages ? "Drop states here" : "No states") : null),
             );
         }
         this.viewport.appendChild(stagesLayer);
@@ -427,7 +490,7 @@ export class GraphView {
             }
             if (isSelected || touches) {
                 cls += " strong";
-            } else if (selected) {
+            } else if (selected && !(selected.type === "stage" && neighbours.has(edge.source) && neighbours.has(edge.target))) {
                 cls += " faded";
             }
             if (simulating) {
@@ -544,14 +607,19 @@ export class GraphView {
             const handle = target.closest("[data-handle]")?.getAttribute("data-handle");
             const node = target.closest("[data-node]")?.getAttribute("data-node");
             const edge = target.closest("[data-edge]")?.getAttribute("data-edge");
-            const hit: GraphSelection = node ? { type: "node", id: node } : edge ? { type: "edge", id: edge } : null;
+            const stage = target.closest("[data-stage]")?.getAttribute("data-stage");
+            const hit: GraphSelection = node ? { type: "node", id: node } : edge ? { type: "edge", id: edge } : stage ? { type: "stage", id: stage } : null;
             const start = { startX: e.clientX, startY: e.clientY, moved: false, hit };
+            const editable = this.style?.editable && this.graph?.view === "csv";
             if (handle) {
                 this.drag = { kind: "connect", id: handle, ox: 0, oy: 0, ...start };
-            } else if (node && this.style?.editable && this.graph?.view === "csv") {
+            } else if (node && editable) {
                 const b = this.boxes.get(node)!;
                 const p = this.toGraph(e.clientX, e.clientY);
                 this.drag = { kind: "node", id: node, ox: p.x - b.x, oy: p.y - b.y, ...start };
+            } else if (stage && editable) {
+                const p = this.toGraph(e.clientX, e.clientY);
+                this.drag = { kind: "stage", id: stage, ox: p.x, oy: p.y, ...start };
             } else {
                 this.drag = { kind: "pan", ox: this.transform.x, oy: this.transform.y, ...start };
             }
@@ -578,6 +646,28 @@ export class GraphView {
                 const p = this.toGraph(e.clientX, e.clientY);
                 b.x = Math.round((p.x - drag.ox) / 4) * 4;
                 b.y = Math.round((p.y - drag.oy) / 4) * 4;
+                this.computeStageBoxes(drag.id);
+                this.dropStage = this.stageUnder(drag.id);
+                this.render();
+            } else if (drag.kind === "stage" && drag.id) {
+                const p = this.toGraph(e.clientX, e.clientY);
+                const dx = Math.round((p.x - drag.ox) / 4) * 4;
+                const dy = Math.round((p.y - drag.oy) / 4) * 4;
+                if (dx === 0 && dy === 0) {
+                    return;
+                }
+                drag.ox += dx;
+                drag.oy += dy;
+                for (const node of this.graph?.nodes.filter((n) => n.stage === drag.id) ?? []) {
+                    const b = this.boxes.get(node.id)!;
+                    b.x += dx;
+                    b.y += dy;
+                }
+                const empty = this.emptyStageBoxes.get(drag.id);
+                if (empty) {
+                    empty.x += dx;
+                    empty.y += dy;
+                }
                 this.computeStageBoxes();
                 this.render();
             } else if (drag.kind === "connect" && drag.id) {
@@ -607,8 +697,27 @@ export class GraphView {
                 return;
             }
             if (drag.kind === "node" && drag.moved && drag.id) {
+                const stage = this.dropStage;
+                this.dropStage = null;
+                this.computeStageBoxes();
+                if (stage !== null) {
+                    this.render();
+                    this.callbacks.restage(drag.id, stage);
+                    return;
+                }
                 const b = this.boxes.get(drag.id)!;
                 this.callbacks.move({ [drag.id]: { x: b.x + b.w / 2, y: b.y + b.h / 2 } });
+                return;
+            }
+            if (drag.kind === "stage" && drag.moved && drag.id) {
+                const positions: Record<string, { x: number; y: number }> = {};
+                for (const node of this.graph?.nodes.filter((n) => n.stage === drag.id) ?? []) {
+                    const b = this.boxes.get(node.id)!;
+                    positions[node.id] = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+                }
+                if (Object.keys(positions).length) {
+                    this.callbacks.move(positions);
+                }
                 return;
             }
             if (!drag.moved) {

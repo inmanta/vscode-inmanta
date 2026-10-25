@@ -3,7 +3,7 @@
  * csv can't hold, such as stage definitions, transfer annotations, layout and test scenarios.
  */
 import { Document, isMap, isSeq, parseDocument } from "yaml";
-import { Trigger } from "./model";
+import { parseTransfer, Trigger, XState } from "./model";
 import { formatEvent, parseEvent } from "./simulator";
 
 export interface StageDefinition {
@@ -35,6 +35,24 @@ export interface Metadata {
     transfers: TransferAnnotations[];
     layout: Record<string, { x: number; y: number }>;
     scenarios: Scenario[];
+}
+
+/** The triggers whose transfers the lifecycle factory annotates */
+export const TRANSFER_ANNOTATION_TRIGGERS: readonly Trigger[] = ["on_create", "on_update", "on_delete", "on_api_set_state", "on_auto", "on_deployed"];
+
+/** The transfer entries the lifecycle factory rejects: they must match a transfer of the csv */
+export function metadataIssues(metadata: Metadata, states: readonly XState[]): string[] {
+    return metadata.transfers.flatMap((entry) => {
+        const where = `transfer ${entry.source}.${entry.trigger} -> ${entry.target}`;
+        const state = states.find((x) => x.name === entry.source);
+        if (state === undefined) {
+            return [`${where}: no state ${entry.source}`];
+        }
+        if (!TRANSFER_ANNOTATION_TRIGGERS.includes(entry.trigger)) {
+            return [`${where}: the factory doesn't annotate ${entry.trigger} transfers`];
+        }
+        return state.triggers[entry.trigger].some((raw) => parseTransfer(raw)?.target === entry.target) ? [] : [`${where}: ${entry.source} has no such transfer`];
+    });
 }
 
 export function emptyMetadata(): Metadata {
@@ -124,6 +142,9 @@ export function parseMetadata(text: string): ParsedMetadata {
 
 const HEADER = "# Lifecycle Studio metadata: stages, transfer annotations, layout and scenarios of the lifecycle csv.\nversion: 1\n";
 
+// Never fold long lines, a one line transfer entry stays on one line
+const FORMAT = { lineWidth: 0 };
+
 function load(text: string): Document {
     return parseDocument(text.trim() ? text : HEADER);
 }
@@ -142,14 +163,24 @@ export function setLayout(text: string, positions: Record<string, { x: number; y
     for (const [state, p] of Object.entries(positions)) {
         doc.setIn(["layout", state], flow(doc, { x: Math.round(p.x), y: Math.round(p.y) }));
     }
-    return doc.toString();
+    return doc.toString(FORMAT);
+}
+
+/** Drop the position of states from the layout section */
+export function removeLayout(text: string, states: readonly string[]): string {
+    const doc = load(text);
+    const layout = doc.get("layout", true);
+    if (isMap(layout)) {
+        states.forEach((state) => layout.delete(state));
+    }
+    return doc.toString(FORMAT);
 }
 
 /** Drop the layout section */
 export function clearLayout(text: string): string {
     const doc = load(text);
     doc.delete("layout");
-    return doc.toString();
+    return doc.toString(FORMAT);
 }
 
 /** Add a scenario, or replace the one with the same name */
@@ -185,7 +216,7 @@ export function upsertScenario(text: string, scenario: Scenario): string {
             created.set(0, node);
         }
     }
-    return doc.toString();
+    return doc.toString(FORMAT);
 }
 
 export function deleteScenario(text: string, name: string): string {
@@ -194,7 +225,7 @@ export function deleteScenario(text: string, name: string): string {
     if (isSeq(seq)) {
         seq.items = seq.items.filter((item) => !(isMap(item) && item.get("name") === name));
     }
-    return doc.toString();
+    return doc.toString(FORMAT);
 }
 
 /** Set (or remove when empty) the annotations of a transfer */
@@ -218,7 +249,7 @@ export function setTransferAnnotations(text: string, entry: TransferAnnotations)
         doc.set("transfers", doc.createNode([]));
         (doc.get("transfers", true) as { add(v: unknown): void }).add(flow(doc, value));
     }
-    return doc.toString();
+    return doc.toString(FORMAT);
 }
 
 /** Drop the layout and transfer annotations of a deleted state, scenarios using it are left to fail */
@@ -235,7 +266,7 @@ export function deleteStateInMetadata(text: string, name: string): string {
     if (isSeq(transfers)) {
         transfers.items = transfers.items.filter((item) => !(isMap(item) && (item.get("source") === name || item.get("target") === name)));
     }
-    return doc.toString();
+    return doc.toString(FORMAT);
 }
 
 /** Rename a state in the layout, transfers and scenarios sections */
@@ -288,7 +319,125 @@ export function renameStateInMetadata(text: string, from: string, to: string): s
             }
         }
     }
-    return doc.toString();
+    return doc.toString(FORMAT);
+}
+
+function stageValue(stage: StageDefinition): Record<string, unknown> {
+    const value: Record<string, unknown> = { id: stage.id };
+    for (const key of ["name", "column", "row", "description"] as const) {
+        if (stage[key] !== undefined && stage[key] !== "") {
+            value[key] = stage[key];
+        }
+    }
+    return value;
+}
+
+function stageIndex(seq: unknown, id: string): number {
+    return isSeq(seq) ? seq.items.findIndex((item) => isMap(item) && item.get("id") === id) : -1;
+}
+
+/** Add a stage at the end of the stages section, or replace the one with the same id */
+export function upsertStage(text: string, stage: StageDefinition): string {
+    const doc = load(text);
+    const node = flow(doc, stageValue(stage));
+    const seq = doc.get("stages", true);
+    if (isSeq(seq)) {
+        const index = stageIndex(seq, stage.id);
+        if (index >= 0) {
+            seq.set(index, node);
+        } else {
+            seq.add(node);
+        }
+    } else {
+        doc.set("stages", doc.createNode([]));
+        (doc.get("stages", true) as { add(v: unknown): void }).add(node);
+    }
+    return doc.toString(FORMAT);
+}
+
+/** Declare the given stages, in this order, keeping the definitions of the declared ones */
+export function setStages(text: string, stages: readonly StageDefinition[]): string {
+    const doc = load(text);
+    const current = parseMetadata(text).metadata.stages;
+    const nodes = stages.map((stage) => flow(doc, stageValue({ ...current.find((s) => s.id === stage.id), ...stage })));
+    doc.set("stages", doc.createNode([]));
+    const seq = doc.get("stages", true) as { add(v: unknown): void };
+    nodes.forEach((node) => seq.add(node));
+    return doc.toString(FORMAT);
+}
+
+export function deleteStage(text: string, id: string): string {
+    const doc = load(text);
+    const seq = doc.get("stages", true);
+    if (isSeq(seq)) {
+        seq.items = seq.items.filter((item) => !(isMap(item) && item.get("id") === id));
+    }
+    return doc.toString(FORMAT);
+}
+
+export function renameStageInMetadata(text: string, from: string, to: string): string {
+    const doc = load(text);
+    const seq = doc.get("stages", true);
+    const index = stageIndex(seq, from);
+    if (isSeq(seq) && index >= 0) {
+        const item = seq.items[index];
+        if (isMap(item)) {
+            item.set("id", to);
+        }
+    }
+    return doc.toString(FORMAT);
+}
+
+/** Move a stage one place up (-1) or down (+1) in the stages section */
+export function moveStage(text: string, id: string, delta: -1 | 1): string {
+    const doc = load(text);
+    const seq = doc.get("stages", true);
+    const index = stageIndex(seq, id);
+    if (isSeq(seq) && index >= 0 && index + delta >= 0 && index + delta < seq.items.length) {
+        const [item] = seq.items.splice(index, 1);
+        seq.items.splice(index + delta, 0, item);
+    }
+    return doc.toString(FORMAT);
+}
+
+export type MetadataOp =
+    | { kind: "setLayout"; positions: Record<string, { x: number; y: number }> }
+    | { kind: "removeLayout"; states: string[] }
+    | { kind: "clearLayout" }
+    | { kind: "upsertScenario"; scenario: Scenario }
+    | { kind: "deleteScenario"; name: string }
+    | { kind: "setTransferAnnotations"; entry: TransferAnnotations }
+    | { kind: "upsertStage"; stage: StageDefinition }
+    | { kind: "setStages"; stages: StageDefinition[] }
+    | { kind: "deleteStage"; id: string }
+    | { kind: "renameStage"; from: string; to: string }
+    | { kind: "moveStage"; id: string; delta: -1 | 1 };
+
+export function applyMetadataOp(text: string, op: MetadataOp): string {
+    switch (op.kind) {
+        case "setLayout":
+            return setLayout(text, op.positions);
+        case "removeLayout":
+            return removeLayout(text, op.states);
+        case "clearLayout":
+            return clearLayout(text);
+        case "upsertScenario":
+            return upsertScenario(text, op.scenario);
+        case "deleteScenario":
+            return deleteScenario(text, op.name);
+        case "setTransferAnnotations":
+            return setTransferAnnotations(text, op.entry);
+        case "upsertStage":
+            return upsertStage(text, op.stage);
+        case "setStages":
+            return setStages(text, op.stages);
+        case "deleteStage":
+            return deleteStage(text, op.id);
+        case "renameStage":
+            return renameStageInMetadata(text, op.from, op.to);
+        case "moveStage":
+            return moveStage(text, op.id, op.delta);
+    }
 }
 
 function isScalarValue(node: unknown): unknown {

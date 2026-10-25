@@ -27,35 +27,19 @@ import {
 import { parseCsv } from "./csv";
 import { applyEdit, EditError, EditOp } from "./edit";
 import { lint } from "./lint";
-import {
-    clearLayout,
-    deleteScenario,
-    deleteStateInMetadata,
-    metadataPathFor,
-    parseMetadata,
-    renameStateInMetadata,
-    Scenario,
-    setLayout,
-    setTransferAnnotations,
-    TransferAnnotations,
-    upsertScenario,
-} from "./metadata";
+import { applyMetadataOp, deleteStateInMetadata, MetadataOp, metadataPathFor, parseMetadata, renameStateInMetadata } from "./metadata";
 import { isLifecycleHeader, parseLifecycleCsv, parseStatesCsv } from "./model";
+import { StageChange } from "./stages";
 
 export const VIEW_TYPE = "inmanta.lifecycleStudio";
-
-export type MetadataOp =
-    | { kind: "setLayout"; positions: Record<string, { x: number; y: number }> }
-    | { kind: "clearLayout" }
-    | { kind: "upsertScenario"; scenario: Scenario }
-    | { kind: "deleteScenario"; name: string }
-    | { kind: "setTransferAnnotations"; entry: TransferAnnotations };
 
 /** Messages sent by the webview */
 export type WebviewMessage =
     | { type: "ready" }
     | { type: "edit"; op: EditOp }
     | { type: "metadata"; op: MetadataOp }
+    | { type: "stages"; change: StageChange }
+    | { type: "warn"; message: string }
     | { type: "open"; file: "csv" | "states" | "metadata"; line?: number };
 
 /** Message sent to the webview */
@@ -115,19 +99,10 @@ async function writeText(uri: Uri, text: string): Promise<void> {
     await workspace.fs.writeFile(uri, Buffer.from(text, "utf8"));
 }
 
-function applyMetadataOp(text: string, op: MetadataOp): string {
-    switch (op.kind) {
-        case "setLayout":
-            return setLayout(text, op.positions);
-        case "clearLayout":
-            return clearLayout(text);
-        case "upsertScenario":
-            return upsertScenario(text, op.scenario);
-        case "deleteScenario":
-            return deleteScenario(text, op.name);
-        case "setTransferAnnotations":
-            return setTransferAnnotations(text, op.entry);
-    }
+async function replaceDocument(document: TextDocument, text: string): Promise<void> {
+    const edit = new WorkspaceEdit();
+    edit.replace(document.uri, new Range(new Position(0, 0), document.lineAt(document.lineCount - 1).range.end), text);
+    await workspace.applyEdit(edit);
 }
 
 function debounce(f: () => void, ms: number): () => void {
@@ -211,10 +186,7 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                     await send();
                     return;
                 case "edit": {
-                    const text = applyEdit(document.getText(), message.op);
-                    const edit = new WorkspaceEdit();
-                    edit.replace(document.uri, new Range(new Position(0, 0), document.lineAt(document.lineCount - 1).range.end), text);
-                    await workspace.applyEdit(edit);
+                    await replaceDocument(document, applyEdit(document.getText(), message.op));
                     const op = message.op;
                     if (op.kind === "renameState" || op.kind === "deleteState") {
                         const metadata = await readText(related.metadata);
@@ -230,6 +202,35 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                     await writeText(related.metadata, applyMetadataOp(metadata, message.op));
                     return;
                 }
+                case "stages": {
+                    // Compute all the new texts first, so a failing edit changes nothing
+                    const { csv, states, metadata } = message.change;
+                    const csvText = csv.length ? csv.reduce(applyEdit, document.getText()) : null;
+                    const statesBefore = states.length && related.states ? await readText(related.states) : null;
+                    const statesText = statesBefore !== null ? states.reduce(applyEdit, statesBefore) : null;
+                    const metadataBefore = await readText(related.metadata);
+                    // Removing positions from a missing metadata file doesn't create it
+                    const metadataText =
+                        metadata.length && (metadataBefore !== null || metadata.some((op) => op.kind !== "removeLayout"))
+                            ? metadata.reduce(applyMetadataOp, metadataBefore ?? "")
+                            : null;
+                    if (states.length && statesText === null) {
+                        throw new EditError("The stage is set in a states csv that can't be read");
+                    }
+                    if (statesText !== null && related.states) {
+                        await writeText(related.states, statesText);
+                    }
+                    if (metadataText !== null) {
+                        await writeText(related.metadata, metadataText);
+                    }
+                    if (csvText !== null) {
+                        await replaceDocument(document, csvText);
+                    }
+                    return;
+                }
+                case "warn":
+                    void window.showWarningMessage(message.message);
+                    return;
                 case "open": {
                     const uri = message.file === "csv" ? document.uri : message.file === "states" ? related.states : related.metadata;
                     if (uri === null) {
@@ -262,7 +263,7 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${cspSource};">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${cspSource} data:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lifecycle Studio</title>
 </head>
