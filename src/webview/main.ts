@@ -57,6 +57,9 @@ interface Ui {
     selection: GraphSelection;
     problemsOpen: boolean;
     context: CompileContext["kind"];
+    /** Widths of the side panels set by dragging their edge, the default when unset */
+    leftWidth?: number;
+    rightWidth?: number;
 }
 
 interface Sim {
@@ -102,6 +105,8 @@ const ui: Ui = {
     selection: saved.selection ?? null,
     problemsOpen: saved.problemsOpen ?? false,
     context: saved.context ?? "export",
+    leftWidth: saved.leftWidth,
+    rightWidth: saved.rightWidth,
 };
 let data: Data | null = null;
 let sim: Sim = { start: null, instance: null, steps: [], history: [] };
@@ -136,8 +141,52 @@ const canvas = h("div", { class: "canvas" });
 const inspector = h("aside", { class: "panel inspector" });
 const problems = h("div", { class: "problems" });
 const popup = h("div", { class: "popup", hidden: true });
-const main = h("div", { class: "main" }, left, canvas, inspector);
+const leftSplit = h("div", { class: "splitter left-split", title: "Drag to resize, double click to reset" });
+const rightSplit = h("div", { class: "splitter right-split", title: "Drag to resize, double click to reset" });
+const main = h("div", { class: "main" }, left, canvas, inspector, leftSplit, rightSplit);
 app.append(toolbar, main, problems, popup);
+
+function applyWidths(): void {
+    for (const [name, width] of [["--left-w", ui.leftWidth], ["--right-w", ui.rightWidth]] as const) {
+        if (width === undefined) {
+            app.style.removeProperty(name);
+        } else {
+            app.style.setProperty(name, `${width}px`);
+        }
+    }
+}
+
+/** Resize a side panel by dragging its edge */
+function bindSplitter(splitter: HTMLElement, side: "leftWidth" | "rightWidth"): void {
+    let dragging = false;
+    splitter.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        splitter.setPointerCapture(e.pointerId);
+        splitter.classList.add("active");
+    });
+    splitter.addEventListener("pointermove", (e) => {
+        if (!dragging) {
+            return;
+        }
+        const rect = main.getBoundingClientRect();
+        const width = side === "leftWidth" ? e.clientX - rect.left : rect.right - e.clientX;
+        ui[side] = Math.round(Math.min(Math.max(width, 160), rect.width * 0.6));
+        applyWidths();
+    });
+    splitter.addEventListener("pointerup", () => {
+        dragging = false;
+        splitter.classList.remove("active");
+        persist();
+    });
+    splitter.addEventListener("dblclick", () => {
+        ui[side] = undefined;
+        applyWidths();
+        persist();
+    });
+}
+bindSplitter(leftSplit, "leftWidth");
+bindSplitter(rightSplit, "rightWidth");
+applyWidths();
 
 const zoomControls = h("div", { class: "zoom" },
     h("button", { title: "Zoom in", onclick: () => graphView.zoom(1.25) }, "+"),

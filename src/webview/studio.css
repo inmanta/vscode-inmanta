@@ -55,9 +55,15 @@ input.invalid { border-color: var(--vscode-inputValidation-errorBorder, #be1100)
 .add-state input { width: 120px; }
 
 /* main */
-.main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
-#app[data-mode="simulate"] .main { grid-template-columns: 250px minmax(0, 1fr) 340px; }
-#app[data-mode="edit"] .main { grid-template-columns: 220px minmax(0, 1fr) 340px; }
+#app { --left: var(--left-w, 220px); --right: var(--right-w, 340px); }
+#app[data-mode="simulate"] { --left: var(--left-w, 250px); }
+.main { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) var(--right); min-height: 0; }
+#app:not([data-mode="view"]) .main { grid-template-columns: var(--left) minmax(0, 1fr) var(--right); }
+.splitter { position: absolute; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 5; }
+.splitter:hover, .splitter.active { background: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder)); }
+.splitter.left-split { left: calc(var(--left) - 3px); }
+.splitter.right-split { right: calc(var(--right) - 3px); }
+#app[data-mode="view"] .left-split { display: none; }
 .panel { overflow: auto; padding: 8px 12px 24px; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); min-width: 0; }
 .left { border-right: 1px solid var(--border); overflow-x: hidden; }
 #app[data-mode="view"] .left { display: none; }
