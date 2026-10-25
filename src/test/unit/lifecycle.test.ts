@@ -9,6 +9,7 @@ import { lint } from "../../lifecycle/lint";
 import { deleteStateInMetadata, emptyMetadata, parseMetadata, renameStateInMetadata, setLayout, upsertScenario } from "../../lifecycle/metadata";
 import { isFlagColumn, parseLifecycleCsv, parseStatesCsv, parseTransfer } from "../../lifecycle/model";
 import { compileContexts, runScenario, Simulator } from "../../lifecycle/simulator";
+import { consoleView } from "../../lifecycle/console";
 
 const fixtures = path.resolve(__dirname, "../../../src/test/unit/fixtures");
 const lifecycleText = fs.readFileSync(path.join(fixtures, "lifecycle.csv"), "utf8");
@@ -240,5 +241,30 @@ suite("lifecycle graph and metadata", () => {
         const deleted = parseMetadata(deleteStateInMetadata(text, "a")).metadata;
         assert.deepStrictEqual(deleted.layout, {});
         assert.deepStrictEqual(deleted.transfers, []);
+    });
+});
+
+suite("lifecycle web console preview", () => {
+    test("badge and actions", () => {
+        const lsm = load();
+        const metadata = emptyMetadata();
+        metadata.transfers.push({ source: "updating_failed", trigger: "on_api_set_state", target: "up", annotations: { web_button_label: "Give up the update", web_advanced_state: true, web_confirm: "Sure?" } });
+        metadata.transfers.push({ source: "updating_failed", trigger: "on_delete", target: "deleting", annotations: { web_confirm: "Really delete?" } });
+        const view = consoleView(lsm, metadata, "updating_failed", "lab1");
+        assert.deepStrictEqual(view.badge, { text: "updating_failed", label: "danger", icon: null, description: null, plain: false });
+        assert.ok(!view.edit.enabled);
+        assert.deepStrictEqual(view.delete, { enabled: true, confirm: "Really delete?" });
+        assert.deepStrictEqual(view.setState.map((a) => [a.target, a.label, a.confirm]), [["rolling_back", "rolling_back", "Are you sure you want to set state of instance lab1 to rolling_back?"]]);
+        assert.deepStrictEqual(view.advanced.map((a) => [a.label, a.confirm]), [["Give up the update", "Sure?"]]);
+    });
+
+    test("labels of generated states", () => {
+        const lsm = load();
+        const view = consoleView(lsm, emptyMetadata(), "rejected_updating_from_up");
+        assert.strictEqual(view.badge.text, "Rejected updating");
+        assert.strictEqual(view.badge.icon, "FaBan");
+        // cancel goes back to up, whose web_label is Up
+        assert.deepStrictEqual(view.setState.map((a) => a.label), ["Up"]);
+        assert.ok(view.edit.enabled);
     });
 });

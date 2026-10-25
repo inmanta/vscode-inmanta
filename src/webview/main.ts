@@ -1,3 +1,4 @@
+import { ConsoleAction, consoleView } from "../lifecycle/console";
 import { EDGE_KINDS, EdgeKind, Graph, GraphEdge, View, buildGraph } from "../lifecycle/graph";
 import { expand, LsmLifecycle, LsmState } from "../lifecycle/expand";
 import { Issue, lint } from "../lifecycle/lint";
@@ -102,6 +103,8 @@ let data: Data | null = null;
 let sim: Sim = { start: null, instance: null, steps: [], history: [] };
 let scenarioResults = new Map<string, ScenarioResult>();
 let pendingDelete: string | null = null;
+/** Web console preview: the advanced disclosure and the confirmation dialog that is open */
+const consoleUi: { advanced: boolean; confirm: { title: string; body: string; event: SimEvent } | null } = { advanced: false, confirm: null };
 let currentGraph: Graph | null = null;
 
 function post(message: unknown): void {
@@ -139,6 +142,7 @@ const graphView = new GraphView(canvas, {
     select: (selection) => {
         ui.selection = selection;
         pendingDelete = null;
+        consoleUi.confirm = null;
         hidePopup();
         persist();
         renderAll(false);
@@ -484,6 +488,103 @@ function renderInspector(): void {
     add(inspector, ...overview());
 }
 
+const ICON_GLYPHS: Record<string, string> = {
+    FaBan: "⊘",
+    FaClipboardCheck: "☑",
+    FaCheck: "✓",
+    FaPlus: "+",
+    FaTrash: "✕",
+    FaTimes: "✕",
+    FaExclamationTriangle: "!",
+    FaUndo: "↺",
+    FaSync: "⟳",
+    FaPause: "❚❚",
+    FaPlay: "▶",
+    FaWrench: "⚒",
+};
+
+function faIcon(name: string | null): HTMLElement | null {
+    return name ? h("span", { class: "pf-icon", title: `Font Awesome ${name}` }, ICON_GLYPHS[name] ?? "●") : null;
+}
+
+/**
+ * The state badge and Actions menu the web console shows for an instance in this state.
+ * In simulate mode, confirming an action sends it to the simulation.
+ */
+function consolePreview(stateName: string): HTMLElement {
+    const d = data!;
+    const view = consoleView(d.lsm, d.metadata, stateName, "my-instance", d.files.csv.replace(/\.csv$/, ""));
+    const interactive = ui.mode === "simulate" && sim.instance?.state === stateName;
+    const badge = view.badge;
+    const badgeEl = badge.plain
+        ? h("span", { class: "pf-plain" }, badge.text)
+        : h("span", { class: `pf-label s-${badge.label ?? "none"}`, title: badge.description ?? "" }, faIcon(badge.icon), badge.text);
+
+    const ask = (title: string, body: string, event: SimEvent) => {
+        consoleUi.confirm = { title, body, event };
+        renderInspector();
+    };
+    const item = (label: string, opts: { disabled?: boolean; icon?: string | null; variant?: string | null; onclick?: () => void; title?: string }) =>
+        h("li", null, h("button", {
+            class: `pf-item${opts.variant ? ` v-${opts.variant}` : ""}`,
+            disabled: opts.disabled ?? false,
+            title: opts.title ?? "",
+            onclick: opts.onclick,
+        }, faIcon(opts.icon ?? null) ?? h("span", { class: "pf-icon" }), label));
+    const action = (a: ConsoleAction) =>
+        item(a.label, {
+            icon: a.icon,
+            variant: a.variant,
+            title: `api_set_state → ${a.target}${a.transfer.targetOperation ? ` (${a.transfer.targetOperation})` : ""}`,
+            onclick: () => ask("Confirm set state transfer", a.confirm, { kind: "set_state", target: a.target }),
+        });
+
+    const menu = h("ul", { class: "pf-menu", role: "menu" },
+        item("Edit", { disabled: !view.edit.enabled, icon: "FaWrench", title: view.edit.enabled ? "on_update transfer" : "No on_update transfer from this state" }),
+        item("Duplicate", { icon: null }),
+        item("Delete", {
+            disabled: !view.delete.enabled,
+            icon: "FaTrash",
+            title: view.delete.enabled ? "on_delete transfer" : "No on_delete transfer from this state",
+            onclick: () => ask("Delete instance", view.delete.confirm, { kind: "delete" }),
+        }),
+        view.setState.length + view.advanced.length > 0 ? h("li", { class: "pf-divider" }) : null,
+        view.setState.length ? h("li", { class: "pf-group" }, "Set state") : null,
+        view.setState.map(action),
+        view.advanced.length
+            ? h("li", null, h("button", { class: "pf-item", onclick: () => { consoleUi.advanced = !consoleUi.advanced; renderInspector(); } },
+                h("span", { class: "pf-icon" }, consoleUi.advanced ? "▾" : "▸"), "Advanced"))
+            : null,
+        consoleUi.advanced ? view.advanced.map(action) : null);
+
+    const confirm = consoleUi.confirm;
+    return h("div", { class: "pf" },
+        h("div", { class: "pf-crumb" }, `Service inventory / ${d.files.csv.replace(/\.csv$/, "")} / my-instance`),
+        h("div", { class: "pf-head" }, h("span", { class: "pf-title" }, "my-instance"), badgeEl, h("span", { class: "pf-toggle" }, "Actions ▾")),
+        badge.description ? h("div", { class: "pf-tooltip" }, h("span", null, "Tooltip: "), badge.description) : null,
+        menu,
+        confirm
+            ? h("div", { class: "pf-modal", role: "dialog" },
+                h("div", { class: "pf-modal-title" }, h("span", { class: "pf-warn" }, "!"), confirm.title),
+                h("p", null, confirm.body),
+                h("div", { class: "pf-modal-actions" },
+                    h("button", {
+                        class: "pf-primary",
+                        onclick: () => {
+                            const event = confirm.event;
+                            consoleUi.confirm = null;
+                            if (interactive) {
+                                send(event);
+                            } else {
+                                renderInspector();
+                            }
+                        },
+                    }, "Yes"),
+                    h("button", { class: "pf-link", onclick: () => { consoleUi.confirm = null; renderInspector(); } }, "No")),
+                interactive ? null : h("p", { class: "pf-hint" }, "In Simulate mode, Yes sends this event to the simulated instance."))
+            : null);
+}
+
 function overview(): HTMLElement[] {
     const d = data!;
     const initial = [d.lsm.initialState, ...d.lsm.alternativeInitialStates].filter((s): s is string => s !== null);
@@ -557,6 +658,7 @@ function stateInspector(state: LsmState): HTMLElement[] {
                 h("button", { onclick: () => post({ type: "open", file: "csv", line: x.line }) }, "Open csv row"),
                 h("button", { onclick: () => { ui.mode = "simulate"; replay(state.name, []); persist(); renderAll(false); } }, "Simulate from here")) : null),
         issues.length ? section("Problems", h("ul", { class: "plain" }, issues.map((i) => h("li", { class: i.severity }, i.message)))) : h("span"),
+        section("Web console", consolePreview(state.name)),
         ui.view === "csv" && x ? csvTransfers(state.name) : section("Leaves to",
             h("div", { class: "transfers" },
                 outgoing.map((t) => {
@@ -608,6 +710,7 @@ function edgeInspector(edge: GraphEdge): HTMLElement[] {
     const d = data!;
     return [
         h("header", { class: "title" }, stateLink(edge.source), " → ", stateLink(edge.target)),
+        d.lsm.states.has(edge.source) ? section(`Web console in ${edge.source}`, consolePreview(edge.source)) : h("span"),
         ...edge.details.map((detail) => {
             const target = parseTransfer(detail.raw)?.target ?? edge.target;
             const entry = d.metadata.transfers.find((t) => t.source === detail.state && t.trigger === detail.trigger && t.target === target);
@@ -742,6 +845,7 @@ function editInspector(x: XState): HTMLElement[] {
                 field("desired_state", select(desiredStates, x.desiredState, (v) => set("desired_state", v), "desired_state")),
                 field("current", select([...ATTRIBUTE_SETS], x.current ?? "", (v) => set("current", v), "current")),
                 field("previous", select([...ATTRIBUTE_SETS], x.previous ?? "", (v) => set("previous", v), "previous")))),
+        section("Web console", consolePreview(x.name)),
         section("Transfers",
             h("div", { class: "transfer-editor" },
                 TRIGGERS.flatMap((trigger) => {
@@ -921,6 +1025,7 @@ function simulationInspector(): HTMLElement[] {
         const state = d.lsm.states.get(instance.state);
         result.push(
             h("header", { class: "title" }, badge(state?.label ?? null, instance.state), h("span", { class: "muted" }, `version ${instance.version}`)),
+            section("Web console", consolePreview(instance.state)),
             section("Attribute sets", setsView(instance)),
         );
         if (state) {

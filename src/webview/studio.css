@@ -188,3 +188,33 @@ svg.graph:active { cursor: grabbing; }
 .canvas.busy::after { content: "Laying out…"; position: absolute; left: 12px; top: 10px; color: var(--muted); }
 .inspector { overflow-x: hidden; }
 .transfer > *, .wrap > * { min-width: 0; overflow-wrap: anywhere; }
+
+/* web console preview: PatternFly light look, independent of the VS Code theme */
+.pf { --pf-text: #151515; --pf-muted: #4d4d4d; --pf-border: #c7c7c7; --pf-blue: #0066cc; background: #f2f2f2; color: var(--pf-text); border-radius: 6px; padding: 10px; font-family: "Red Hat Text", "RedHatText", "Overpass", Helvetica, Arial, sans-serif; font-size: 13px; display: grid; gap: 8px; }
+.pf-crumb { color: var(--pf-muted); font-size: 11.5px; }
+.pf-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pf-title { font-weight: 600; font-size: 15px; }
+.pf-toggle { margin-left: auto; background: var(--pf-blue); color: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12.5px; }
+.pf-label { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--st, #8a8d90); color: var(--st-text, #151515); background: #fff; border-radius: 999px; padding: 1px 9px; font-size: 12.5px; }
+.pf-label.s-success { --st: #3d7317; --st-text: #204d00; } .pf-label.s-info { --st: #5e40be; --st-text: #3d2785; } .pf-label.s-warning { --st: #dca614; --st-text: #73480b; } .pf-label.s-danger { --st: #b1380b; --st-text: #731f00; }
+.pf-plain { color: var(--pf-text); }
+.pf-icon { display: inline-grid; place-items: center; width: 14px; font-size: 11px; color: inherit; }
+.pf-tooltip { background: #151515; color: #fff; border-radius: 4px; padding: 5px 8px; font-size: 12px; }
+.pf-tooltip span { opacity: 0.6; }
+.pf-menu { list-style: none; margin: 0; padding: 6px 0; background: #fff; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
+.pf-item { display: flex; align-items: center; gap: 8px; width: 100%; background: none; color: var(--pf-text); border: 0; border-radius: 0; padding: 5px 12px; text-align: left; font: inherit; }
+.pf-item:hover:not(:disabled) { background: #f2f2f2; }
+.pf-item:disabled { color: #a3a3a3; opacity: 1; }
+.pf-item.v-danger { color: #b1380b; } .pf-item.v-warning { color: #73480b; }
+.pf-divider { border-top: 1px solid #e0e0e0; margin: 5px 0; }
+.pf-group { color: var(--pf-muted); font-size: 11.5px; padding: 3px 12px; }
+.pf-modal { background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); padding: 12px 14px; display: grid; gap: 8px; }
+.pf-modal p { margin: 0; }
+.pf-modal-title { font-weight: 600; font-size: 14px; display: flex; gap: 6px; align-items: center; }
+.pf-warn { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #b1380b; color: #fff; font-size: 11px; }
+.pf-modal-actions { display: flex; gap: 8px; }
+.pf-primary { background: var(--pf-blue); color: #fff; border-radius: 999px; padding: 4px 14px; }
+.pf-primary:hover:not(:disabled) { background: #004d99; }
+.pf-link { background: none; color: var(--pf-blue); }
+.pf-link:hover:not(:disabled) { background: none; text-decoration: underline; }
+.pf-hint { color: var(--pf-muted); font-size: 11.5px; }
