@@ -1,5 +1,5 @@
 import ELK, { ElkNode } from "elkjs/lib/elk.bundled.js";
-import { EDGE_KINDS, EdgeKind, Graph, GraphEdge, GraphNode } from "../lifecycle/graph";
+import { EdgeKind, Graph, GraphEdge, GraphNode } from "../lifecycle/graph";
 import { clear, s } from "./dom";
 
 export type GraphSelection = { type: "node"; id: string } | { type: "edge"; id: string } | { type: "stage"; id: string } | null;
@@ -53,6 +53,50 @@ function cubicPoint(p: number[], t: number): { x: number; y: number } {
     return {
         x: u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
         y: u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3,
+    };
+}
+
+/** The part of the curve from its start up to t (de Casteljau) */
+function cubicHead(p: number[], t: number): number[] {
+    const lerp = (a: number, b: number) => a + (b - a) * t;
+    const [x0, y0, x1, y1, x2, y2, x3, y3] = p;
+    const ax = lerp(x0, x1), ay = lerp(y0, y1);
+    const bx = lerp(x1, x2), by = lerp(y1, y2);
+    const cx = lerp(x2, x3), cy = lerp(y2, y3);
+    const dx = lerp(ax, bx), dy = lerp(ay, by);
+    const ex = lerp(bx, cx), ey = lerp(by, cy);
+    return [x0, y0, ax, ay, dx, dy, lerp(dx, ex), lerp(dy, ey)];
+}
+
+function curvePath(p: number[]): string {
+    return `M${p[0]},${p[1]} C${p[2]},${p[3]} ${p[4]},${p[5]} ${p[6]},${p[7]}`;
+}
+
+/**
+ * A curve ending in an arrowhead.  The head points along the part of the curve it covers, the
+ * tangent at the very end can differ a lot from that when the curve bends close to its end, and
+ * the line stops at the base of the head so it doesn't show behind it.
+ */
+function arrow(p: number[], size: number): { line: string; head: string } {
+    const tip = { x: p[6], y: p[7] };
+    let t = 0.5;
+    for (let candidate = 0.995; candidate > 0.5; candidate -= 0.005) {
+        const q = cubicPoint(p, candidate);
+        if (Math.hypot(tip.x - q.x, tip.y - q.y) >= size) {
+            t = candidate;
+            break;
+        }
+    }
+    const base = cubicPoint(p, t);
+    const length = Math.hypot(tip.x - base.x, tip.y - base.y) || 1;
+    const ux = (tip.x - base.x) / length;
+    const uy = (tip.y - base.y) / length;
+    const w = size * 0.45;
+    // The line goes slightly under the head, so no gap shows at the joint
+    const line = cubicHead(p, Math.min(1, t + 0.003));
+    return {
+        line: curvePath(line),
+        head: `M${tip.x},${tip.y} L${base.x - uy * w},${base.y + ux * w} L${base.x + uy * w},${base.y - ux * w} z`,
     };
 }
 
@@ -114,18 +158,6 @@ export class GraphView {
         private readonly callbacks: GraphCallbacks,
     ) {
         this.svg = s("svg", { class: "graph", tabindex: 0, "aria-label": "Lifecycle graph" });
-        const defs = s("defs");
-        for (const kind of EDGE_KINDS) {
-            defs.appendChild(
-                s("marker", { id: `arrow-${kind}`, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" },
-                    s("path", { d: "M0,0 L10,5 L0,10 z", class: `mk k-${kind}` })),
-            );
-        }
-        defs.appendChild(
-            s("marker", { id: "arrow-route", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 5, markerHeight: 5, orient: "auto" },
-                s("path", { d: "M0,0 L10,5 L0,10 z", class: "mk route" })),
-        );
-        this.svg.appendChild(defs);
         this.viewport = s("g");
         this.svg.appendChild(this.viewport);
         container.appendChild(this.svg);
@@ -481,7 +513,8 @@ export class GraphView {
             }
             const offset = pairs.has(`${edge.target}>${edge.source}`) ? 5 : 0;
             const p = edgeCurve(a, b, offset);
-            const d = `M${p[0]},${p[1]} C${p[2]},${p[3]} ${p[4]},${p[5]} ${p[6]},${p[7]}`;
+            const d = curvePath(p);
+            const paths = arrow(p, 9);
             const isSelected = selected?.type === "edge" && selected.id === edge.id;
             const touches = selected?.type === "node" && (edge.source === selected.id || edge.target === selected.id);
             let cls = `edge k-${kind}`;
@@ -498,7 +531,8 @@ export class GraphView {
             }
             const title = edge.details.map((x) => `${x.state}.${x.trigger} = ${x.raw}${x.operation ? ` (${x.operation})` : ""}`).join("\n");
             const group = s("g", { class: cls, "data-edge": edge.id },
-                s("path", { d, class: "line", "marker-end": `url(#arrow-${kind})` }),
+                s("path", { d: paths.line, class: "line" }),
+                s("path", { d: paths.head, class: `mk k-${kind}` }),
                 s("path", { d, class: "hit" }),
                 s("title", {}, title));
             if (edge.details.some((x) => x.validate) && !simulating) {
@@ -522,7 +556,9 @@ export class GraphView {
             }
             const p = edgeCurve(a, b, 0);
             const m = cubicPoint(p, 0.5);
-            routeLayer.appendChild(s("path", { d: `M${p[0]},${p[1]} C${p[2]},${p[3]} ${p[4]},${p[5]} ${p[6]},${p[7]}`, class: "route-line", "marker-end": "url(#arrow-route)" }));
+            const route = arrow(p, 13);
+            routeLayer.appendChild(s("path", { d: route.line, class: "route-line" }));
+            routeLayer.appendChild(s("path", { d: route.head, class: "mk route" }));
             routeLayer.appendChild(s("g", { transform: `translate(${m.x},${m.y})`, class: "route-step" }, s("circle", { r: 8 }), s("text", { y: 3.5 }, String(step))));
         });
         this.viewport.appendChild(edgesLayer);

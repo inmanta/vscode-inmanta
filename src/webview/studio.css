@@ -231,3 +231,5 @@ button.icon { padding: 0 4px; min-width: 0; line-height: 1.3; }
 .pf-link { background: none; color: var(--pf-blue); }
 .pf-link:hover:not(:disabled) { background: none; text-decoration: underline; }
 .pf-hint { color: var(--pf-muted); font-size: 11.5px; }
+.seg-group { display: inline-flex; align-items: center; gap: 6px; }
+.seg-label { color: var(--muted); font-size: 0.9em; }

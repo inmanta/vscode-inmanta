@@ -51,7 +51,7 @@ port=8888                                         # Replace this by the port on 
 ### Lifecycle Studio
 Open a csv lifecycle of `future::lsm::fsm` (a `lifecycle.csv` with `name`, `desired_state` and `on_*` columns) with the **Open in Lifecycle Studio** button in the editor title, or with *Open With... > Inmanta Lifecycle Studio*. The studio has three modes:
 
-- **View**: the lifecycle as a graph, grouped in stages (the `web_stage` annotation, or the desired state). Switch between the states of the csv, the lsm states including the generated validation states, and the desired states.
+- **View**: the lifecycle as a graph, grouped in stages (the `web_stage` annotation, or the desired state). The detail level goes from coarse to fine: **Desired states** (one box per desired state), **States** (the rows of the csv) and **States + validation** (every state in the orchestrator, including the `validating_*` and `rejected_*` states the factory generates).
 - **Edit**: change states and transfers in the inspector, or drag the handle of the selected state onto another state to add a transfer. Every edit is a normal edit of the csv, so undo, save and diff work as usual.
   The stages panel adds, names, orders and deletes stages. Drop a state on a stage to set its `web_stage`, drag a stage by its title to arrange the canvas. Once declared, the stages are laid out left to right in their order.
 - **Simulate**: create an instance or start in any state, then send updates, deletes, set state calls, validation results and resource outcomes. The studio shows the attribute sets, the desired state and the `states.csv` options the model sees in each kind of compile, and saves runs as scenarios.
