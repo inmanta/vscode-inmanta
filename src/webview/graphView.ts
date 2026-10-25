@@ -33,6 +33,12 @@ interface Box {
     h: number;
 }
 
+function union(a: Box, b: Box): Box {
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+}
+
 const NODE_H = 30;
 const EMPTY_STAGE = { w: 220, h: 90 };
 const KIND_ORDER: EdgeKind[] = ["create", "auto", "update", "delete", "set", "validated", "rejected", "deployed", "failed", "non_compliant"];
@@ -145,6 +151,8 @@ export class GraphView {
         oy: number;
         /** What was under the pointer when it went down, pointer capture retargets the later events */
         hit: GraphSelection;
+        /** The box of the stage of the dragged state when the drag started, it doesn't shrink during the drag */
+        stageBox?: Box;
     } | null = null;
     private tempLine: SVGPathElement | null = null;
     /** The stage the dragged state would be dropped in */
@@ -652,7 +660,9 @@ export class GraphView {
             } else if (node && editable) {
                 const b = this.boxes.get(node)!;
                 const p = this.toGraph(e.clientX, e.clientY);
-                this.drag = { kind: "node", id: node, ox: p.x - b.x, oy: p.y - b.y, ...start };
+                const own = this.graph?.nodes.find((n) => n.id === node)?.stage;
+                const stageBox = own ? this.stageBoxes.get(own) : undefined;
+                this.drag = { kind: "node", id: node, ox: p.x - b.x, oy: p.y - b.y, ...start, stageBox: stageBox && { ...stageBox } };
             } else if (stage && editable) {
                 const p = this.toGraph(e.clientX, e.clientY);
                 this.drag = { kind: "stage", id: stage, ox: p.x, oy: p.y, ...start };
@@ -683,6 +693,11 @@ export class GraphView {
                 b.x = Math.round((p.x - drag.ox) / 4) * 4;
                 b.y = Math.round((p.y - drag.oy) / 4) * 4;
                 this.computeStageBoxes(drag.id);
+                const own = this.graph?.nodes.find((n) => n.id === drag.id)?.stage;
+                const current = own ? this.stageBoxes.get(own) : undefined;
+                if (own && drag.stageBox) {
+                    this.stageBoxes.set(own, current ? union(current, drag.stageBox) : drag.stageBox);
+                }
                 this.dropStage = this.stageUnder(drag.id);
                 this.render();
             } else if (drag.kind === "stage" && drag.id) {
