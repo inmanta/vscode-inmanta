@@ -252,7 +252,7 @@ export function buildGraph(view: View, xStates: readonly XState[], lifecycle: Ls
         nodes.push({
             id: name,
             label: labels.includes("success") ? "success" : members.some((m) => m.current !== null) ? "info" : null,
-            stage: members[0].annotations.web_stage || (members.some((m) => m.current !== null) ? name : ""),
+            stage: members[0].annotations.web_stage ?? "",
             initial: members.some((m) => initial.has(m.name)),
             deleted: members.every((m) => lifecycle.states.get(m.name)?.deleted),
             generated: false,

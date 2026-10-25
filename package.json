@@ -186,6 +186,23 @@
                     "when": "editorLangId == inmanta",
                     "command": "inmanta.exportToServer",
                     "group": "navigation"
+                },
+                {
+                    "when": "resourceExtname == .csv && activeCustomEditorId != inmanta.lifecycleStudio",
+                    "command": "inmanta.openLifecycleStudio",
+                    "group": "navigation"
+                },
+                {
+                    "when": "activeCustomEditorId == inmanta.lifecycleStudio",
+                    "command": "inmanta.openLifecycleCsvAsText",
+                    "group": "navigation"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "when": "resourceExtname == .csv",
+                    "command": "inmanta.openLifecycleStudio",
+                    "group": "navigation"
                 }
             ]
         },

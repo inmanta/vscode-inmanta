@@ -7,6 +7,7 @@ import {
     commands,
     CustomTextEditorProvider,
     Diagnostic,
+    Disposable,
     DiagnosticSeverity,
     ExtensionContext,
     languages,
@@ -29,6 +30,7 @@ import { lint } from "./lint";
 import {
     clearLayout,
     deleteScenario,
+    deleteStateInMetadata,
     metadataPathFor,
     parseMetadata,
     renameStateInMetadata,
@@ -38,7 +40,7 @@ import {
     TransferAnnotations,
     upsertScenario,
 } from "./metadata";
-import { isLifecycleHeader, parseLifecycleCsv, parseStatesCsv, StatesFile } from "./model";
+import { isLifecycleHeader, parseLifecycleCsv, parseStatesCsv } from "./model";
 
 export const VIEW_TYPE = "inmanta.lifecycleStudio";
 
@@ -128,6 +130,22 @@ function applyMetadataOp(text: string, op: MetadataOp): string {
     }
 }
 
+function debounce(f: () => void, ms: number): () => void {
+    let timer: NodeJS.Timeout | undefined;
+    return () => {
+        clearTimeout(timer);
+        timer = setTimeout(f, ms);
+    };
+}
+
+/** Watch the given files, wherever they are */
+function watchFiles(uris: Uri[], onChange: () => void): Disposable[] {
+    return uris.flatMap((uri) => {
+        const watcher = workspace.createFileSystemWatcher(new RelativePattern(Uri.joinPath(uri, ".."), path.posix.basename(uri.path)));
+        return [watcher, watcher.onDidChange(onChange), watcher.onDidCreate(onChange), watcher.onDidDelete(onChange)];
+    });
+}
+
 class LifecycleStudioProvider implements CustomTextEditorProvider {
     constructor(private readonly context: ExtensionContext) {}
 
@@ -138,9 +156,17 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
         webview.html = this.html(webview.asWebviewUri(Uri.joinPath(outDir, "webview.js")).toString(), webview.cspSource);
 
         let related = await relatedFiles(document.uri);
+        let watchers: Disposable[] = [];
+        let watched = "";
 
         const send = async () => {
             related = await relatedFiles(document.uri);
+            const files = [related.metadata, related.states].filter((u): u is Uri => u !== null);
+            if (files.map((u) => u.toString()).join() !== watched) {
+                watchers.forEach((w) => w.dispose());
+                watchers = watchFiles(files, scheduleSend);
+                watched = files.map((u) => u.toString()).join();
+            }
             const message: LoadMessage = {
                 type: "load",
                 csv: document.getText(),
@@ -154,36 +180,31 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
             };
             await webview.postMessage(message);
         };
+        // A single change can be reported by both the document and the file watcher
+        const scheduleSend = debounce(() => void send(), 50);
 
-        const dir = Uri.joinPath(document.uri, "..");
-        const watcher = workspace.createFileSystemWatcher(new RelativePattern(dir, "*.{csv,yml}"));
+        // Handle the messages one at a time, each edit is computed on the text left by the previous one
+        let queue = Promise.resolve();
         const subscriptions = [
             workspace.onDidChangeTextDocument((e) => {
                 const changed = e.document.uri.toString();
-                if (
-                    changed === document.uri.toString() ||
-                    changed === related.metadata.toString() ||
-                    changed === related.states?.toString()
-                ) {
-                    void send();
+                if (changed === document.uri.toString() || changed === related.metadata.toString() || changed === related.states?.toString()) {
+                    scheduleSend();
                 }
             }),
-            watcher.onDidChange(() => void send()),
-            watcher.onDidCreate(() => void send()),
-            watcher.onDidDelete(() => void send()),
-            watcher,
-            webview.onDidReceiveMessage((message: WebviewMessage) => this.receive(document, message, () => related, send)),
+            webview.onDidReceiveMessage((message: WebviewMessage) => {
+                queue = queue.then(() => this.receive(document, message, related, send));
+            }),
         ];
-        panel.onDidDispose(() => subscriptions.forEach((s) => s.dispose()));
+        panel.onDidDispose(() => [...subscriptions, ...watchers].forEach((s) => s.dispose()));
     }
 
     private async receive(
         document: TextDocument,
         message: WebviewMessage,
-        getRelated: () => { metadata: Uri; states: Uri | null },
+        related: { metadata: Uri; states: Uri | null },
         send: () => Promise<void>,
     ): Promise<void> {
-        const related = getRelated();
         try {
             switch (message.type) {
                 case "ready":
@@ -194,10 +215,12 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                     const edit = new WorkspaceEdit();
                     edit.replace(document.uri, new Range(new Position(0, 0), document.lineAt(document.lineCount - 1).range.end), text);
                     await workspace.applyEdit(edit);
-                    if (message.op.kind === "renameState") {
+                    const op = message.op;
+                    if (op.kind === "renameState" || op.kind === "deleteState") {
                         const metadata = await readText(related.metadata);
                         if (metadata) {
-                            await writeText(related.metadata, renameStateInMetadata(metadata, message.op.from, message.op.to));
+                            const updated = op.kind === "renameState" ? renameStateInMetadata(metadata, op.from, op.to) : deleteStateInMetadata(metadata, op.name);
+                            await writeText(related.metadata, updated);
                         }
                     }
                     return;
@@ -205,7 +228,6 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                 case "metadata": {
                     const metadata = (await readText(related.metadata)) ?? "";
                     await writeText(related.metadata, applyMetadataOp(metadata, message.op));
-                    await send();
                     return;
                 }
                 case "open": {
@@ -253,26 +275,39 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
 }
 
 /**
- * Report the lifecycle checks of the open lifecycle csv files as diagnostics.
+ * Report the lifecycle checks of the open lifecycle csv files as diagnostics.  Problems found
+ * in a states csv are merged over all the open lifecycles using it.
  */
 function registerDiagnostics(context: ExtensionContext): void {
     const collection = languages.createDiagnosticCollection("inmanta-lifecycle");
     context.subscriptions.push(collection);
-    const statesUris = new Map<string, Uri>();
+    // Per lifecycle csv: the states csv it uses and the problems found in it
+    const statesProblems = new Map<string, { states: Uri; diagnostics: Diagnostic[] }>();
+    const timers = new Map<string, NodeJS.Timeout>();
 
     const severity = { error: DiagnosticSeverity.Error, warning: DiagnosticSeverity.Warning, info: DiagnosticSeverity.Information };
 
+    const publishStates = (states: Uri) => {
+        const entries = [...statesProblems.values()].filter((e) => e.states.toString() === states.toString());
+        const seen = new Set<string>();
+        const merged = entries
+            .flatMap((e) => e.diagnostics)
+            .filter((d) => {
+                const key = `${d.range.start.line}|${d.message}`;
+                return !seen.has(key) && seen.add(key);
+            });
+        collection.set(states, merged);
+    };
+
     const refresh = async (document: TextDocument) => {
-        if (document.uri.scheme !== "file" || !isLifecycleDocument(document)) {
-            return;
-        }
+        const version = document.version;
         const related = await relatedFiles(document.uri);
         const statesText = related.states ? await readText(related.states) : null;
-        let states: StatesFile | undefined;
-        if (statesText !== null && related.states) {
-            states = parseStatesCsv(statesText);
-            statesUris.set(document.uri.toString(), related.states);
+        if (document.isClosed || document.version !== version) {
+            // A newer refresh is scheduled
+            return;
         }
+        const states = statesText !== null ? parseStatesCsv(statesText) : undefined;
         const lifecycle = parseLifecycleCsv(document.getText(), states);
         const own: Diagnostic[] = [];
         const inStates: Diagnostic[] = [];
@@ -287,29 +322,53 @@ function registerDiagnostics(context: ExtensionContext): void {
             (issue.inStatesFile ? inStates : own).push(diagnostic);
         }
         collection.set(document.uri, own);
-        if (related.states) {
-            collection.set(related.states, inStates);
+        const previous = statesProblems.get(document.uri.toString());
+        if (related.states && statesText !== null) {
+            statesProblems.set(document.uri.toString(), { states: related.states, diagnostics: inStates });
+            publishStates(related.states);
+        } else {
+            statesProblems.delete(document.uri.toString());
+        }
+        if (previous && previous.states.toString() !== related.states?.toString()) {
+            publishStates(previous.states);
         }
     };
 
-    for (const document of workspace.textDocuments) {
-        void refresh(document);
-    }
+    const schedule = (document: TextDocument) => {
+        if (document.uri.scheme !== "file" || !isLifecycleDocument(document)) {
+            return;
+        }
+        const key = document.uri.toString();
+        clearTimeout(timers.get(key));
+        timers.set(key, setTimeout(() => {
+            timers.delete(key);
+            void refresh(document);
+        }, 250));
+    };
+
+    workspace.textDocuments.forEach(schedule);
     context.subscriptions.push(
-        workspace.onDidOpenTextDocument((d) => void refresh(d)),
+        workspace.onDidOpenTextDocument(schedule),
         workspace.onDidChangeTextDocument((e) => {
-            void refresh(e.document);
+            schedule(e.document);
             // A change in a states csv affects the lifecycles using it
-            for (const [lifecycle, states] of statesUris) {
-                if (states.toString() === e.document.uri.toString()) {
+            for (const [lifecycle, entry] of statesProblems) {
+                if (entry.states.toString() === e.document.uri.toString()) {
                     const doc = workspace.textDocuments.find((d) => d.uri.toString() === lifecycle);
                     if (doc) {
-                        void refresh(doc);
+                        schedule(doc);
                     }
                 }
             }
         }),
-        workspace.onDidCloseTextDocument((d) => collection.delete(d.uri)),
+        workspace.onDidCloseTextDocument((d) => {
+            collection.delete(d.uri);
+            const entry = statesProblems.get(d.uri.toString());
+            if (entry) {
+                statesProblems.delete(d.uri.toString());
+                publishStates(entry.states);
+            }
+        }),
     );
 }
 

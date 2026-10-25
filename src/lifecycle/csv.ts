@@ -10,6 +10,8 @@ export interface CsvRow {
     raw: string[];
     /** Zero-based line of the start of the row in the source text */
     line: number;
+    /** Number of empty lines in front of the row */
+    blankBefore?: number;
 }
 
 export interface CsvTable {
@@ -19,16 +21,20 @@ export interface CsvTable {
     eol: string;
     /** Whether the source text ends with a line separator */
     trailingEol: boolean;
+    /** Number of empty lines at the end of the text, after the last line separator */
+    blankAfter: number;
 }
 
 /**
- * Parse csv text into a table.  The first row is the header.  Empty lines are skipped.
+ * Parse csv text into a table.  The first row is the header.  Empty lines are not rows, they
+ * are kept to write them back.
  */
 export function parseCsv(text: string): CsvTable {
     const eol = text.includes("\r\n") ? "\r\n" : "\n";
     const rows: CsvRow[] = [];
     let line = 0;
     let i = 0;
+    let blank = 0;
 
     while (i < text.length) {
         const rowLine = line;
@@ -86,13 +92,15 @@ export function parseCsv(text: string): CsvTable {
         }
 
         if (values.length === 1 && values[0] === "") {
+            blank++;
             continue;
         }
-        rows.push({ values, raw, line: rowLine });
+        rows.push({ values, raw, line: rowLine, blankBefore: blank });
+        blank = 0;
     }
 
     const header = rows.shift() ?? { values: [], raw: [], line: 0 };
-    return { header, rows, eol, trailingEol: text.endsWith("\n") };
+    return { header, rows, eol, trailingEol: text.endsWith("\n"), blankAfter: blank };
 }
 
 /**
@@ -105,14 +113,8 @@ export function formatCell(value: string): string {
     return value;
 }
 
-function formatRow(row: CsvRow, width: number): string {
-    const cells: string[] = [];
-    for (let i = 0; i < width; i++) {
-        const value = row.values[i] ?? "";
-        const raw = row.raw[i];
-        cells.push(raw !== undefined && unquote(raw) === value ? raw : formatCell(value));
-    }
-    return cells.join(",");
+function formatRow(row: CsvRow): string {
+    return row.values.map((value, i) => (row.raw[i] !== undefined && unquote(row.raw[i]) === value ? row.raw[i] : formatCell(value))).join(",");
 }
 
 function unquote(raw: string): string {
@@ -127,8 +129,11 @@ function unquote(raw: string): string {
  * Write a table back to text.  Unchanged cells keep their original text.
  */
 export function writeCsv(table: CsvTable): string {
-    const width = table.header.values.length;
-    const lines = [formatRow(table.header, width), ...table.rows.map((r) => formatRow(r, width))];
+    const lines = [formatRow(table.header)];
+    for (const row of table.rows) {
+        lines.push(...Array<string>(row.blankBefore ?? 0).fill(""), formatRow(row));
+    }
+    lines.push(...Array<string>(table.blankAfter).fill(""));
     return lines.join(table.eol) + (table.trailingEol ? table.eol : "");
 }
 

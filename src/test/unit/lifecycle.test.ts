@@ -6,7 +6,7 @@ import { applyEdit, referencesTo } from "../../lifecycle/edit";
 import { expand, LsmLifecycle } from "../../lifecycle/expand";
 import { buildGraph } from "../../lifecycle/graph";
 import { lint } from "../../lifecycle/lint";
-import { emptyMetadata, parseMetadata, renameStateInMetadata, setLayout, upsertScenario } from "../../lifecycle/metadata";
+import { deleteStateInMetadata, emptyMetadata, parseMetadata, renameStateInMetadata, setLayout, upsertScenario } from "../../lifecycle/metadata";
 import { isFlagColumn, parseLifecycleCsv, parseStatesCsv, parseTransfer } from "../../lifecycle/model";
 import { compileContexts, runScenario, Simulator } from "../../lifecycle/simulator";
 
@@ -23,6 +23,15 @@ suite("lifecycle csv", () => {
         assert.strictEqual(writeCsv(parseCsv(lifecycleText)), lifecycleText);
         const crlf = 'a,b\r\n"x, y",""\r\n';
         assert.strictEqual(writeCsv(parseCsv(crlf)), crlf);
+    });
+
+    test("round trip keeps blank lines and ragged rows", () => {
+        for (const text of ["a,b\n\n1,2\n\n", "a,b\n1,2,extra\n3\n", "a,b\n1,2"]) {
+            assert.strictEqual(writeCsv(parseCsv(text)), text);
+        }
+        const header = "name,label,current,previous,desired_state,on_create\n";
+        const after = applyEdit(header + "a,info,,,x,b,note\n\nb,,,,x\n", { kind: "setCell", state: "b", column: "label", value: "info" });
+        assert.strictEqual(after, header + "a,info,,,x,b,note\n\nb,info,,,x\n");
     });
 
     test("quoted cells", () => {
@@ -220,5 +229,16 @@ suite("lifecycle graph and metadata", () => {
         assert.deepStrictEqual(metadata.layout.up, { x: 10, y: 20 });
         assert.deepStrictEqual(metadata.scenarios[0], { name: "happy", start: undefined, steps: ["create", "validation_ok"], expect: "building" });
         assert.strictEqual(metadata.stages[0].name, "Operate");
+    });
+
+    test("metadata follows renamed and deleted states", () => {
+        let text = "layout:\n  a: {x: 1, y: 2}\ntransfers:\n  - {source: a, trigger: on_update, target: b, web_action: Go}\n";
+        text += "scenarios:\n  - {name: s, steps: [\"set_state: a\", create], expect: a}\n";
+        const renamed = parseMetadata(renameStateInMetadata(text, "a", "c")).metadata;
+        assert.deepStrictEqual(renamed.scenarios[0].steps, ["set_state:c", "create"]);
+        assert.strictEqual(renamed.transfers[0].source, "c");
+        const deleted = parseMetadata(deleteStateInMetadata(text, "a")).metadata;
+        assert.deepStrictEqual(deleted.layout, {});
+        assert.deepStrictEqual(deleted.transfers, []);
     });
 });

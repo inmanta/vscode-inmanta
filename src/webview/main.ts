@@ -224,26 +224,22 @@ function replay(start: string | null, events: SimEvent[]): void {
     const s = simulator();
     sim = { start, instance: start ? s.instanceIn(start) : null, steps: [], history: [] };
     for (const event of events) {
-        const step = s.apply(sim.instance, event);
-        if (step.rejected) {
-            break;
-        }
-        sim.history.push(sim.instance);
-        sim.steps.push(step);
+        record(s, event);
+    }
+}
+
+/** Apply an event, a rejected event stays in the trace but doesn't change the instance */
+function record(s: Simulator, event: SimEvent): void {
+    const step = s.apply(sim.instance, event);
+    sim.history.push(sim.instance);
+    sim.steps.push(step);
+    if (!step.rejected) {
         sim.instance = step.instance;
     }
 }
 
 function send(event: SimEvent): void {
-    const step = simulator().apply(sim.instance, event);
-    if (step.rejected) {
-        sim.steps.push(step);
-        sim.history.push(sim.instance);
-    } else {
-        sim.history.push(sim.instance);
-        sim.steps.push(step);
-        sim.instance = step.instance;
-    }
+    record(simulator(), event);
     renderAll(false);
 }
 

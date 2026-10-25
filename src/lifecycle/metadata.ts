@@ -4,6 +4,7 @@
  */
 import { Document, isMap, isSeq, parseDocument } from "yaml";
 import { Trigger } from "./model";
+import { formatEvent, parseEvent } from "./simulator";
 
 export interface StageDefinition {
     id: string;
@@ -220,6 +221,23 @@ export function setTransferAnnotations(text: string, entry: TransferAnnotations)
     return doc.toString();
 }
 
+/** Drop the layout and transfer annotations of a deleted state, scenarios using it are left to fail */
+export function deleteStateInMetadata(text: string, name: string): string {
+    if (!text.trim()) {
+        return text;
+    }
+    const doc = load(text);
+    const layout = doc.get("layout", true);
+    if (isMap(layout)) {
+        layout.delete(name);
+    }
+    const transfers = doc.get("transfers", true);
+    if (isSeq(transfers)) {
+        transfers.items = transfers.items.filter((item) => !(isMap(item) && (item.get("source") === name || item.get("target") === name)));
+    }
+    return doc.toString();
+}
+
 /** Rename a state in the layout, transfers and scenarios sections */
 export function renameStateInMetadata(text: string, from: string, to: string): string {
     if (!text.trim()) {
@@ -258,8 +276,14 @@ export function renameStateInMetadata(text: string, from: string, to: string): s
             const steps = item.get("steps", true);
             if (isSeq(steps)) {
                 steps.items = steps.items.map((s) => {
-                    const v = isScalarValue(s);
-                    return v === `set_state:${from}` ? doc.createNode(`set_state:${to}`) : v === `create:${from}` ? doc.createNode(`create:${to}`) : s;
+                    const event = parseEvent(String(isScalarValue(s)));
+                    if (event?.kind === "set_state" && event.target === from) {
+                        return doc.createNode(formatEvent({ ...event, target: to }));
+                    }
+                    if (event?.kind === "create" && event.state === from) {
+                        return doc.createNode(formatEvent({ ...event, state: to }));
+                    }
+                    return s;
                 }) as typeof steps.items;
             }
         }

@@ -86,7 +86,17 @@ export class GraphView {
     private stageBoxes = new Map<string, Box>();
     private transform = { k: 1, x: 20, y: 20 };
     private style: GraphStyle | null = null;
-    private drag: { kind: "pan" | "node" | "connect"; id?: string; startX: number; startY: number; moved: boolean; ox: number; oy: number } | null = null;
+    private drag: {
+        kind: "pan" | "node" | "connect";
+        id?: string;
+        startX: number;
+        startY: number;
+        moved: boolean;
+        ox: number;
+        oy: number;
+        /** What was under the pointer when it went down, pointer capture retargets the later events */
+        hit: GraphSelection;
+    } | null = null;
     private tempLine: SVGPathElement | null = null;
     private readonly elk = new ELK();
     private stageDefinitions = new Map<string, { column?: number; row?: number }>();
@@ -533,14 +543,17 @@ export class GraphView {
             const target = e.target as Element;
             const handle = target.closest("[data-handle]")?.getAttribute("data-handle");
             const node = target.closest("[data-node]")?.getAttribute("data-node");
+            const edge = target.closest("[data-edge]")?.getAttribute("data-edge");
+            const hit: GraphSelection = node ? { type: "node", id: node } : edge ? { type: "edge", id: edge } : null;
+            const start = { startX: e.clientX, startY: e.clientY, moved: false, hit };
             if (handle) {
-                this.drag = { kind: "connect", id: handle, startX: e.clientX, startY: e.clientY, moved: false, ox: 0, oy: 0 };
+                this.drag = { kind: "connect", id: handle, ox: 0, oy: 0, ...start };
             } else if (node && this.style?.editable && this.graph?.view === "csv") {
                 const b = this.boxes.get(node)!;
                 const p = this.toGraph(e.clientX, e.clientY);
-                this.drag = { kind: "node", id: node, startX: e.clientX, startY: e.clientY, moved: false, ox: p.x - b.x, oy: p.y - b.y };
+                this.drag = { kind: "node", id: node, ox: p.x - b.x, oy: p.y - b.y, ...start };
             } else {
-                this.drag = { kind: "pan", startX: e.clientX, startY: e.clientY, moved: false, ox: this.transform.x, oy: this.transform.y };
+                this.drag = { kind: "pan", ox: this.transform.x, oy: this.transform.y, ...start };
             }
             this.svg.setPointerCapture(e.pointerId);
         });
@@ -598,13 +611,9 @@ export class GraphView {
                 this.callbacks.move({ [drag.id]: { x: b.x + b.w / 2, y: b.y + b.h / 2 } });
                 return;
             }
-            if (drag.moved) {
-                return;
+            if (!drag.moved) {
+                this.callbacks.select(drag.hit);
             }
-            const target = e.target as Element;
-            const node = target.closest("[data-node]")?.getAttribute("data-node");
-            const edge = target.closest("[data-edge]")?.getAttribute("data-edge");
-            this.callbacks.select(node ? { type: "node", id: node } : edge ? { type: "edge", id: edge } : null);
         });
 
         this.svg.addEventListener("dblclick", (e) => {
