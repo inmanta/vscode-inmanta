@@ -501,6 +501,14 @@ const ICON_GLYPHS: Record<string, string> = {
     FaPause: "❚❚",
     FaPlay: "▶",
     FaWrench: "⚒",
+    FaRegCircle: "○",
+    FaRocket: "↑",
+    FaCheckCircle: "✓",
+    FaSyncAlt: "⟳",
+    FaTrashAlt: "✕",
+    FaTimesCircle: "⊗",
+    FaCogs: "⚙",
+    FaPowerOff: "⏻",
 };
 
 function faIcon(name: string | null): HTMLElement | null {
