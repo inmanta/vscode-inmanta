@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as fs from "fs";
 import * as path from "path";
 import { parseCsv, writeCsv } from "../../lifecycle/csv";
-import { applyEdit, referencesTo } from "../../lifecycle/edit";
+import { applyEdit, FileChange, referencesTo } from "../../lifecycle/edit";
 import { expand, LsmLifecycle } from "../../lifecycle/expand";
 import { buildGraph, stageOf } from "../../lifecycle/graph";
 import { lint } from "../../lifecycle/lint";
@@ -20,7 +20,8 @@ import {
 import { isFlagColumn, parseLifecycleCsv, parseStatesCsv, parseTransfer } from "../../lifecycle/model";
 import { compileContexts, runScenario, Simulator } from "../../lifecycle/simulator";
 import { consoleView } from "../../lifecycle/console";
-import { addStage, deleteStage, moveToStage, renameStage, StageChange } from "../../lifecycle/stages";
+import { addStage, deleteStage, moveToStage, renameStage } from "../../lifecycle/stages";
+import { checkCell, lifecycleTable, planChanges, statesTable, suggestCell, TableContext, transfersTable } from "../../lifecycle/table";
 
 const fixtures = path.resolve(__dirname, "../../../src/test/unit/fixtures");
 const lifecycleText = fs.readFileSync(path.join(fixtures, "lifecycle.csv"), "utf8");
@@ -287,7 +288,7 @@ suite("lifecycle stages", () => {
     // The states of desired state up get the stage running from the states csv
     const statesWithStage = statesText.replace("web_icon\n", "web_icon,web_stage\n").replace("Deployed,\n", "Deployed,,running\n");
 
-    function apply(change: StageChange, csv = lifecycleText, states = statesWithStage): { csv: string; states: string } {
+    function apply(change: FileChange, csv = lifecycleText, states = statesWithStage): { csv: string; states: string } {
         return { csv: change.csv.reduce(applyEdit, csv), states: change.states.reduce(applyEdit, states) };
     }
 
@@ -403,6 +404,75 @@ suite("lifecycle stages", () => {
             "transfer nope.on_update -> up: no state nope",
             "transfer up.on_failed -> failed: the factory doesn't annotate on_failed transfers",
             "transfer up.on_update -> up: up has no such transfer",
+        ]);
+    });
+});
+
+suite("lifecycle table", () => {
+    const states = parseStatesCsv(statesText);
+    const lifecycle = parseLifecycleCsv(lifecycleText, states);
+    const context: TableContext = {
+        states: lifecycle.states.map((s) => s.name),
+        desiredStates: states.options.map((o) => o.name),
+        stages: [],
+        icons: ["FaCheck", "FaRocket"],
+    };
+
+    test("typed columns of the lifecycle csv", () => {
+        const model = lifecycleTable(lifecycle, lint(lifecycle, states));
+        const kinds = Object.fromEntries(model.columns.map((c) => [c.key, c.kind]));
+        assert.deepStrictEqual([kinds.name, kinds.label, kinds.current, kinds.on_update, kinds.on_api_set_state, kinds.web_icon], ["name", "label", "set", "transfer", "transfers", "icon"]);
+        // The annotation columns keep their order when a column is added to the csv
+        assert.deepStrictEqual(model.columns.filter((c) => c.group === "Annotations").map((c) => c.key).slice(0, 4), ["web_label", "web_icon", "web_stage", "web_description"]);
+        assert.strictEqual(model.rows.find((r) => r.id === "up")?.cells.on_update, "validate(updating)");
+    });
+
+    test("checks while typing", () => {
+        const model = lifecycleTable(lifecycle, []);
+        const column = (key: string) => model.columns.find((c) => c.key === key)!;
+        assert.deepStrictEqual(checkCell(column("on_update"), "validate(updating, nowhere)", "up", model, context).map((i) => i.message), ["validate(updating, nowhere): no state nowhere"]);
+        assert.deepStrictEqual(checkCell(column("on_api_set_state"), "up, rollback(up)", "up", model, context), []);
+        assert.strictEqual(checkCell(column("on_deployed"), "validate(up)", "up", model, context)[0].severity, "warning");
+        assert.deepStrictEqual(checkCell(column("name"), "creating", "up", model, context).map((i) => i.message), ["creating already exists"]);
+        assert.strictEqual(checkCell(column("label"), "red", "up", model, context)[0].severity, "error");
+        assert.strictEqual(checkCell(column("web_icon"), "FaNope", "up", model, context)[0].severity, "warning");
+    });
+
+    test("suggestions", () => {
+        const model = lifecycleTable(lifecycle, []);
+        const column = (key: string) => model.columns.find((c) => c.key === key)!;
+        assert.deepStrictEqual(suggestCell(column("on_update"), "validate(upd", context).map((s) => s.value), ["validate(updating)", "validate(updating_failed)"]);
+        assert.deepStrictEqual(suggestCell(column("on_update"), "validate(updating, fa", context).map((s) => s.value), ["validate(updating, failed)"]);
+        // The last expression of on_api_set_state is completed
+        assert.deepStrictEqual(suggestCell(column("on_api_set_state"), "up, rollback(roll", context).map((s) => s.value), ["up, rollback(rolling_back)"]);
+        // Resource transfers only take a state
+        assert.deepStrictEqual(suggestCell(column("on_deployed"), "upd", context).map((s) => s.value), ["updating", "updating_failed"]);
+        assert.deepStrictEqual(suggestCell(column("label"), "da", context).map((s) => s.value), ["danger"]);
+    });
+
+    test("changed cells become edits of their file", () => {
+        const model = lifecycleTable(lifecycle, []);
+        const change = planChanges(model, [
+            { row: "up", column: "name", value: "running" },
+            { row: "up", column: "on_api_set_state", value: "updating,deleting" },
+            { row: "up", column: "label", value: "success" },
+        ], lifecycle, emptyMetadata());
+        assert.deepStrictEqual(change.csv, [
+            { kind: "setCell", state: "up", column: "on_api_set_state", value: "updating, deleting" },
+            { kind: "renameState", from: "up", to: "running" },
+        ]);
+
+        const desired = planChanges(statesTable(states, []), [{ row: "up", column: "name", value: "running" }], lifecycle, emptyMetadata());
+        assert.deepStrictEqual(desired.states, [{ kind: "setCell", state: "up", column: "name", value: "running" }]);
+        assert.ok(desired.csv.length > 0 && desired.csv.every((op) => op.kind === "setCell" && op.column === "desired_state" && op.value === "running"));
+
+        const metadata = emptyMetadata();
+        metadata.transfers.push({ source: "up", trigger: "on_delete", target: "deleting", annotations: { web_confirm: "Sure?" } });
+        const transfers = transfersTable(lifecycle, metadata);
+        const id = "up on_delete deleting";
+        assert.strictEqual(transfers.rows.find((r) => r.id === id)?.cells.web_confirm, "Sure?");
+        assert.deepStrictEqual(planChanges(transfers, [{ row: id, column: "web_advanced_state", value: "true" }, { row: id, column: "source", value: "x" }], lifecycle, metadata).metadata, [
+            { kind: "setTransferAnnotations", entry: { source: "up", trigger: "on_delete", target: "deleting", annotations: { web_confirm: "Sure?", web_advanced_state: true } } },
         ]);
     });
 });

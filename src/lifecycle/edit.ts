@@ -3,6 +3,7 @@
  * rows that change are rewritten.
  */
 import { CsvRow, CsvTable, parseCsv, writeCsv } from "./csv";
+import { MetadataOp } from "./metadata";
 import { formatTransfer, joinApiSetState, parseTransfer, splitApiSetState, Trigger, TRIGGERS } from "./model";
 
 export type EditOp =
@@ -14,6 +15,13 @@ export type EditOp =
     | { kind: "renameState"; from: string; to: string };
 
 export class EditError extends Error {}
+
+/** Edits of the lifecycle csv, the states csv and the metadata files, applied together */
+export interface FileChange {
+    csv: EditOp[];
+    states: EditOp[];
+    metadata: MetadataOp[];
+}
 
 function columnIndex(table: CsvTable, column: string, create: boolean): number {
     let index = table.header.values.indexOf(column);

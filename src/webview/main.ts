@@ -23,7 +23,10 @@ import { CompileContext, compileContexts, EventOption, eventLabel, formatEvent, 
 import { add, clear, h } from "./dom";
 import { GraphSelection, GraphView } from "./graphView";
 import { faIcon, ICON_NAMES } from "./icons";
-import { addStage, deleteStage, moveToStage, renameStage, StageChange } from "../lifecycle/stages";
+import { addStage, deleteStage, moveToStage, renameStage } from "../lifecycle/stages";
+import { FileChange } from "../lifecycle/edit";
+import { CellChange, checkCell, lifecycleTable, planChanges, statesTable, suggestCell, TableContext, TableModel, TableTab, transfersTable } from "../lifecycle/table";
+import { Grid } from "./grid";
 import css from "./studio.css";
 import redHatDisplay from "@fontsource-variable/red-hat-display/files/red-hat-display-latin-wght-normal.woff2";
 import redHatText from "@fontsource-variable/red-hat-text/files/red-hat-text-latin-wght-normal.woff2";
@@ -36,7 +39,7 @@ interface VsCodeApi {
 declare function acquireVsCodeApi(): VsCodeApi;
 const vscode = acquireVsCodeApi();
 
-type Mode = "view" | "edit" | "simulate";
+type Mode = "view" | "edit" | "simulate" | "table";
 
 interface Data {
     files: { csv: string; states: string | null } & MetadataTexts;
@@ -60,6 +63,9 @@ interface Ui {
     /** Widths of the side panels set by dragging their edge, the default when unset */
     leftWidth?: number;
     rightWidth?: number;
+    tableTab: TableTab;
+    /** Annotation columns added in Table mode that have no value yet, per tab */
+    tableColumns: Partial<Record<TableTab, string[]>>;
 }
 
 interface Sim {
@@ -107,6 +113,8 @@ const ui: Ui = {
     context: saved.context ?? "export",
     leftWidth: saved.leftWidth,
     rightWidth: saved.rightWidth,
+    tableTab: saved.tableTab ?? "lifecycle",
+    tableColumns: saved.tableColumns ?? {},
 };
 let data: Data | null = null;
 let sim: Sim = { start: null, instance: null, steps: [], history: [] };
@@ -138,12 +146,13 @@ const app = document.getElementById("app")!;
 const toolbar = h("div", { class: "toolbar" });
 const left = h("aside", { class: "panel left" });
 const canvas = h("div", { class: "canvas" });
+const tableHost = h("div", { class: "table-host" });
 const inspector = h("aside", { class: "panel inspector" });
 const problems = h("div", { class: "problems" });
 const popup = h("div", { class: "popup", hidden: true });
 const leftSplit = h("div", { class: "splitter left-split", title: "Drag to resize, double click to reset" });
 const rightSplit = h("div", { class: "splitter right-split", title: "Drag to resize, double click to reset" });
-const main = h("div", { class: "main" }, left, canvas, inspector, leftSplit, rightSplit);
+const main = h("div", { class: "main" }, left, canvas, tableHost, inspector, leftSplit, rightSplit);
 app.append(toolbar, main, problems, popup);
 
 function applyWidths(): void {
@@ -205,7 +214,7 @@ const graphView = new GraphView(canvas, {
     },
     move: (positions) => post({ type: "metadata", op: { kind: "setLayout", positions } }),
     connect: (source, target, x, y) => showConnectMenu(source, target, x, y),
-    restage: (id, stage) => changeStages(() => moveToStage(data!.lifecycle, data!.states, id, stage)),
+    restage: (id, stage) => changeFiles(() => moveToStage(data!.lifecycle, data!.states, id, stage)),
     activate: (id) => {
         const line = data?.lifecycle.states.find((s) => s.name === csvStateOf(id))?.line;
         if (line !== undefined) {
@@ -348,7 +357,11 @@ function renderAll(dataChanged: boolean): void {
     app.dataset.mode = ui.mode;
     const focused = document.activeElement?.getAttribute("data-key");
     renderToolbar();
-    renderGraph(dataChanged);
+    if (ui.mode === "table") {
+        renderTable();
+    } else {
+        renderGraph(dataChanged);
+    }
     renderLeft();
     renderInspector();
     renderProblems();
@@ -369,7 +382,7 @@ function renderToolbar(): void {
     const csvCount = d.lifecycle.states.length;
     const desiredCount = new Set(d.lifecycle.states.map((x) => x.desiredState)).size;
     add(toolbar, 
-        seg<Mode>([["view", "View"], ["edit", "Edit"], ["simulate", "Simulate"]], ui.mode, (mode) => {
+        seg<Mode>([["view", "View"], ["edit", "Edit"], ["simulate", "Simulate"], ["table", "Table", "The csv files as tables, with suggestions and checks per column"]], ui.mode, (mode) => {
             ui.mode = mode;
             if (mode === "edit" && ui.view !== "csv") {
                 ui.view = "csv";
@@ -377,7 +390,8 @@ function renderToolbar(): void {
             persist();
             renderAll(false);
         }),
-        seg<View>([
+        ui.mode === "table" ? tableToolbar() : null,
+        ui.mode === "table" ? null : seg<View>([
             ["desired", `Desired states (${desiredCount})`, "One box per desired state: what the model builds. The states with the same desired_state are merged."],
             ["csv", `States (${csvCount})`, `The states as written in ${d.files.csv}, one per row.`],
             ["lsm", `States + validation (${d.lsm.states.size})`, "Every state of the lifecycle in the orchestrator, including the validating_* and rejected_* states the factory generates for validate() transfers."],
@@ -387,7 +401,7 @@ function renderToolbar(): void {
             persist();
             renderAll(false);
         }, "Detail"),
-        h("div", { class: "chips" },
+        ui.mode === "table" ? null : h("div", { class: "chips" },
             EDGE_KINDS.filter((k) => ui.view === "lsm" || (k !== "validated" && k !== "rejected")).map((kind) =>
                 h("button", {
                     class: `chip${ui.hidden.includes(kind) ? " off" : ""}`,
@@ -399,7 +413,7 @@ function renderToolbar(): void {
                         renderAll(false);
                     },
                 }, h("i", { class: `swatch k-${kind}` }), KIND_LABEL[kind]))),
-        h("input", {
+        ui.mode === "table" ? null : h("input", {
             class: "search",
             type: "search",
             placeholder: "Search states",
@@ -529,6 +543,18 @@ function renderInspector(): void {
         return;
     }
     const selection = ui.selection;
+    if (ui.mode === "table") {
+        const name = selection?.type === "node" ? selection.id : null;
+        const x = d.lifecycle.states.find((s) => s.name === name);
+        if (ui.tableTab === "lifecycle" && x) {
+            add(inspector, ...editInspector(x));
+        } else if (ui.tableTab === "states" && name && d.states?.options.some((o) => o.name === name)) {
+            add(inspector, ...desiredStateInspector(name));
+        } else {
+            add(inspector, ...overview());
+        }
+        return;
+    }
     if (selection?.type === "edge") {
         const edge = currentGraph?.edges.find((e) => e.id === selection.id);
         if (edge) {
@@ -1029,9 +1055,9 @@ function showIconPicker(x: number, y: number, choose: (name: string) => void): v
 
 // ---------- stages ----------
 
-function changeStages(plan: () => StageChange): void {
+function changeFiles(plan: () => FileChange): void {
     try {
-        post({ type: "stages", change: plan() });
+        post({ type: "batch", change: plan() });
     } catch (e) {
         post({ type: "warn", message: e instanceof Error ? e.message : String(e) });
     }
@@ -1083,7 +1109,7 @@ function stagesPanel(): HTMLElement {
         const id = idInput.value.trim();
         if (id) {
             const name = id.replace(/[_-]+/g, " ").replace(/^./, (c) => c.toUpperCase());
-            changeStages(() => {
+            changeFiles(() => {
                 const change = addStage(d.lifecycle, d.metadata.stages, id, name);
                 // Declare the other stages too, so the new one goes last
                 return undeclared.length ? { ...change, metadata: [{ kind: "setStages", stages: [...stages.map((st) => ({ id: st.id, name: st.name })), { id, name }] }] } : change;
@@ -1142,7 +1168,7 @@ function stageInspector(id: string): HTMLElement[] {
                     onchange: (e: Event) => {
                         const to = (e.target as HTMLInputElement).value.trim();
                         if (to && to !== id) {
-                            changeStages(() => renameStage(d.lifecycle, d.states, d.metadata.stages, id, to));
+                            changeFiles(() => renameStage(d.lifecycle, d.states, d.metadata.stages, id, to));
                             ui.selection = { type: "stage", id: to };
                         }
                     },
@@ -1168,16 +1194,114 @@ function stageInspector(id: string): HTMLElement[] {
     if (editable) {
         result.push(section("Stage actions", h("div", { class: "actions" },
             pendingDelete === `stage:${id}`
-                ? h("button", { class: "danger", onclick: () => { pendingDelete = null; ui.selection = null; changeStages(() => deleteStage(d.lifecycle, d.states, id)); } }, members.length ? `Delete, ${members.length} states go back to their default stage` : "Confirm delete")
+                ? h("button", { class: "danger", onclick: () => { pendingDelete = null; ui.selection = null; changeFiles(() => deleteStage(d.lifecycle, d.states, id)); } }, members.length ? `Delete, ${members.length} states go back to their default stage` : "Confirm delete")
                 : h("button", { onclick: () => { pendingDelete = `stage:${id}`; renderAll(false); } }, "Delete stage"))));
     }
     return result;
+}
+
+// ---------- table ----------
+
+const grid = new Grid(tableHost, {
+    commit: (changes) => commitCells(changes),
+    select: (row) => {
+        ui.selection = ui.tableTab === "transfers" ? null : { type: "node", id: row };
+        persist();
+        renderInspector();
+    },
+    check: (column, value, row) => (currentTable ? checkCell(column, value, row, currentTable, tableContext()) : []),
+    suggest: (column, value) => suggestCell(column, value, tableContext()),
+    pickIcon: (x, y, choose) => showIconPicker(x, y, choose),
+});
+let currentTable: TableModel | null = null;
+
+function tableContext(): TableContext {
+    const d = data!;
+    return {
+        states: d.lifecycle.states.map((s) => s.name),
+        desiredStates: d.states ? d.states.options.map((o) => o.name) : [...new Set(d.lifecycle.states.map((s) => s.desiredState))],
+        stages: allStages().map((s) => s.id),
+        icons: ICON_NAMES,
+    };
+}
+
+function tableModel(tab: TableTab): TableModel | null {
+    const d = data!;
+    const extra = ui.tableColumns[tab] ?? [];
+    switch (tab) {
+        case "lifecycle":
+            return lifecycleTable(d.lifecycle, d.issues, extra);
+        case "states":
+            return d.states ? statesTable(d.states, d.issues, extra) : null;
+        case "transfers":
+            return transfersTable(d.lifecycle, d.metadata, d.metadataErrors.filter((e) => e.file === "transfers").map((e) => e.message), extra);
+    }
+}
+
+function renderTable(): void {
+    currentTable = tableModel(ui.tableTab);
+    if (currentTable === null) {
+        clear(tableHost);
+        add(tableHost, h("p", { class: "muted table-empty" }, "No states csv next to the lifecycle csv."));
+        return;
+    }
+    if (!tableHost.querySelector(".grid-scroll")) {
+        clear(tableHost);
+        tableHost.appendChild(gridElement);
+    }
+    grid.setModel(currentTable, ui.selection?.type === "node" ? ui.selection.id : null);
+}
+const gridElement = tableHost.firstElementChild as HTMLElement;
+
+function commitCells(changes: CellChange[]): void {
+    if (currentTable === null || changes.length === 0) {
+        return;
+    }
+    const model = currentTable;
+    changeFiles(() => planChanges(model, changes, data!.lifecycle, data!.metadata));
+}
+
+function tableToolbar(): HTMLElement {
+    const d = data!;
+    const columnInput = h("input", { class: "small", placeholder: "web_...", "data-key": "new-column", title: "Add an annotation column, it is written with the first value" });
+    const addColumn = () => {
+        const column = columnInput.value.trim();
+        if (!/^(web|inmanta)_[a-z0-9_]+$/.test(column)) {
+            post({ type: "warn", message: "An annotation column starts with web_ or inmanta_" });
+            return;
+        }
+        ui.tableColumns = { ...ui.tableColumns, [ui.tableTab]: [...(ui.tableColumns[ui.tableTab] ?? []), column] };
+        persist();
+        renderAll(false);
+    };
+    columnInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            addColumn();
+        }
+    });
+    return h("div", { class: "table-tools" },
+        seg<TableTab>([
+            ["lifecycle", d.files.csv, "The states, one per row"],
+            ["states", d.files.states ?? "states.csv", "The desired states, one per row: the options the model reads and the default annotations"],
+            ["transfers", d.files.transfers, "Every transfer the factory annotates, a row is written to the transfers csv once it has an annotation"],
+        ], ui.tableTab, (tab) => {
+            ui.tableTab = tab;
+            ui.selection = null;
+            persist();
+            renderAll(false);
+            grid.focus();
+        }),
+        ui.tableTab === "lifecycle" ? addStateForm() : null,
+        ui.tableTab === "transfers" ? null : h("div", { class: "add-state" }, columnInput, h("button", { onclick: addColumn }, "+ Column")));
 }
 
 // ---------- simulate ----------
 
 function renderLeft(): void {
     clear(left);
+    if (ui.mode === "table") {
+        return;
+    }
     if (ui.mode === "edit") {
         add(left, stagesPanel());
         return;

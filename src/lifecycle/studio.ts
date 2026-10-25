@@ -25,7 +25,7 @@ import {
     WorkspaceEdit,
 } from "vscode";
 import { parseCsv } from "./csv";
-import { applyEdit, EditError, EditOp } from "./edit";
+import { applyEdit, EditError, EditOp, FileChange } from "./edit";
 import { lint } from "./lint";
 import {
     applyMetadataOp,
@@ -40,7 +40,6 @@ import {
     renameStateInMetadata,
 } from "./metadata";
 import { isLifecycleHeader, parseLifecycleCsv, parseStatesCsv } from "./model";
-import { StageChange } from "./stages";
 
 export const VIEW_TYPE = "inmanta.lifecycleStudio";
 
@@ -49,7 +48,7 @@ export type WebviewMessage =
     | { type: "ready" }
     | { type: "edit"; op: EditOp }
     | { type: "metadata"; op: MetadataOp }
-    | { type: "stages"; change: StageChange }
+    | { type: "batch"; change: FileChange }
     | { type: "warn"; message: string }
     | { type: "open"; file: "csv" | "states" | MetadataFile; line?: number }
     | { type: "openLifecycle"; path: string }
@@ -256,7 +255,7 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                     await writeMetadata(related.metadata, metadata, applyMetadataOp(metadata, message.op));
                     return;
                 }
-                case "stages": {
+                case "batch": {
                     // Compute all the new texts first, so a failing edit changes nothing
                     const { csv, states, metadata } = message.change;
                     const csvText = csv.length ? csv.reduce(applyEdit, document.getText()) : null;
@@ -265,7 +264,7 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                     const metadataBefore = await readMetadata(related.metadata);
                     const metadataAfter = metadata.reduce(applyMetadataOp, metadataBefore);
                     if (states.length && statesText === null) {
-                        throw new EditError("The stage is set in a states csv that can't be read");
+                        throw new EditError("The states csv can't be read");
                     }
                     if (statesText !== null && related.states) {
                         await writeText(related.states, statesText);

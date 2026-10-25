@@ -55,6 +55,7 @@ Open a csv lifecycle of `future::lsm::fsm` (a `lifecycle.csv` with `name`, `desi
 - **Edit**: change states and transfers in the inspector, or drag the handle of the selected state onto another state to add a transfer. Every edit is a normal edit of the csv, so undo, save and diff work as usual.
   The stages panel adds, names, orders and deletes stages. Drop a state on a stage to set its `web_stage`, drag a stage by its title to arrange the canvas. Once declared, the stages are laid out left to right in their order.
 - **Simulate**: create an instance or start in any state, then send updates, deletes, set state calls, validation results and resource outcomes. The studio shows the attribute sets, the desired state and the `states.csv` options the model sees in each kind of compile, and saves runs as scenarios.
+- **Table**: the lifecycle csv, the states csv and the transfers csv as tables with a column type each. A cell suggests its values (states, `validate(...)` expressions, desired states, labels, icons) and is checked while typing. Arrow keys move, Enter or typing edits, copy and paste work with spreadsheets, Ctrl+D fills down and Delete clears the selected cells.
 
 For every state, the inspector previews what the web console shows: the state badge (`web_label`, `web_icon`, `web_description`) and the Actions menu with the set state buttons and their transfer annotations (`web_button_label`, `web_confirm`, `web_advanced_state`, ...). In Simulate mode these buttons drive the simulation.
 

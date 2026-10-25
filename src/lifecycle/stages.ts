@@ -3,16 +3,9 @@
  * in the lifecycle csv or for its desired state in the states csv, and defaults to its desired
  * state.  The stages csv holds the names and order of the stages.
  */
-import { EditOp } from "./edit";
+import { EditOp, FileChange } from "./edit";
 import { stageOf } from "./graph";
-import { MetadataOp } from "./metadata";
 import { LifecycleFile, StatesFile, XState } from "./model";
-
-export interface StageChange {
-    csv: EditOp[];
-    states: EditOp[];
-    metadata: MetadataOp[];
-}
 
 export class StageError extends Error {}
 
@@ -29,7 +22,7 @@ function stageIds(lifecycle: LifecycleFile): Set<string> {
 }
 
 /** Put a state in a stage, the state gets laid out again in its new stage */
-export function moveToStage(lifecycle: LifecycleFile, states: StatesFile | undefined, name: string, stage: string): StageChange {
+export function moveToStage(lifecycle: LifecycleFile, states: StatesFile | undefined, name: string, stage: string): FileChange {
     const x = lifecycle.states.find((s) => s.name === name);
     if (x === undefined) {
         throw new StageError(`No state named ${name}`);
@@ -49,14 +42,14 @@ export function renameStage(
     declared: readonly { id: string }[],
     from: string,
     to: string,
-): StageChange {
+): FileChange {
     if (!STAGE_ID.test(to)) {
         throw new StageError("A stage id can only hold letters, digits, underscores and dashes");
     }
     if (to !== from && (stageIds(lifecycle).has(to) || declared.some((s) => s.id === to))) {
         throw new StageError(`Stage ${to} already exists`);
     }
-    const change: StageChange = { csv: [], states: [], metadata: [{ kind: "renameStage", from, to }] };
+    const change: FileChange = { csv: [], states: [], metadata: [{ kind: "renameStage", from, to }] };
     for (const option of states?.options ?? []) {
         if (option.annotations.web_stage === from) {
             change.states.push({ kind: "setCell", state: option.name, column: "web_stage", value: to });
@@ -73,7 +66,7 @@ export function renameStage(
 }
 
 /** Drop a stage, its states go back to their default stage */
-export function deleteStage(lifecycle: LifecycleFile, states: StatesFile | undefined, id: string): StageChange {
+export function deleteStage(lifecycle: LifecycleFile, states: StatesFile | undefined, id: string): FileChange {
     return {
         csv: lifecycle.states
             .filter((x) => x.ownAnnotations.web_stage === id)
@@ -86,7 +79,7 @@ export function deleteStage(lifecycle: LifecycleFile, states: StatesFile | undef
 }
 
 /** Declare a new, empty stage */
-export function addStage(lifecycle: LifecycleFile, declared: readonly { id: string }[], id: string, name: string): StageChange {
+export function addStage(lifecycle: LifecycleFile, declared: readonly { id: string }[], id: string, name: string): FileChange {
     if (!STAGE_ID.test(id)) {
         throw new StageError("A stage id can only hold letters, digits, underscores and dashes");
     }
