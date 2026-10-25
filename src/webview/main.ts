@@ -22,7 +22,7 @@ import {
 import { CompileContext, compileContexts, EventOption, eventLabel, formatEvent, Instance, parseEvent, runScenario, ScenarioResult, SimEvent, Simulator, Step } from "../lifecycle/simulator";
 import { add, clear, h } from "./dom";
 import { GraphSelection, GraphView } from "./graphView";
-import { faIcon } from "./icons";
+import { faIcon, ICON_NAMES } from "./icons";
 import { addStage, deleteStage, moveToStage, renameStage, StageChange } from "../lifecycle/stages";
 import css from "./studio.css";
 import redHatDisplay from "@fontsource-variable/red-hat-display/files/red-hat-display-latin-wght-normal.woff2";
@@ -874,7 +874,7 @@ function editInspector(x: XState): HTMLElement[] {
         const e = parseTransfer(raw);
         return e !== null && (e.target === x.name || e.escape === x.name);
     })));
-    const annotationColumns = [...new Set([...header.filter(isAnnotation), "web_label", "web_stage", "web_description"])];
+    const annotationColumns = [...new Set([...header.filter(isAnnotation), "web_label", "web_icon", "web_stage", "web_description"])];
     const inherited = (column: string) => (x.annotations[column] && !(column in x.ownAnnotations) ? x.annotations[column] : "");
 
     const nameInput = h("input", {
@@ -911,13 +911,22 @@ function editInspector(x: XState): HTMLElement[] {
                 }))),
         section("Annotations",
             h("div", { class: "form" },
-                annotationColumns.map((column) => field(column, h("input", {
-                    value: x.ownAnnotations[column] ?? "",
-                    list: column === "web_stage" ? "stage-ids" : undefined,
-                    placeholder: inherited(column) || (column === "web_stage" ? x.desiredState : ""),
-                    "data-key": `a-${column}`,
-                    onchange: (e: Event) => set(column, (e.target as HTMLInputElement).value),
-                }), inherited(column) ? "(default from states csv)" : column === "web_stage" ? "(default: desired_state)" : undefined)),
+                annotationColumns.map((column) => {
+                    const input = h("input", {
+                        value: x.ownAnnotations[column] ?? "",
+                        list: column === "web_stage" ? "stage-ids" : undefined,
+                        placeholder: inherited(column) || (column === "web_stage" ? x.desiredState : ""),
+                        "data-key": `a-${column}`,
+                        onchange: (e: Event) => set(column, (e.target as HTMLInputElement).value),
+                    });
+                    const control = column === "web_icon"
+                        ? h("div", { class: "icon-field" },
+                            h("span", { class: "icon-preview" }, faIcon(x.ownAnnotations.web_icon || inherited(column) || null)),
+                            input,
+                            h("button", { onclick: (e: Event) => showIconPicker((e as MouseEvent).clientX, (e as MouseEvent).clientY, (name) => set(column, name)) }, "Choose"))
+                        : input;
+                    return field(column, control, inherited(column) ? "(default from states csv)" : column === "web_stage" ? "(default: desired_state)" : undefined);
+                }),
                 h("datalist", { id: "annotation-keys" }, ANNOTATION_SUGGESTIONS.map((k) => h("option", { value: k }))),
                 h("datalist", { id: "stage-ids" }, allStages().map((st) => h("option", { value: st.id }, st.name))),
                 addAnnotation(x))),
@@ -982,6 +991,40 @@ function showConnectMenu(source: string, target: string, x: number, y: number): 
     popup.style.left = `${Math.min(x, window.innerWidth - 260)}px`;
     popup.style.top = `${Math.min(y, window.innerHeight - 340)}px`;
     popup.hidden = false;
+}
+
+/** A searchable grid of the Font Awesome icons, picking one calls choose with its name */
+function showIconPicker(x: number, y: number, choose: (name: string) => void): void {
+    clear(popup);
+    const LIMIT = 160;
+    const grid = h("div", { class: "icon-grid" });
+    const count = h("div", { class: "muted small" });
+    const search = h("input", { placeholder: "Search icons", "data-key": "icon-search" }) as HTMLInputElement;
+    const pick = (name: string) => {
+        hidePopup();
+        choose(name);
+    };
+    const fill = () => {
+        const query = search.value.trim().toLowerCase();
+        const matches = ICON_NAMES.filter((name) => name.toLowerCase().includes(query));
+        clear(grid);
+        add(grid, matches.slice(0, LIMIT).map((name) => h("button", { class: "icon-choice", title: name, onclick: () => pick(name) }, faIcon(name))));
+        count.textContent = matches.length > LIMIT ? `${LIMIT} of ${matches.length} icons, refine the search` : `${matches.length} icons`;
+    };
+    search.addEventListener("input", fill);
+    add(popup,
+        h("div", { class: "popup-title" }, "web_icon"),
+        search,
+        grid,
+        count,
+        h("div", { class: "actions" },
+            h("button", { onclick: () => pick("") }, "No icon"),
+            h("button", { class: "muted", onclick: hidePopup }, "Cancel")));
+    fill();
+    popup.style.left = `${Math.max(8, Math.min(x - 340, window.innerWidth - 360))}px`;
+    popup.style.top = `${Math.max(8, Math.min(y, window.innerHeight - 420))}px`;
+    popup.hidden = false;
+    search.focus();
 }
 
 // ---------- stages ----------

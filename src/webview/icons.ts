@@ -24,6 +24,9 @@ function build(node: IconTree): SVGElement {
     return el;
 }
 
+/** The names of all the icons, in alphabetical order */
+export const ICON_NAMES: readonly string[] = Object.keys(fa).filter((name) => /^Fa[A-Z]/.test(name)).sort();
+
 export function faIcon(name: string | null): HTMLElement | null {
     if (!name) {
         return null;
