@@ -188,7 +188,7 @@
                     "group": "navigation"
                 },
                 {
-                    "when": "resourceExtname == .csv && activeCustomEditorId != inmanta.lifecycleStudio",
+                    "when": "inmanta.lifecycleCsvActive && activeCustomEditorId != inmanta.lifecycleStudio",
                     "command": "inmanta.openLifecycleStudio",
                     "group": "navigation"
                 },

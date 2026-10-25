@@ -51,7 +51,9 @@ export type WebviewMessage =
     | { type: "metadata"; op: MetadataOp }
     | { type: "stages"; change: StageChange }
     | { type: "warn"; message: string }
-    | { type: "open"; file: "csv" | "states" | MetadataFile; line?: number };
+    | { type: "open"; file: "csv" | "states" | MetadataFile; line?: number }
+    | { type: "openLifecycle"; path: string }
+    | { type: "openAsText" };
 
 /** Message sent to the webview */
 export interface LoadMessage {
@@ -119,6 +121,21 @@ function isLifecycleDocument(document: TextDocument): boolean {
     return isLifecycleHeader(parseCsv(firstLine).header.values);
 }
 
+/** The lifecycle csv files next to the given csv that use it as their states csv */
+async function lifecyclesUsing(states: Uri): Promise<Uri[]> {
+    const dir = Uri.joinPath(states, "..");
+    const entries = await workspace.fs.readDirectory(dir);
+    const result: Uri[] = [];
+    for (const [name] of entries.filter(([name]) => name.toLowerCase().endsWith(".csv")).sort()) {
+        const csv = Uri.joinPath(dir, name);
+        const text = await readText(csv);
+        if (text !== null && isLifecycleHeader(parseCsv(text.split(/\r?\n/, 1)[0]).header.values) && (await relatedFiles(csv)).states?.toString() === states.toString()) {
+            result.push(csv);
+        }
+    }
+    return result;
+}
+
 async function writeText(uri: Uri, text: string): Promise<void> {
     const open = workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     if (open) {
@@ -158,6 +175,10 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
 
     async resolveCustomTextEditor(document: TextDocument, panel: WebviewPanel): Promise<void> {
         const webview = panel.webview;
+        if (!isLifecycleDocument(document)) {
+            await this.notALifecycle(document, panel);
+            return;
+        }
         const outDir = Uri.joinPath(this.context.extensionUri, "out");
         webview.options = { enableScripts: true, localResourceRoots: [outDir] };
         webview.html = this.html(webview.asWebviewUri(Uri.joinPath(outDir, "webview.js")).toString(), webview.cspSource);
@@ -255,6 +276,9 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                     }
                     return;
                 }
+                case "openLifecycle":
+                case "openAsText":
+                    return;
                 case "warn":
                     void window.showWarningMessage(message.message);
                     return;
@@ -283,6 +307,49 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                 void window.showErrorMessage(`Lifecycle Studio: ${e instanceof Error ? e.message : String(e)}`);
             }
         }
+    }
+
+    /** Explain why a csv can't be shown, and link to the lifecycles using it as states csv */
+    private async notALifecycle(document: TextDocument, panel: WebviewPanel): Promise<void> {
+        const name = path.posix.basename(document.uri.path);
+        const lifecycles = await lifecyclesUsing(document.uri);
+        const escape = (s: string) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+        const nonce = Array.from({ length: 32 }, () => Math.floor(Math.random() * 36).toString(36)).join("");
+        const links = lifecycles.map((uri) => `<li><button data-path="${escape(uri.path)}">${escape(path.posix.basename(uri.path))}</button></li>`).join("");
+        panel.webview.options = { enableScripts: true };
+        panel.webview.html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
+<style>
+body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 24px; max-width: 640px; }
+button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 4px 12px; cursor: pointer; }
+button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+ul { padding-left: 0; list-style: none; } li { margin: 6px 0; }
+.muted { color: var(--vscode-descriptionForeground); }
+</style>
+</head>
+<body>
+<h2>${escape(name)} is not a lifecycle csv</h2>
+<p class="muted">The Lifecycle Studio shows a lifecycle csv: one row per state, with the name, desired_state and on_* columns.</p>
+${lifecycles.length ? `<p>${escape(name)} is the states csv of:</p><ul>${links}</ul>` : ""}
+<p><button class="secondary" id="text">Open ${escape(name)} as text</button></p>
+<script nonce="${nonce}">
+const vscode = acquireVsCodeApi();
+document.querySelectorAll("button[data-path]").forEach((b) => b.addEventListener("click", () => vscode.postMessage({ type: "openLifecycle", path: b.dataset.path })));
+document.getElementById("text").addEventListener("click", () => vscode.postMessage({ type: "openAsText" }));
+</script>
+</body>
+</html>`;
+        const subscription = panel.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
+            if (message.type === "openLifecycle") {
+                await commands.executeCommand("vscode.openWith", document.uri.with({ path: message.path }), VIEW_TYPE);
+            } else if (message.type === "openAsText") {
+                await commands.executeCommand("vscode.openWith", document.uri, "default");
+            }
+        });
+        panel.onDidDispose(() => subscription.dispose());
     }
 
     private html(script: string, cspSource: string): string {
@@ -402,7 +469,18 @@ function registerDiagnostics(context: ExtensionContext): void {
 }
 
 export function registerLifecycleStudio(context: ExtensionContext): void {
+    const updateContext = () => {
+        const document = window.activeTextEditor?.document;
+        void commands.executeCommand("setContext", "inmanta.lifecycleCsvActive", document !== undefined && isLifecycleDocument(document));
+    };
+    updateContext();
     context.subscriptions.push(
+        window.onDidChangeActiveTextEditor(updateContext),
+        workspace.onDidChangeTextDocument((e) => {
+            if (e.document === window.activeTextEditor?.document) {
+                updateContext();
+            }
+        }),
         window.registerCustomEditorProvider(VIEW_TYPE, new LifecycleStudioProvider(context), {
             webviewOptions: { retainContextWhenHidden: true },
         }),
