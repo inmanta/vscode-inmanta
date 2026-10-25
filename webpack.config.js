@@ -51,4 +51,33 @@ const extensionConfig = {
     }
 };
 
-module.exports = [extensionConfig];
+/** @type WebpackConfig */
+const webviewConfig = {
+    target: 'web',
+    mode: 'none',
+    entry: './src/webview/main.ts',
+    output: {
+        path: path.resolve(__dirname, 'out'),
+        filename: 'webview.js',
+    },
+    resolve: {
+        extensions: ['.ts', '.js'],
+    },
+    module: {
+        rules: [
+            {
+                test: /\.ts$/,
+                exclude: /node_modules/,
+                use: [{ loader: 'ts-loader', options: { configFile: path.resolve(__dirname, 'src/webview/tsconfig.json') } }],
+            },
+            {
+                test: /\.css$/,
+                type: 'asset/source',
+            },
+        ],
+    },
+    devtool: 'source-map',
+    performance: { hints: false },
+};
+
+module.exports = [extensionConfig, webviewConfig];

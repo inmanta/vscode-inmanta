@@ -1,0 +1,13 @@
+name,label,current,previous,desired_state,on_create,on_update,on_delete,on_api_set_state,on_auto,on_deployed,on_failed,on_non_compliant,web_label
+start,,,,unmanaged,"validate(creating, terminated)",,,,,,,,
+creating,info,active,,creating,,,validate(deleting),,,up,creating_failed,,Creating
+creating_failed,danger,active,,creating,,,validate(deleting),creating,,up,creating_failed,,
+up,success,active,,up,,validate(updating),validate(deleting),,,up,failed,degraded,Up
+failed,danger,active,,up,,validate(updating),validate(deleting),,,up,failed,degraded,
+degraded,warning,active,,up,,validate(updating),validate(deleting),,,up,failed,degraded,
+updating,info,active,rollback,updating,,,validate(deleting),rollback(rolling_back),,up,updating_failed,,
+updating_failed,danger,active,rollback,updating,,,validate(deleting),"rollback(rolling_back), up",,up,updating_failed,,
+rolling_back,info,active,candidate,rolling_back,,,,,,up,rolling_back,,
+deleting,info,active,,deleting,,,,,,terminated,deleting_failed,,
+deleting_failed,danger,active,,deleting,,,,terminated,,terminated,deleting_failed,,
+terminated,,,,unmanaged,,,,,,,,,

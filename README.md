@@ -48,6 +48,15 @@ host=10.0.0.102                                   # Replace this by the address 
 port=8888                                         # Replace this by the port on which the server is listening
 ```
 
+### Lifecycle Studio
+Open a csv lifecycle of `future::lsm::fsm` (a `lifecycle.csv` with `name`, `desired_state` and `on_*` columns) with the **Open in Lifecycle Studio** button in the editor title, or with *Open With... > Inmanta Lifecycle Studio*. The studio has three modes:
+
+- **View**: the lifecycle as a graph, grouped in stages (the `web_stage` annotation, or the desired state). Switch between the states of the csv, the lsm states including the generated validation states, and the desired states.
+- **Edit**: change states and transfers in the inspector, or drag the handle of the selected state onto another state to add a transfer. Every edit is a normal edit of the csv, so undo, save and diff work as usual.
+- **Simulate**: create an instance or start in any state, then send updates, deletes, set state calls, validation results and resource outcomes. The studio shows the attribute sets, the desired state and the `states.csv` options the model sees in each kind of compile, and saves runs as scenarios.
+
+The `states.csv` next to the lifecycle csv is picked up automatically. What the csv can't hold (stage definitions, transfer annotations, layout and scenarios) is stored in `<name>.lifecycle.yml` next to the csv. The lifecycle checks are also reported in the Problems panel for any open lifecycle csv. The studio works without the language server.
+
 ## Requirements
 
  - Operating System: Currently only Linux and Windows are supported.

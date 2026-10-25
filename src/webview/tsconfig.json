@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "module": "es2020",
+        "moduleResolution": "bundler",
+        "target": "es2020",
+        "lib": ["es2020", "dom"],
+        "strict": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "sourceMap": true,
+        "noEmit": false
+    },
+    "include": ["./**/*.ts", "../lifecycle/csv.ts", "../lifecycle/model.ts", "../lifecycle/expand.ts", "../lifecycle/lint.ts", "../lifecycle/simulator.ts", "../lifecycle/graph.ts", "../lifecycle/metadata.ts"]
+}

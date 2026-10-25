@@ -8,6 +8,7 @@ import { addSetupAssistantButton } from './walkthrough_button';
 import { createOutputChannel, getConfiguration, getOuterMostWorkspaceFolder, getWorkspaceFolder, onDidChangeConfiguration } from './vscode_api';
 import { checkIfConfigurationChanged } from './settings';
 import { registerLogger, traceLog } from './logTracer';
+import { registerLifecycleStudio } from './lifecycle/studio';
 
 let inmantaCommands: InmantaCommands;
 let lastActiveFolder: WorkspaceFolder | undefined;
@@ -29,6 +30,9 @@ export const languageServers: Map<string, LanguageServer> = new Map();
 export async function activate(context: ExtensionContext) {
     const outputChannel = createOutputChannel('Inmanta');
     context.subscriptions.push(registerLogger(outputChannel));
+
+    // The lifecycle studio doesn't need python or the language server
+    registerLifecycleStudio(context);
 
     const pythonExtension = extensions.getExtension('ms-python.python');
 

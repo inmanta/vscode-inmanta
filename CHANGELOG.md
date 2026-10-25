@@ -1,6 +1,7 @@
 # v 1.11.0 (?)
 Changes in this release:
 - Update Walkthrough/setup assistant to be in line with v2 modules install flow. (#2291)
+- Add the Lifecycle Studio to view, edit and simulate csv lifecycles.
 
 # v 1.10.0 (2026-02-19)
 Changes in this release:

@@ -1,0 +1,7 @@
+name,created_child,removed_child,purge,starting,description,web_icon
+unmanaged,,,false,false,Not managed,
+creating,creating,deleting,false,true,First deployment,FaPlus
+up,creating,deleting,false,false,Deployed,
+updating,creating,deleting,false,false,Applying an update,
+rolling_back,,,false,false,Going back to the previous attributes,
+deleting,,,true,false,Removing everything,FaTrash
