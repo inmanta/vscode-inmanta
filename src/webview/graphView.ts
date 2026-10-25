@@ -592,7 +592,7 @@ export class GraphView {
             }
             const g = s("g", { class: cls, "data-node": node.id, transform: `translate(${b.x},${b.y})` },
                 s("rect", { class: "body", width: b.w, height: b.h, rx: 5 }),
-                s("rect", { class: "strip", width: 5, height: b.h, rx: 2 }),
+                s("path", { class: "strip", d: `M6,0 V${b.h} H5 A5,5 0 0 1 0,${b.h - 5} V5 A5,5 0 0 1 5,0 Z` }),
                 s("text", { x: node.initial ? 24 : 14, y: b.h / 2 + 4.5, class: "name" }, node.id),
                 s("title", {}, `${node.title}\ndesired state: ${node.desiredState ?? "-"}${node.protected ? "\nprotected: no on_delete" : ""}${node.selfLoops.length ? `\nloops: ${node.selfLoops.join(", ")}` : ""}`));
             if (node.initial) {
