@@ -27,7 +27,18 @@ import {
 import { parseCsv } from "./csv";
 import { applyEdit, EditError, EditOp } from "./edit";
 import { lint } from "./lint";
-import { applyMetadataOp, deleteStateInMetadata, MetadataOp, metadataPathFor, parseMetadata, renameStateInMetadata } from "./metadata";
+import {
+    applyMetadataOp,
+    deleteStateInMetadata,
+    METADATA_FILES,
+    MetadataFile,
+    MetadataOp,
+    metadataPathFor,
+    MetadataTexts,
+    newFileText,
+    parseMetadata,
+    renameStateInMetadata,
+} from "./metadata";
 import { isLifecycleHeader, parseLifecycleCsv, parseStatesCsv } from "./model";
 import { StageChange } from "./stages";
 
@@ -40,15 +51,15 @@ export type WebviewMessage =
     | { type: "metadata"; op: MetadataOp }
     | { type: "stages"; change: StageChange }
     | { type: "warn"; message: string }
-    | { type: "open"; file: "csv" | "states" | "metadata"; line?: number };
+    | { type: "open"; file: "csv" | "states" | MetadataFile; line?: number };
 
 /** Message sent to the webview */
 export interface LoadMessage {
     type: "load";
     csv: string;
     states: string | null;
-    metadata: string | null;
-    files: { csv: string; states: string | null; metadata: string };
+    metadata: MetadataTexts;
+    files: { csv: string; states: string | null } & MetadataTexts;
 }
 
 async function readText(uri: Uri): Promise<string | null> {
@@ -63,12 +74,33 @@ async function readText(uri: Uri): Promise<string | null> {
     }
 }
 
-/** The metadata file and states csv belonging to a lifecycle csv */
-async function relatedFiles(csv: Uri): Promise<{ metadata: Uri; states: Uri | null }> {
-    const metadata = csv.with({ path: metadataPathFor(csv.path) });
-    const metadataText = await readText(metadata);
+type MetadataUris = Record<MetadataFile, Uri>;
+
+interface RelatedFiles {
+    metadata: MetadataUris;
+    states: Uri | null;
+}
+
+async function readMetadata(uris: MetadataUris): Promise<MetadataTexts> {
+    const [transfers, stages, studio] = await Promise.all(METADATA_FILES.map(async (file) => (await readText(uris[file])) ?? ""));
+    return { transfers, stages, studio };
+}
+
+/** Write the metadata files whose text changed */
+async function writeMetadata(uris: MetadataUris, before: MetadataTexts, after: MetadataTexts): Promise<void> {
+    for (const file of METADATA_FILES) {
+        if (after[file] !== before[file]) {
+            await writeText(uris[file], after[file]);
+        }
+    }
+}
+
+/** The metadata files and states csv belonging to a lifecycle csv */
+async function relatedFiles(csv: Uri): Promise<RelatedFiles> {
+    const metadata = Object.fromEntries(METADATA_FILES.map((file) => [file, csv.with({ path: metadataPathFor(csv.path, file) })])) as MetadataUris;
+    const studioText = await readText(metadata.studio);
     const dir = path.posix.dirname(csv.path);
-    const configured = metadataText ? parseMetadata(metadataText).metadata.statesCsv : undefined;
+    const configured = studioText ? parseMetadata({ transfers: "", stages: "", studio: studioText }).metadata.statesCsv : undefined;
     if (configured) {
         return { metadata, states: csv.with({ path: path.posix.resolve(dir, configured) }) };
     }
@@ -136,7 +168,7 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
 
         const send = async () => {
             related = await relatedFiles(document.uri);
-            const files = [related.metadata, related.states].filter((u): u is Uri => u !== null);
+            const files = [...Object.values(related.metadata), related.states].filter((u): u is Uri => u !== null);
             if (files.map((u) => u.toString()).join() !== watched) {
                 watchers.forEach((w) => w.dispose());
                 watchers = watchFiles(files, scheduleSend);
@@ -146,11 +178,13 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                 type: "load",
                 csv: document.getText(),
                 states: related.states ? await readText(related.states) : null,
-                metadata: await readText(related.metadata),
+                metadata: await readMetadata(related.metadata),
                 files: {
                     csv: path.posix.basename(document.uri.path),
                     states: related.states ? path.posix.basename(related.states.path) : null,
-                    metadata: path.posix.basename(related.metadata.path),
+                    transfers: path.posix.basename(related.metadata.transfers.path),
+                    stages: path.posix.basename(related.metadata.stages.path),
+                    studio: path.posix.basename(related.metadata.studio.path),
                 },
             };
             await webview.postMessage(message);
@@ -163,7 +197,8 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
         const subscriptions = [
             workspace.onDidChangeTextDocument((e) => {
                 const changed = e.document.uri.toString();
-                if (changed === document.uri.toString() || changed === related.metadata.toString() || changed === related.states?.toString()) {
+                const watchedUris = [document.uri, related.states, ...Object.values(related.metadata)];
+                if (watchedUris.some((uri) => uri?.toString() === changed)) {
                     scheduleSend();
                 }
             }),
@@ -177,7 +212,7 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
     private async receive(
         document: TextDocument,
         message: WebviewMessage,
-        related: { metadata: Uri; states: Uri | null },
+        related: RelatedFiles,
         send: () => Promise<void>,
     ): Promise<void> {
         try {
@@ -189,17 +224,15 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                     await replaceDocument(document, applyEdit(document.getText(), message.op));
                     const op = message.op;
                     if (op.kind === "renameState" || op.kind === "deleteState") {
-                        const metadata = await readText(related.metadata);
-                        if (metadata) {
-                            const updated = op.kind === "renameState" ? renameStateInMetadata(metadata, op.from, op.to) : deleteStateInMetadata(metadata, op.name);
-                            await writeText(related.metadata, updated);
-                        }
+                        const metadata = await readMetadata(related.metadata);
+                        const updated = op.kind === "renameState" ? renameStateInMetadata(metadata, op.from, op.to) : deleteStateInMetadata(metadata, op.name);
+                        await writeMetadata(related.metadata, metadata, updated);
                     }
                     return;
                 }
                 case "metadata": {
-                    const metadata = (await readText(related.metadata)) ?? "";
-                    await writeText(related.metadata, applyMetadataOp(metadata, message.op));
+                    const metadata = await readMetadata(related.metadata);
+                    await writeMetadata(related.metadata, metadata, applyMetadataOp(metadata, message.op));
                     return;
                 }
                 case "stages": {
@@ -208,21 +241,15 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                     const csvText = csv.length ? csv.reduce(applyEdit, document.getText()) : null;
                     const statesBefore = states.length && related.states ? await readText(related.states) : null;
                     const statesText = statesBefore !== null ? states.reduce(applyEdit, statesBefore) : null;
-                    const metadataBefore = await readText(related.metadata);
-                    // Removing positions from a missing metadata file doesn't create it
-                    const metadataText =
-                        metadata.length && (metadataBefore !== null || metadata.some((op) => op.kind !== "removeLayout"))
-                            ? metadata.reduce(applyMetadataOp, metadataBefore ?? "")
-                            : null;
+                    const metadataBefore = await readMetadata(related.metadata);
+                    const metadataAfter = metadata.reduce(applyMetadataOp, metadataBefore);
                     if (states.length && statesText === null) {
                         throw new EditError("The stage is set in a states csv that can't be read");
                     }
                     if (statesText !== null && related.states) {
                         await writeText(related.states, statesText);
                     }
-                    if (metadataText !== null) {
-                        await writeText(related.metadata, metadataText);
-                    }
+                    await writeMetadata(related.metadata, metadataBefore, metadataAfter);
                     if (csvText !== null) {
                         await replaceDocument(document, csvText);
                     }
@@ -232,12 +259,13 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
                     void window.showWarningMessage(message.message);
                     return;
                 case "open": {
-                    const uri = message.file === "csv" ? document.uri : message.file === "states" ? related.states : related.metadata;
+                    const file = message.file;
+                    const uri = file === "csv" ? document.uri : file === "states" ? related.states : related.metadata[file];
                     if (uri === null) {
                         return;
                     }
-                    if (message.file === "metadata" && (await readText(uri)) === null) {
-                        await writeText(uri, applyMetadataOp("", { kind: "clearLayout" }));
+                    if (file !== "csv" && file !== "states" && (await readText(uri)) === null) {
+                        await writeText(uri, newFileText(file));
                     }
                     const editor = await window.showTextDocument(uri, { viewColumn: ViewColumn.Beside, preview: false });
                     if (message.line !== undefined) {

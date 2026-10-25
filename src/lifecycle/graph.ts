@@ -63,7 +63,7 @@ export interface Stage {
     name: string;
     description?: string;
     order: number;
-    /** Defined in the metadata file */
+    /** Declared in the stages csv */
     declared: boolean;
 }
 
@@ -105,7 +105,7 @@ function addEdge(edges: Map<string, GraphEdge>, source: string, target: string, 
     edges.set(id, edge);
 }
 
-/** The stages in use, and the empty ones of the metadata file when includeEmpty is set */
+/** The stages in use, and the empty declared ones when includeEmpty is set */
 function stagesFor(allUsed: string[], metadata: Metadata, includeEmpty = false): Stage[] {
     const used = allUsed.filter((id) => id !== "");
     const declared = metadata.stages;

@@ -58,7 +58,7 @@ Open a csv lifecycle of `future::lsm::fsm` (a `lifecycle.csv` with `name`, `desi
 
 For every state, the inspector previews what the web console shows: the state badge (`web_label`, `web_icon`, `web_description`) and the Actions menu with the set state buttons and their transfer annotations (`web_button_label`, `web_confirm`, `web_advanced_state`, ...). In Simulate mode these buttons drive the simulation.
 
-The `states.csv` next to the lifecycle csv is picked up automatically. What the csv can't hold (stage definitions, transfer annotations, layout and scenarios) is stored in `<name>.lifecycle.yml` next to the csv. Pass this file as the `metadata_file` of `future::lsm::fsm::LifecycleFactory` to set the transfer annotations in the lifecycle. The lifecycle checks are also reported in the Problems panel for any open lifecycle csv. The studio works without the language server.
+The `states.csv` next to the lifecycle csv is picked up automatically. What the lifecycle csv can't hold goes in files next to it, which can also be written by hand: the transfer annotations in `<name>.transfers.csv` (one row per transfer, identified by `source`, `trigger` and `target`, pass it as the `transfers_csv_file` of `future::lsm::fsm::LifecycleFactory`), the stages in display order in `<name>.stages.csv`, and the layout and scenarios, which only the studio uses, in `<name>.studio.yml`. The lifecycle checks are also reported in the Problems panel for any open lifecycle csv. The studio works without the language server.
 
 ## Requirements
 

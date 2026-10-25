@@ -1,7 +1,7 @@
 /**
  * Changes to the stages of a lifecycle.  The stage of a state is its web_stage annotation, set
  * in the lifecycle csv or for its desired state in the states csv, and defaults to its desired
- * state.  The metadata file holds the names and order of the stages.
+ * state.  The stages csv holds the names and order of the stages.
  */
 import { EditOp } from "./edit";
 import { stageOf } from "./graph";

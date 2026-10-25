@@ -10,6 +10,7 @@ import {
     applyMetadataOp,
     deleteStateInMetadata,
     emptyMetadata,
+    emptyTexts,
     metadataIssues,
     parseMetadata,
     renameStateInMetadata,
@@ -230,27 +231,30 @@ suite("lifecycle graph and metadata", () => {
     });
 
     test("metadata edits keep comments", () => {
-        let text = "# my notes\nversion: 1\nstages:\n  - {id: up, name: Operate, column: 2}\n";
+        let text = "# my notes\nversion: 1\nstage_layout:\n  up: {column: 2}\n";
         text = setLayout(text, { up: { x: 10.4, y: 20 } });
         text = upsertScenario(text, { name: "happy", steps: ["create", "validation_ok"], expect: "creating" });
-        text = renameStateInMetadata(text, "creating", "building");
         assert.ok(text.startsWith("# my notes\n"));
-        const { metadata, errors } = parseMetadata(text);
+        const stages = "id,name,description\nup,Operate,\n";
+        const { metadata, errors } = parseMetadata({ ...emptyTexts(), stages, studio: renameStateInMetadata({ ...emptyTexts(), studio: text }, "creating", "building").studio });
         assert.deepStrictEqual(errors, []);
         assert.deepStrictEqual(metadata.layout.up, { x: 10, y: 20 });
         assert.deepStrictEqual(metadata.scenarios[0], { name: "happy", start: undefined, steps: ["create", "validation_ok"], expect: "building" });
-        assert.strictEqual(metadata.stages[0].name, "Operate");
+        assert.deepStrictEqual(metadata.stages[0], { id: "up", name: "Operate", column: 2, row: undefined, description: undefined });
     });
 
     test("metadata follows renamed and deleted states", () => {
-        let text = "layout:\n  a: {x: 1, y: 2}\ntransfers:\n  - {source: a, trigger: on_update, target: b, web_action: Go}\n";
-        text += "scenarios:\n  - {name: s, steps: [\"set_state: a\", create], expect: a}\n";
-        const renamed = parseMetadata(renameStateInMetadata(text, "a", "c")).metadata;
-        assert.deepStrictEqual(renamed.scenarios[0].steps, ["set_state:c", "create"]);
-        assert.strictEqual(renamed.transfers[0].source, "c");
-        const deleted = parseMetadata(deleteStateInMetadata(text, "a")).metadata;
+        const texts = {
+            ...emptyTexts(),
+            transfers: "source,trigger,target,web_action\na,on_update,b,Go\nb,on_update,c,Stay\n",
+            studio: "layout:\n  a: {x: 1, y: 2}\nscenarios:\n  - {name: s, steps: [\"set_state: a\", create], expect: a}\n",
+        };
+        const renamed = renameStateInMetadata(texts, "a", "c");
+        assert.strictEqual(renamed.transfers, "source,trigger,target,web_action\nc,on_update,b,Go\nb,on_update,c,Stay\n");
+        assert.deepStrictEqual(parseMetadata(renamed).metadata.scenarios[0].steps, ["set_state:c", "create"]);
+        const deleted = parseMetadata(deleteStateInMetadata(texts, "a")).metadata;
         assert.deepStrictEqual(deleted.layout, {});
-        assert.deepStrictEqual(deleted.transfers, []);
+        assert.deepStrictEqual(deleted.transfers.map((e) => e.source), ["b"]);
     });
 });
 
@@ -338,32 +342,41 @@ suite("lifecycle stages", () => {
         assert.throws(() => addStage(lifecycle(), [{ id: "spare" }], "spare", "Spare"), /already exists/);
     });
 
-    test("stage definitions in the metadata file", () => {
-        let text = applyMetadataOp("", { kind: "setStages", stages: [{ id: "creating", name: "Creating" }, { id: "up", name: "Up" }] });
-        text = applyMetadataOp(text, { kind: "upsertStage", stage: { id: "deleting", name: "Deleting", description: "Going away" } });
-        text = applyMetadataOp(text, { kind: "moveStage", id: "deleting", delta: -1 });
-        text = applyMetadataOp(text, { kind: "renameStage", from: "up", to: "running" });
-        text = applyMetadataOp(text, { kind: "upsertStage", stage: { id: "creating", name: "Provisioning", column: 0 } });
-        assert.deepStrictEqual(parseMetadata(text).metadata.stages, [
+    test("stage definitions in the stages csv", () => {
+        let texts = applyMetadataOp(emptyTexts(), { kind: "setStages", stages: [{ id: "creating", name: "Creating" }, { id: "up", name: "Up" }] });
+        texts = applyMetadataOp(texts, { kind: "upsertStage", stage: { id: "deleting", name: "Deleting", description: "Going away" } });
+        texts = applyMetadataOp(texts, { kind: "moveStage", id: "deleting", delta: -1 });
+        texts = applyMetadataOp(texts, { kind: "renameStage", from: "up", to: "running" });
+        texts = applyMetadataOp(texts, { kind: "upsertStage", stage: { id: "creating", name: "Provisioning", column: 0 } });
+        assert.strictEqual(texts.stages, "id,name,description\ncreating,Provisioning,\ndeleting,Deleting,Going away\nrunning,Up,\n");
+        assert.deepStrictEqual(parseMetadata(texts).metadata.stages, [
             { id: "creating", name: "Provisioning", column: 0, row: undefined, description: undefined },
             { id: "deleting", name: "Deleting", column: undefined, row: undefined, description: "Going away" },
             { id: "running", name: "Up", column: undefined, row: undefined, description: undefined },
         ]);
-        text = applyMetadataOp(text, { kind: "deleteStage", id: "deleting" });
+        texts = applyMetadataOp(texts, { kind: "deleteStage", id: "deleting" });
         // Redeclaring keeps the definitions
-        text = applyMetadataOp(text, { kind: "setStages", stages: [{ id: "running", name: "Up" }, { id: "creating", name: "Creating" }] });
-        assert.deepStrictEqual(parseMetadata(text).metadata.stages.map((st) => [st.id, st.name, st.column]), [["running", "Up", undefined], ["creating", "Creating", 0]]);
+        texts = applyMetadataOp(texts, { kind: "setStages", stages: [{ id: "running", name: "Up" }, { id: "creating", name: "Creating" }] });
+        assert.deepStrictEqual(parseMetadata(texts).metadata.stages.map((st) => [st.id, st.name, st.column]), [["running", "Up", undefined], ["creating", "Creating", 0]]);
 
-        text = setLayout(text, { up: { x: 1, y: 2 }, failed: { x: 3, y: 4 } });
-        text = applyMetadataOp(text, { kind: "removeLayout", states: ["up"] });
-        assert.deepStrictEqual(Object.keys(parseMetadata(text).metadata.layout), ["failed"]);
+        texts = { ...texts, studio: setLayout(texts.studio, { up: { x: 1, y: 2 }, failed: { x: 3, y: 4 } }) };
+        texts = applyMetadataOp(texts, { kind: "removeLayout", states: ["up"] });
+        assert.deepStrictEqual(Object.keys(parseMetadata(texts).metadata.layout), ["failed"]);
     });
 
-    test("long entries of the metadata file stay on one line", () => {
-        const entry = `  - {source: up, trigger: on_update, target: updating, web_confirm: "${"x".repeat(120)}"}`;
-        const text = applyMetadataOp(`version: 1\ntransfers:\n${entry}\n`, { kind: "upsertStage", stage: { id: "up" } });
-        assert.strictEqual(text.split("\n").filter((line) => line.includes("web_confirm")).length, 1);
-        assert.ok(text.includes('web_confirm: "' + "x".repeat(120)));
+    test("transfer annotations in the transfers csv", () => {
+        const entry = { source: "up", trigger: "on_update" as const, target: "updating" };
+        let texts = applyMetadataOp(emptyTexts(), { kind: "setTransferAnnotations", entry: { ...entry, annotations: { web_confirm: "Sure, with a comma?" } } });
+        texts = applyMetadataOp(texts, { kind: "setTransferAnnotations", entry: { source: "up", trigger: "on_delete", target: "deleting", annotations: { web_advanced_state: true } } });
+        assert.strictEqual(texts.transfers, 'source,trigger,target,web_confirm,web_advanced_state\nup,on_update,updating,"Sure, with a comma?",\nup,on_delete,deleting,,true\n');
+        assert.deepStrictEqual(parseMetadata(texts).metadata.transfers[1].annotations, { web_advanced_state: true });
+        // Removing the last annotation drops the row, other files are left alone
+        const cleared = applyMetadataOp(texts, { kind: "setTransferAnnotations", entry: { ...entry, annotations: {} } });
+        assert.strictEqual(cleared.transfers, "source,trigger,target,web_confirm,web_advanced_state\nup,on_delete,deleting,,true\n");
+        assert.strictEqual(cleared.studio, "");
+        assert.deepStrictEqual(parseMetadata({ ...emptyTexts(), transfers: "source,trigger,target,label\n" }).errors, [
+            { file: "transfers", message: "The columns label are not annotations, the factory rejects them" },
+        ]);
     });
 
     test("empty declared stages are shown in the csv view", () => {

@@ -1,7 +1,7 @@
 /**
  * What the web console shows for a service instance in a state: the state badge and the
  * Actions menu.  Mirrors InstanceStateLabel, getAvailableStateTargets and InstanceActions of
- * the web-console, with the transfer annotations taken from the metadata file.
+ * the web-console, with the transfer annotations taken from the transfers csv.
  */
 import { LsmLifecycle, LsmTransfer } from "./expand";
 import { Metadata } from "./metadata";

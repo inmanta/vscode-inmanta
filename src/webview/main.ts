@@ -2,7 +2,7 @@ import { ConsoleAction, consoleView } from "../lifecycle/console";
 import { EDGE_KINDS, EdgeKind, Graph, GraphEdge, View, buildGraph, stageOf } from "../lifecycle/graph";
 import { expand, LsmLifecycle, LsmState } from "../lifecycle/expand";
 import { Issue, lint } from "../lifecycle/lint";
-import { emptyMetadata, Metadata, metadataIssues, parseMetadata, Scenario, StageDefinition, TRANSFER_ANNOTATION_TRIGGERS } from "../lifecycle/metadata";
+import { Metadata, MetadataError, metadataIssues, MetadataTexts, parseMetadata, Scenario, StageDefinition, TRANSFER_ANNOTATION_TRIGGERS } from "../lifecycle/metadata";
 import {
     ATTRIBUTE_SETS,
     formatTransfer,
@@ -39,12 +39,12 @@ const vscode = acquireVsCodeApi();
 type Mode = "view" | "edit" | "simulate";
 
 interface Data {
-    files: { csv: string; states: string | null; metadata: string };
+    files: { csv: string; states: string | null } & MetadataTexts;
     csvText: string;
     lifecycle: LifecycleFile;
     states?: StatesFile;
     metadata: Metadata;
-    metadataErrors: string[];
+    metadataErrors: MetadataError[];
     lsm: LsmLifecycle;
     issues: Issue[];
 }
@@ -167,10 +167,10 @@ const graphView = new GraphView(canvas, {
 
 // ---------- data ----------
 
-function load(message: { csv: string; states: string | null; metadata: string | null; files: Data["files"] }): void {
+function load(message: { csv: string; states: string | null; metadata: MetadataTexts; files: Data["files"] }): void {
     const states = message.states !== null ? parseStatesCsv(message.states) : undefined;
     const lifecycle = parseLifecycleCsv(message.csv, states);
-    const parsed = message.metadata ? parseMetadata(message.metadata) : { metadata: emptyMetadata(), errors: [] };
+    const parsed = parseMetadata(message.metadata);
     const lsm = expand(lifecycle.states);
     data = {
         files: message.files,
@@ -178,7 +178,7 @@ function load(message: { csv: string; states: string | null; metadata: string | 
         lifecycle,
         states,
         metadata: parsed.metadata,
-        metadataErrors: [...parsed.errors, ...metadataIssues(parsed.metadata, lifecycle.states)],
+        metadataErrors: [...parsed.errors, ...metadataIssues(parsed.metadata, lifecycle.states).map((message): MetadataError => ({ file: "transfers", message }))],
         lsm,
         issues: lint(lifecycle, states, lsm),
     };
@@ -375,8 +375,8 @@ function renderToolbar(): void {
         ui.mode === "edit" ? addStateForm() : null,
         h("div", { class: "files" },
             h("button", { class: "link", onclick: () => post({ type: "open", file: "csv" }) }, d.files.csv),
-            d.files.states ? h("button", { class: "link", onclick: () => post({ type: "open", file: "states" }) }, d.files.states) : h("span", { class: "muted", title: "Put a states.csv next to the lifecycle, or set states_csv in the metadata file" }, "no states.csv"),
-            h("button", { class: "link", onclick: () => post({ type: "open", file: "metadata" }) }, d.files.metadata)),
+            d.files.states ? h("button", { class: "link", onclick: () => post({ type: "open", file: "states" }) }, d.files.states) : h("span", { class: "muted", title: `Put a states.csv next to the lifecycle, or set states_csv in ${d.files.studio}` }, "no states.csv"),
+            (["transfers", "stages", "studio"] as const).map((file) => h("button", { class: "link", onclick: () => post({ type: "open", file }) }, d.files[file]))),
     );
 }
 
@@ -603,7 +603,7 @@ function overview(): HTMLElement[] {
                 ["initial", h("span", null, initial.map((s, i) => [i > 0 ? ", " : "", stateLink(s)]))],
             ])),
         section("Stages",
-            h("p", { class: "muted" }, d.metadata.stages.length ? "From the metadata file and the web_stage annotations." : "No web_stage annotations, states are grouped by desired state."),
+            h("p", { class: "muted" }, d.metadata.stages.length ? `From ${d.files.stages} and the web_stage annotations.` : "No web_stage annotations, states are grouped by desired state."),
             h("ul", { class: "plain" }, stages.map((s) => h("li", null, stageLink(s.id, s.name), s.description ? h("span", { class: "muted" }, ` - ${s.description}`) : null)))),
         section("How to use",
             h("ul", { class: "plain muted" },
@@ -737,7 +737,7 @@ function edgeInspector(edge: GraphEdge): HTMLElement[] {
                     ["operation", detail.operation],
                     ["validated", detail.validate ? "yes" : "no"],
                 ]),
-                h("h4", null, "Transfer annotations (metadata file)"),
+                h("h4", null, `Transfer annotations (${d.files.transfers})`),
                 editable
                     ? h("div", { class: "form" },
                         TRANSFER_ANNOTATIONS.map((key) => field(key, h("input", {
@@ -945,7 +945,7 @@ function changeStages(plan: () => StageChange): void {
     }
 }
 
-/** The stages of the csv states, with the empty ones of the metadata file */
+/** The stages of the csv states, with the empty declared ones */
 function allStages(): { id: string; name: string; declared: boolean }[] {
     return buildGraph("csv", data!.lifecycle.states, data!.lsm, data!.metadata).stages;
 }
@@ -1020,7 +1020,7 @@ function stagesPanel(): HTMLElement {
         undeclared.length
             ? h("div", { class: "actions" },
                 h("button", {
-                    title: "Write the stages to the metadata file in this order, to name and reorder them",
+                    title: `Write the stages to ${d.files.stages} in this order, to name and reorder them`,
                     onclick: () => post({ type: "metadata", op: { kind: "setStages", stages: stages.map((st): StageDefinition => ({ id: st.id, name: st.name })) } }),
                 }, `Declare ${undeclared.length === stages.length ? "the" : `${undeclared.length} more`} stages`))
             : null,
@@ -1066,7 +1066,7 @@ function stageInspector(id: string): HTMLElement[] {
             ["name", stage?.name ?? id],
             ["description", definition.description ?? null],
             ["grid", definition.column !== undefined ? `column ${definition.column}, row ${definition.row ?? 0}` : null],
-            ["declared", stage?.declared ? "in the metadata file" : "no, only used by web_stage or a desired state"],
+            ["declared", stage?.declared ? `in ${d.files.stages}` : "no, only used by web_stage or a desired state"],
         ])));
     }
     result.push(section(`States (${members.length})`,
@@ -1231,7 +1231,7 @@ function simulationInspector(): HTMLElement[] {
 function renderProblems(): void {
     clear(problems);
     const d = data!;
-    const issues = [...d.issues, ...d.metadataErrors.map((m): Issue => ({ severity: "error", code: "metadata", message: `${d.files.metadata}: ${m}` }))];
+    const issues = [...d.issues, ...d.metadataErrors.map((e): Issue => ({ severity: "error", code: "metadata", message: `${d.files[e.file]}: ${e.message}` }))];
     const count = (s: string) => issues.filter((i) => i.severity === s).length;
     add(problems, 
         h("button", { class: "problems-toggle", onclick: () => { ui.problemsOpen = !ui.problemsOpen; persist(); renderProblems(); } },
