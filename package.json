@@ -228,7 +228,7 @@
         "lru-cache": "^11.5.3",
         "minimatch": "^10.2.6",
         "uuid": "^14.0.3",
-        "vscode-languageclient": "^10.1.2"
+        "vscode-languageclient": "^11.0.0"
     },
     "extensionDependencies": [
         "ms-python.python"
