@@ -1,3 +1,4 @@
+import { AnnotationKey, annotationHint, annotationKey, annotationKeys, AnnotationTarget } from "../lifecycle/annotations";
 import { ConsoleAction, consoleView } from "../lifecycle/console";
 import { EDGE_KINDS, EdgeKind, Graph, GraphEdge, View, buildGraph, stageOf } from "../lifecycle/graph";
 import { expand, LsmLifecycle, LsmState } from "../lifecycle/expand";
@@ -27,6 +28,7 @@ import { addStage, deleteStage, moveToStage, renameStage } from "../lifecycle/st
 import { FileChange } from "../lifecycle/edit";
 import { CellChange, checkCell, lifecycleTable, planChanges, statesTable, suggestCell, TableContext, TableModel, TableTab, transfersTable } from "../lifecycle/table";
 import { Grid } from "./grid";
+import { attachSuggestions } from "./suggest";
 import css from "./studio.css";
 import redHatDisplay from "@fontsource-variable/red-hat-display/files/red-hat-display-latin-wght-normal.woff2";
 import redHatText from "@fontsource-variable/red-hat-text/files/red-hat-text-latin-wght-normal.woff2";
@@ -99,8 +101,8 @@ const TRIGGER_LABEL: Record<Trigger, string> = {
     on_non_compliant: "non-compliant",
 };
 
-const ANNOTATION_SUGGESTIONS = ["web_label", "web_description", "web_icon", "web_stage", "web_kind"];
-const TRANSFER_ANNOTATIONS = ["web_action", "web_button_label", "web_confirm", "web_button_variant"];
+const keySuggestions = (on: AnnotationTarget) => annotationKeys(on).map((a) => ({ value: a.key, detail: a.description }));
+const iconSuggestions = () => ICON_NAMES.map((value) => ({ value }));
 
 const saved = (vscode.getState() ?? {}) as Partial<Ui>;
 const ui: Ui = {
@@ -815,13 +817,10 @@ function edgeInspector(edge: GraphEdge): HTMLElement[] {
                 h("h4", null, `Transfer annotations (${d.files.transfers})`),
                 editable
                     ? h("div", { class: "form" },
-                        TRANSFER_ANNOTATIONS.map((key) => field(key, h("input", {
-                            value: String(annotations[key] ?? ""),
-                            "data-key": `ta-${detail.state}-${detail.trigger}-${key}`,
-                            onchange: (e: Event) => update(key, (e.target as HTMLInputElement).value),
-                        }))),
-                        h("label", { class: "check" }, h("input", { type: "checkbox", checked: annotations.web_flow === true, onchange: (e: Event) => update("web_flow", (e.target as HTMLInputElement).checked) }), "web_flow: part of the intended flow"),
-                        h("label", { class: "check" }, h("input", { type: "checkbox", checked: annotations.web_advanced_state === true, onchange: (e: Event) => update("web_advanced_state", (e.target as HTMLInputElement).checked) }), "web_advanced_state"))
+                        [
+                            ...annotationKeys("transfer"),
+                            ...Object.keys(annotations).filter((key) => !annotationKey(key, "transfer")).map((key): AnnotationKey => ({ key, on: "transfer", type: "text", console: false, description: "" })),
+                        ].map((a) => annotationField(a, annotations[a.key], (value) => update(a.key, value), `ta-${detail.state}-${detail.trigger}-${a.key}`)))
                     : Object.keys(annotations).length
                         ? kv(Object.entries(annotations).map(([k, v]) => [k, String(v)]))
                         : h("p", { class: "muted" }, annotatable ? "None, switch to Edit to add them." : `The factory doesn't annotate ${detail.trigger} transfers.`));
@@ -831,8 +830,30 @@ function edgeInspector(edge: GraphEdge): HTMLElement[] {
 
 // ---------- edit ----------
 
-function field(label: string, control: HTMLElement, hint?: string): HTMLElement {
-    return h("label", { class: "field" }, h("span", null, label, hint ? h("span", { class: "muted" }, ` ${hint}`) : null), control);
+function field(label: string, control: HTMLElement, hint?: string, help?: string): HTMLElement {
+    return h("label", { class: "field" }, h("span", null, label, hint ? h("span", { class: "muted" }, ` ${hint}`) : null), control, help ? h("small", { class: "help" }, help) : null);
+}
+
+/** An input for a transfer annotation, by the type of its key */
+function annotationField(a: AnnotationKey, value: string | boolean | undefined, update: (value: string | boolean) => void, dataKey: string): HTMLElement {
+    const help = a.description ? annotationHint(a) : "Not a known web_* annotation";
+    if (a.type === "boolean") {
+        return h("div", { class: "field" },
+            h("label", { class: "check" }, h("input", { type: "checkbox", checked: value === true, "data-key": dataKey, onchange: (e: Event) => update((e.target as HTMLInputElement).checked) }), a.key),
+            h("small", { class: "help" }, help));
+    }
+    if (a.type === "choice") {
+        return field(a.key, select([...a.values!], String(value ?? ""), update, dataKey), undefined, help);
+    }
+    const input = h("input", { value: String(value ?? ""), "data-key": dataKey, onchange: (e: Event) => update((e.target as HTMLInputElement).value) });
+    if (a.type !== "icon") {
+        return field(a.key, input, undefined, help);
+    }
+    attachSuggestions(input, iconSuggestions, update, true);
+    return field(a.key, h("div", { class: "icon-field" },
+        h("span", { class: "icon-preview" }, faIcon(String(value ?? "") || null)),
+        input,
+        h("button", { onclick: (e: Event) => showIconPicker((e as MouseEvent).clientX, (e as MouseEvent).clientY, update) }, "Choose")), undefined, help);
 }
 
 function select(options: string[], value: string, onChange: (v: string) => void, key: string, emptyLabel = "-"): HTMLSelectElement {
@@ -940,22 +961,26 @@ function editInspector(x: XState): HTMLElement[] {
                 annotationColumns.map((column) => {
                     const input = h("input", {
                         value: x.ownAnnotations[column] ?? "",
-                        list: column === "web_stage" ? "stage-ids" : undefined,
                         placeholder: inherited(column) || (column === "web_stage" ? x.desiredState : ""),
                         "data-key": `a-${column}`,
                         onchange: (e: Event) => set(column, (e.target as HTMLInputElement).value),
                     });
+                    if (column === "web_icon") {
+                        attachSuggestions(input, iconSuggestions, (v) => set(column, v), true);
+                    } else if (column === "web_stage") {
+                        attachSuggestions(input, () => allStages().map((st) => ({ value: st.id, detail: st.name })), (v) => set(column, v));
+                    }
+                    const known = annotationKey(column, "state");
                     const control = column === "web_icon"
                         ? h("div", { class: "icon-field" },
                             h("span", { class: "icon-preview" }, faIcon(x.ownAnnotations.web_icon || inherited(column) || null)),
                             input,
                             h("button", { onclick: (e: Event) => showIconPicker((e as MouseEvent).clientX, (e as MouseEvent).clientY, (name) => set(column, name)) }, "Choose"))
                         : input;
-                    return field(column, control, inherited(column) ? "(default from states csv)" : column === "web_stage" ? "(default: desired_state)" : undefined);
+                    return field(column, control, inherited(column) ? "(default from states csv)" : column === "web_stage" ? "(default: desired_state)" : undefined,
+                        known ? annotationHint(known) : column.startsWith("web_") ? "Not a known web_* annotation" : undefined);
                 }),
-                h("datalist", { id: "annotation-keys" }, ANNOTATION_SUGGESTIONS.map((k) => h("option", { value: k }))),
-                h("datalist", { id: "stage-ids" }, allStages().map((st) => h("option", { value: st.id }, st.name))),
-                addAnnotation(x))),
+                addAnnotation(x, annotationColumns))),
         section("State actions",
             h("div", { class: "actions" },
                 h("button", { onclick: () => edit({ kind: "addState", name: `${x.name}_copy`, desiredState: x.desiredState, after: x.name, copyFrom: x.name }) }, "Duplicate"),
@@ -968,8 +993,9 @@ function editInspector(x: XState): HTMLElement[] {
     ];
 }
 
-function addAnnotation(x: XState): HTMLElement {
-    const key = h("input", { placeholder: "web_...", list: "annotation-keys", "data-key": "new-annotation-key" });
+function addAnnotation(x: XState, shown: readonly string[]): HTMLElement {
+    const key = h("input", { placeholder: "web_...", "data-key": "new-annotation-key" });
+    attachSuggestions(key, () => keySuggestions("state").filter((k) => !shown.includes(k.value)), () => value.focus());
     const value = h("input", { placeholder: "value", "data-key": "new-annotation-value" });
     const add = () => {
         const column = key.value.trim();
@@ -1264,6 +1290,7 @@ function commitCells(changes: CellChange[]): void {
 function tableToolbar(): HTMLElement {
     const d = data!;
     const columnInput = h("input", { class: "small", placeholder: "web_...", "data-key": "new-column", title: "Add an annotation column, it is written with the first value" });
+    attachSuggestions(columnInput, () => keySuggestions(ui.tableTab === "transfers" ? "transfer" : "state"), () => undefined);
     const addColumn = () => {
         const column = columnInput.value.trim();
         if (!/^(web|inmanta)_[a-z0-9_]+$/.test(column)) {

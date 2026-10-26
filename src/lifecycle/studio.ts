@@ -135,6 +135,22 @@ async function lifecyclesUsing(states: Uri): Promise<Uri[]> {
     return result;
 }
 
+/** The lifecycle csv a metadata csv belongs to, e.g. lifecycle.csv for lifecycle.stages.csv */
+async function lifecycleOfMetadata(uri: Uri): Promise<{ csv: Uri; file: MetadataFile } | null> {
+    for (const file of METADATA_FILES) {
+        const suffix = metadataPathFor("", file);
+        if (!uri.path.endsWith(suffix)) {
+            continue;
+        }
+        const csv = uri.with({ path: uri.path.slice(0, -suffix.length) + ".csv" });
+        const text = await readText(csv);
+        if (text !== null && isLifecycleHeader(parseCsv(text.split(/\r?\n/, 1)[0]).header.values)) {
+            return { csv, file };
+        }
+    }
+    return null;
+}
+
 async function writeText(uri: Uri, text: string): Promise<void> {
     const open = workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
     if (open) {
@@ -312,6 +328,7 @@ class LifecycleStudioProvider implements CustomTextEditorProvider {
     private async notALifecycle(document: TextDocument, panel: WebviewPanel): Promise<void> {
         const name = path.posix.basename(document.uri.path);
         const lifecycles = await lifecyclesUsing(document.uri);
+        const owner = await lifecycleOfMetadata(document.uri);
         const escape = (s: string) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
         const nonce = Array.from({ length: 32 }, () => Math.floor(Math.random() * 36).toString(36)).join("");
         const links = lifecycles.map((uri) => `<li><button data-path="${escape(uri.path)}">${escape(path.posix.basename(uri.path))}</button></li>`).join("");
@@ -332,6 +349,7 @@ ul { padding-left: 0; list-style: none; } li { margin: 6px 0; }
 <body>
 <h2>${escape(name)} is not a lifecycle csv</h2>
 <p class="muted">The Lifecycle Studio shows a lifecycle csv: one row per state, with the name, desired_state and on_* columns.</p>
+${owner ? `<p>${escape(name)} holds the ${owner.file === "stages" ? "stages" : "transfer annotations"} of a lifecycle, the studio edits it with the lifecycle.</p><p><button data-path="${escape(owner.csv.path)}">Open ${escape(path.posix.basename(owner.csv.path))} in the Lifecycle Studio</button></p>` : ""}
 ${lifecycles.length ? `<p>${escape(name)} is the states csv of:</p><ul>${links}</ul>` : ""}
 <p><button class="secondary" id="text">Open ${escape(name)} as text</button></p>
 <script nonce="${nonce}">

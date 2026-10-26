@@ -106,7 +106,7 @@ export class Grid {
         const table = h("table", { class: "grid" },
             h("thead", null,
                 h("tr", { class: "groups" }, h("th", { class: "rowhead" }), groups.map((g) => h("th", { colspan: String(g.span) }, g.name))),
-                h("tr", null, h("th", { class: "rowhead" }, "#"), model.columns.map((col, c) => h("th", { class: `${c === 0 ? "frozen " : ""}${isEditable(col) ? "" : "fixed"}` }, col.key)))),
+                h("tr", null, h("th", { class: "rowhead" }, "#"), model.columns.map((col, c) => h("th", { class: `${c === 0 ? "frozen " : ""}${isEditable(col) ? "" : "fixed"}`, title: col.hint }, col.key)))),
             h("tbody", null, model.rows.map((row, r) => {
                 const issues = [...row.rowIssues, ...Object.values(row.issues).flat()];
                 const worst = issues.some((i) => i.severity === "error") ? "error" : issues.some((i) => i.severity === "warning") ? "warning" : issues.length ? "info" : "";

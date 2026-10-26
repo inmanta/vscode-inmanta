@@ -205,6 +205,17 @@ suite("lifecycle simulator", () => {
         assert.strictEqual(result.steps[2].instance.sets.candidate, null);
     });
 
+    test("a transfer to the same state is ignored", () => {
+        const sim = new Simulator(load());
+        const up = sim.instanceIn("up");
+        const step = sim.apply(up, { kind: "resources", outcome: "deployed" });
+        assert.strictEqual(step.hops.length, 0);
+        assert.strictEqual(step.instance.version, up.version);
+        assert.ok(step.note);
+        assert.match(sim.options(up).find((o) => o.label === "Resources deployed")!.detail, /^stays in up/);
+        assert.strictEqual(sim.apply(up, { kind: "resources", outcome: "failed" }).instance.version, up.version + 1);
+    });
+
     test("compile contexts", () => {
         const lsm = load();
         const [exp, self, others] = compileContexts(lsm.states.get("validating_updating_from_up")!);
@@ -448,6 +459,16 @@ suite("lifecycle table", () => {
         // Resource transfers only take a state
         assert.deepStrictEqual(suggestCell(column("on_deployed"), "upd", context).map((s) => s.value), ["updating", "updating_failed"]);
         assert.deepStrictEqual(suggestCell(column("label"), "da", context).map((s) => s.value), ["danger"]);
+    });
+
+    test("annotation columns follow the known web_* annotations", () => {
+        const model = transfersTable(lifecycle, emptyMetadata());
+        const column = (key: string) => model.columns.find((c) => c.key === key)!;
+        assert.strictEqual(column("web_button_variant").kind, "choice");
+        assert.strictEqual(column("web_advanced_state").kind, "bool");
+        assert.ok(column("web_confirm").hint);
+        assert.strictEqual(checkCell(column("web_button_variant"), "red", "", model, context)[0].severity, "error");
+        assert.deepStrictEqual(suggestCell(column("web_button_variant"), "d", context).map((s) => s.value), ["danger"]);
     });
 
     test("changed cells become edits of their file", () => {

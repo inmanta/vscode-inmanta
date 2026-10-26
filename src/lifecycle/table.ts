@@ -3,6 +3,7 @@
  * as tables of typed columns, with the checks and suggestions of each column type, and the
  * edits that write a changed cell back to its file.
  */
+import { AnnotationTarget, annotationHint, annotationKey, annotationKeys } from "./annotations";
 import { cell } from "./csv";
 import { EditOp, FileChange } from "./edit";
 import { Issue, Severity } from "./lint";
@@ -26,7 +27,7 @@ import {
 export type TableTab = "lifecycle" | "states" | "transfers";
 
 /** What a column holds, it picks the checks, the suggestions and the cell rendering */
-export type ColumnKind = "name" | "label" | "set" | "desired" | "transfer" | "transfers" | "icon" | "stage" | "bool" | "text" | "fixed";
+export type ColumnKind = "name" | "label" | "set" | "desired" | "transfer" | "transfers" | "icon" | "stage" | "bool" | "choice" | "text" | "fixed";
 
 export interface TableColumn {
     key: string;
@@ -34,6 +35,10 @@ export interface TableColumn {
     kind: ColumnKind;
     /** The trigger of a transfer column */
     trigger?: Trigger;
+    /** The values of a choice column */
+    values?: readonly string[];
+    /** What the column is for */
+    hint?: string;
 }
 
 export interface CellIssue {
@@ -77,11 +82,13 @@ export interface TableContext {
 const STATE_NAME = /^[a-z_]+$/;
 const STAGE_ID = /^[A-Za-z0-9_-]+$/;
 const DEFAULT_ANNOTATIONS = ["web_label", "web_icon", "web_stage", "web_description"];
-const TRANSFER_ANNOTATION_COLUMNS = ["web_button_label", "web_confirm", "web_advanced_state", "web_action", "web_button_variant", "web_flow"];
-const BOOLEAN_ANNOTATIONS = ["web_advanced_state", "web_flow"];
+const KIND: Record<string, ColumnKind> = { text: "text", icon: "icon", stage: "stage", boolean: "bool", choice: "choice" };
 
-function annotationKind(column: string): ColumnKind {
-    return column === "web_icon" ? "icon" : column === "web_stage" ? "stage" : BOOLEAN_ANNOTATIONS.includes(column) ? "bool" : "text";
+function annotationColumn(key: string, on: AnnotationTarget, group: string): TableColumn {
+    const known = annotationKey(key, on);
+    return known
+        ? { key, group, kind: KIND[known.type], values: known.values, hint: annotationHint(known) }
+        : { key, group, kind: "text", hint: key.startsWith("web_") ? "Not a known web_* annotation" : undefined };
 }
 
 function triggerColumn(trigger: Trigger): TableColumn {
@@ -117,7 +124,7 @@ export function lifecycleTable(lifecycle: LifecycleFile, issues: readonly Issue[
         { key: "current", group: "State", kind: "set" },
         { key: "previous", group: "State", kind: "set" },
         ...TRIGGERS.map(triggerColumn),
-        ...annotations.map((key): TableColumn => ({ key, group: "Annotations", kind: annotationKind(key) })),
+        ...annotations.map((key) => annotationColumn(key, "state", "Annotations")),
         ...other.map((key): TableColumn => ({ key, group: "Other", kind: "text" })),
     ];
     const rows = lifecycle.states.map((x): TableRow => {
@@ -147,7 +154,7 @@ export function statesTable(states: StatesFile, issues: readonly Issue[], extraC
         { key: "created_child", group: "Embedded entities", kind: "desired" },
         { key: "removed_child", group: "Embedded entities", kind: "desired" },
         ...states.columns.map((key): TableColumn => ({ key, group: "Options", kind: isFlagColumn(states, key) ? "bool" : "text" })),
-        ...annotations.map((key): TableColumn => ({ key, group: "Annotation defaults", kind: annotationKind(key) })),
+        ...annotations.map((key) => annotationColumn(key, "state", "Annotation defaults")),
     ];
     const rows = states.options.map((o): TableRow => ({
         id: o.name,
@@ -169,12 +176,12 @@ export function transferRowId(source: string, trigger: string, target: string): 
 /** Every transfer the factory annotates, with its annotations from the transfers csv */
 export function transfersTable(lifecycle: LifecycleFile, metadata: Metadata, problems: readonly string[] = [], extraColumns: readonly string[] = []): TableModel {
     const used = metadata.transfers.flatMap((t) => Object.keys(t.annotations));
-    const annotations = [...new Set([...TRANSFER_ANNOTATION_COLUMNS, ...used, ...extraColumns.filter(isAnnotation)])];
+    const annotations = [...new Set([...annotationKeys("transfer").map((a) => a.key), ...used, ...extraColumns.filter(isAnnotation)])];
     const columns: TableColumn[] = [
         { key: "source", group: "Transfer", kind: "fixed" },
         { key: "trigger", group: "Transfer", kind: "fixed" },
         { key: "target", group: "Transfer", kind: "fixed" },
-        ...annotations.map((key): TableColumn => ({ key, group: "Annotations", kind: annotationKind(key) })),
+        ...annotations.map((key) => annotationColumn(key, "transfer", "Annotations")),
     ];
     const rows = new Map<string, TableRow>();
     const addRow = (source: string, trigger: string, target: string) => {
@@ -261,12 +268,15 @@ export function checkCell(column: TableColumn, value: string, row: string, model
             return value && !STAGE_ID.test(value) ? error("A stage id can only hold letters, digits, underscores and dashes") : [];
         case "bool":
             return value && value !== "true" && value !== "false" ? error("Expected true or false") : [];
+        case "choice":
+            return value && !column.values!.includes(value) ? error(`Expected one of ${column.values!.join(", ")}`) : [];
         default:
             return [];
     }
 }
 
-function rank(candidates: Suggestion[], typed: string, limit: number): Suggestion[] {
+/** The candidates that contain the typed text, the ones starting with it first */
+export function rank(candidates: readonly Suggestion[], typed: string, limit: number): Suggestion[] {
     const query = typed.toLowerCase();
     const prefix = candidates.filter((c) => c.value.toLowerCase().startsWith(query));
     const inner = candidates.filter((c) => !c.value.toLowerCase().startsWith(query) && c.value.toLowerCase().includes(query));
@@ -296,6 +306,8 @@ export function suggestCell(column: TableColumn, typed: string, context: TableCo
             return rank(context.desiredStates.map((value) => ({ value })), typed, 40);
         case "bool":
             return rank([{ value: "true" }, { value: "false" }], typed, 2);
+        case "choice":
+            return rank(column.values!.map((value) => ({ value })), typed, 20);
         case "stage":
             return rank(context.stages.map((value) => ({ value })), typed, 40);
         case "icon":

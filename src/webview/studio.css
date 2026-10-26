@@ -286,3 +286,4 @@ button.icon { padding: 0 4px; min-width: 0; line-height: 1.3; }
 .grid-suggestions li { display: flex; gap: 8px; align-items: center; padding: 2px 8px; cursor: pointer; }
 .grid-suggestions li small { color: var(--muted); margin-left: auto; padding-left: 16px; }
 .grid-suggestions li.active, .grid-suggestions li:hover { background: var(--vscode-editorSuggestWidget-selectedBackground, var(--vscode-list-activeSelectionBackground)); color: var(--vscode-editorSuggestWidget-selectedForeground, inherit); }
+.help { color: var(--muted); font-size: 0.85em; line-height: 1.3; }

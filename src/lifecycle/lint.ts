@@ -2,6 +2,7 @@
  * Checks on a csv lifecycle.  Errors are problems that make the compile fail, warnings are
  * lifecycles that compile but are most likely not what was intended.
  */
+import { ANNOTATION_KEYS } from "./annotations";
 import { expand, LsmLifecycle } from "./expand";
 import { forEachTransfer, isAnnotation, LABELS, LifecycleFile, StatesFile, XState } from "./model";
 
@@ -21,20 +22,7 @@ export interface Issue {
     inStatesFile?: boolean;
 }
 
-const KNOWN_WEB_KEYS = new Set([
-    "web_label",
-    "web_icon",
-    "web_description",
-    "web_stage",
-    "web_kind",
-    "web_button_label",
-    "web_confirm",
-    "web_button_type",
-    "web_button_variant",
-    "web_advanced_state",
-    "web_action",
-    "web_flow",
-]);
+const KNOWN_WEB_KEYS = new Set(ANNOTATION_KEYS.map((a) => a.key));
 
 export function lint(lifecycle: LifecycleFile, states?: StatesFile, expanded?: LsmLifecycle): Issue[] {
     const issues: Issue[] = [];

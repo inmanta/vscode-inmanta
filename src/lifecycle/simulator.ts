@@ -12,7 +12,7 @@ export interface AttributeSets {
 
 export interface Instance {
     state: string;
-    /** Version of the instance, bumped on every transfer and attribute change */
+    /** Version of the instance, bumped on every executed transfer and attribute change */
     version: number;
     sets: AttributeSets;
     /** Version of the next attribute set created by an update */
@@ -175,6 +175,7 @@ export class Simulator {
         const out = this.outgoing(instance.state);
         const find = (predicate: (t: LsmTransfer) => boolean) => out.find(predicate);
         const result: EventOption[] = [];
+        const to = (target: string | null) => (target === instance.state ? `stays in ${target}, lsm ignores a transfer to the same state` : `→ ${target}`);
 
         const update = find((t) => t.onUpdate);
         result.push({ event: { kind: "update" }, label: "Update", enabled: !!update, detail: update ? `→ ${update.target}` : "no on_update transfer, the api rejects it" });
@@ -194,13 +195,13 @@ export class Simulator {
             result.push({ event: { kind: "validation", ok: false }, label: "Validation fails", enabled: true, detail: `→ ${validation.error}` });
         }
         const deploy = find((t) => t.resourceBased);
-        result.push({ event: { kind: "resources", outcome: "deployed" }, label: "Resources deployed", enabled: !!deploy, detail: deploy ? `→ ${deploy.target}` : "the state doesn't export resources" });
-        result.push({ event: { kind: "resources", outcome: "failed" }, label: "Resources failed", enabled: !!deploy, detail: deploy ? `→ ${deploy.error}` : "the state doesn't export resources" });
+        result.push({ event: { kind: "resources", outcome: "deployed" }, label: "Resources deployed", enabled: !!deploy, detail: deploy ? to(deploy.target) : "the state doesn't export resources" });
+        result.push({ event: { kind: "resources", outcome: "failed" }, label: "Resources failed", enabled: !!deploy, detail: deploy ? to(deploy.error) : "the state doesn't export resources" });
         result.push({
             event: { kind: "resources", outcome: "non_compliant" },
             label: "Resources non-compliant",
             enabled: !!deploy?.nonCompliant,
-            detail: deploy ? (deploy.nonCompliant ? `→ ${deploy.nonCompliant}` : "no on_non_compliant transfer") : "the state doesn't export resources",
+            detail: deploy ? (deploy.nonCompliant ? to(deploy.nonCompliant) : "no on_non_compliant transfer") : "the state doesn't export resources",
         });
         return result;
     }
@@ -225,7 +226,7 @@ export class Simulator {
     private settle(instance: Instance, hops: Hop[]): Instance {
         for (let i = 0; i < MAX_AUTO_HOPS; i++) {
             const auto = this.outgoing(instance.state).find((t) => t.auto && !t.validate);
-            if (auto === undefined) {
+            if (auto === undefined || auto.target === instance.state) {
                 return instance;
             }
             const [next, hop] = this.hop(instance, auto, "target");
@@ -299,6 +300,11 @@ export class Simulator {
                 break;
         }
 
+        const target = outcome === "target" ? transfer.target : outcome === "error" ? transfer.error : transfer.nonCompliant;
+        if (target === instance.state) {
+            // inmanta-lsm doesn't execute a transfer to the same state: no new version, no operation
+            return { event, hops, instance, note: `lsm ignores the transfer from ${target} to ${target}, the instance stays` };
+        }
         const [next, hop] = this.hop(current, transfer, outcome);
         hops.push(hop);
         return { event, hops, instance: this.settle(next, hops) };
