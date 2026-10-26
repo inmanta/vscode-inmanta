@@ -48,6 +48,19 @@ host=10.0.0.102                                   # Replace this by the address 
 port=8888                                         # Replace this by the port on which the server is listening
 ```
 
+### Lifecycle Studio
+Open a csv lifecycle of `future::lsm::fsm` (a `lifecycle.csv` with `name`, `desired_state` and `on_*` columns) with the **Open in Lifecycle Studio** button in the editor title, or with *Open With... > Inmanta Lifecycle Studio*. The studio has three modes:
+
+- **View**: the lifecycle as a graph, grouped in stages (the `web_stage` annotation, or the desired state). The detail level goes from coarse to fine: **Desired states** (one box per desired state), **States** (the rows of the csv) and **States + validation** (every state in the orchestrator, including the `validating_*` and `rejected_*` states the factory generates).
+- **Edit**: change states and transfers in the inspector, or drag the handle of the selected state onto another state to add a transfer. Every edit is a normal edit of the csv, so undo, save and diff work as usual.
+  The stages panel adds, names, orders and deletes stages. Drop a state on a stage to set its `web_stage`, drag a stage by its title to arrange the canvas. Once declared, the stages are laid out left to right in their order.
+- **Simulate**: create an instance or start in any state, then send updates, deletes, set state calls, validation results and resource outcomes. The studio shows the attribute sets, the desired state and the `states.csv` options the model sees in each kind of compile, and saves runs as scenarios.
+- **Table**: the lifecycle csv, the states csv and the transfers csv as tables with a column type each. A cell suggests its values (states, `validate(...)` expressions, desired states, labels, icons) and is checked while typing. Arrow keys move, Enter or typing edits, copy and paste work with spreadsheets, Ctrl+D fills down and Delete clears the selected cells.
+
+For every state, the inspector previews what the web console shows: the state badge (`web_label`, `web_icon`, `web_description`) and the Actions menu with the set state buttons and their transfer annotations (`web_button_label`, `web_confirm`, `web_advanced_state`, ...). In Simulate mode these buttons drive the simulation.
+
+The `states.csv` next to the lifecycle csv is picked up automatically. What the lifecycle csv can't hold goes in files next to it, which can also be written by hand: the transfer annotations in `<name>.transfers.csv` (one row per transfer, identified by `source`, `trigger` and `target`, pass it as the `transfers_csv_file` of `future::lsm::fsm::LifecycleFactory`), the stages in display order in `<name>.stages.csv`, and the layout and scenarios, which only the studio uses, in `<name>.studio.yml`. The lifecycle checks are also reported in the Problems panel for any open lifecycle csv. The studio works without the language server.
+
 ## Requirements
 
  - Operating System: Currently only Linux and Windows are supported.

@@ -21,6 +21,9 @@
     "engines": {
         "vscode": "^1.97.2"
     },
+    "activationEvents": [
+        "workspaceContains:**/files/lifecycle*.csv"
+    ],
     "categories": [
         "Programming Languages"
     ],
@@ -151,6 +154,30 @@
                 "command": "inmanta.openWalkthrough",
                 "title": "Open Inmanta Walkthrough",
                 "category": "inmanta"
+            },
+            {
+                "command": "inmanta.openLifecycleStudio",
+                "title": "Open in Lifecycle Studio",
+                "category": "inmanta",
+                "icon": "$(type-hierarchy)"
+            },
+            {
+                "command": "inmanta.openLifecycleCsvAsText",
+                "title": "Open Lifecycle CSV as Text",
+                "category": "inmanta",
+                "icon": "$(go-to-file)"
+            }
+        ],
+        "customEditors": [
+            {
+                "viewType": "inmanta.lifecycleStudio",
+                "displayName": "Inmanta Lifecycle Studio",
+                "selector": [
+                    {
+                        "filenamePattern": "*.csv"
+                    }
+                ],
+                "priority": "option"
             }
         ],
         "menus": {
@@ -158,6 +185,23 @@
                 {
                     "when": "editorLangId == inmanta",
                     "command": "inmanta.exportToServer",
+                    "group": "navigation"
+                },
+                {
+                    "when": "inmanta.lifecycleCsvActive && activeCustomEditorId != inmanta.lifecycleStudio",
+                    "command": "inmanta.openLifecycleStudio",
+                    "group": "navigation"
+                },
+                {
+                    "when": "activeCustomEditorId == inmanta.lifecycleStudio",
+                    "command": "inmanta.openLifecycleCsvAsText",
+                    "group": "navigation"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "when": "resourceExtname == .csv",
+                    "command": "inmanta.openLifecycleStudio",
                     "group": "navigation"
                 }
             ]
@@ -221,14 +265,19 @@
         ]
     },
     "dependencies": {
+        "@fontsource-variable/red-hat-display": "^5.3.0",
+        "@fontsource-variable/red-hat-text": "^5.3.0",
         "async-mutex": "^0.5.0",
+        "elkjs": "^0.12.0",
         "fs-extra": "^11.4.1",
         "get-port": "^5.1.1",
         "log-symbols": "^7.0.1",
         "lru-cache": "^11.5.3",
         "minimatch": "^10.2.6",
+        "react-icons": "^5.7.0",
         "uuid": "^14.0.3",
-        "vscode-languageclient": "^10.1.2"
+        "vscode-languageclient": "^10.1.2",
+        "yaml": "^2.9.1"
     },
     "extensionDependencies": [
         "ms-python.python"
@@ -243,6 +292,7 @@
         "pretest:vsix": "tsc -p ./",
         "package": "npm run clean && webpack --mode production --devtool source-map --config ./webpack.config.js",
         "test": "node ./out/test/runTest.js",
+        "test:unit": "tsc -p ./ && mocha --ui tdd \"out/test/unit/**/*.test.js\"",
         "test:vsix": "npm run pretest:vsix && npm run test --vsix",
         "vsce-package": "vsce package"
     },

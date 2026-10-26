@@ -3,6 +3,7 @@
 'use strict';
 
 const path = require('path');
+const webpack = require('webpack');
 
 //@ts-check
 /** @typedef {import('webpack').Configuration} WebpackConfig **/
@@ -51,4 +52,42 @@ const extensionConfig = {
     }
 };
 
-module.exports = [extensionConfig];
+/** @type WebpackConfig */
+const webviewConfig = {
+    target: 'web',
+    mode: 'none',
+    entry: './src/webview/main.ts',
+    output: {
+        path: path.resolve(__dirname, 'out'),
+        filename: 'webview.js',
+    },
+    resolve: {
+        extensions: ['.ts', '.js'],
+        alias: { 'fa-icon-trees$': 'react-icons/fa' },
+    },
+    plugins: [
+        // The icons of react-icons without React: GenIcon hands back the svg tree of the icon
+        new webpack.NormalModuleReplacementPlugin(/react-icons[\\/]lib[\\/]index\.mjs$/, path.resolve(__dirname, 'src/webview/iconShim.js')),
+    ],
+    module: {
+        rules: [
+            {
+                test: /\.ts$/,
+                exclude: /node_modules/,
+                use: [{ loader: 'ts-loader', options: { configFile: path.resolve(__dirname, 'src/webview/tsconfig.json') } }],
+            },
+            {
+                test: /\.css$/,
+                type: 'asset/source',
+            },
+            {
+                test: /\.woff2$/,
+                type: 'asset/inline',
+            },
+        ],
+    },
+    devtool: 'source-map',
+    performance: { hints: false },
+};
+
+module.exports = [extensionConfig, webviewConfig];
