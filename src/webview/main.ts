@@ -66,6 +66,8 @@ interface Ui {
     leftWidth?: number;
     rightWidth?: number;
     tableTab: TableTab;
+    /** The list in the sidebar of Edit mode */
+    leftTab: "states" | "stages" | "desired";
     /** Annotation columns added in Table mode that have no value yet, per tab */
     tableColumns: Partial<Record<TableTab, string[]>>;
 }
@@ -116,12 +118,15 @@ const ui: Ui = {
     leftWidth: saved.leftWidth,
     rightWidth: saved.rightWidth,
     tableTab: saved.tableTab ?? "lifecycle",
+    leftTab: saved.leftTab ?? "states",
     tableColumns: saved.tableColumns ?? {},
 };
 let data: Data | null = null;
 let sim: Sim = { start: null, instance: null, steps: [], history: [] };
 let scenarioResults = new Map<string, ScenarioResult>();
 let pendingDelete: string | null = null;
+/** The filter of the states list in the sidebar */
+let stateFilter = "";
 /** Web console preview: the advanced disclosure and the confirmation dialog that is open */
 const consoleUi: { advanced: boolean; confirm: { title: string; body: string; event: SimEvent } | null } = { advanced: false, confirm: null };
 let currentGraph: Graph | null = null;
@@ -252,6 +257,9 @@ function load(message: { csv: string; states: string | null; metadata: MetadataT
         ui.selection = null;
     }
     if (ui.selection?.type === "stage" && !graph.stages.some((s) => s.id === ui.selection!.id)) {
+        ui.selection = null;
+    }
+    if (ui.selection?.type === "desired" && !states?.options.some((o) => o.name === ui.selection!.id)) {
         ui.selection = null;
     }
     renderAll(true);
@@ -568,6 +576,10 @@ function renderInspector(): void {
         add(inspector, ...stageInspector(selection.id));
         return;
     }
+    if (selection?.type === "desired") {
+        add(inspector, ...desiredStateInspector(selection.id));
+        return;
+    }
     if (selection?.type === "node") {
         if (ui.view === "desired") {
             add(inspector, ...desiredStateInspector(selection.id));
@@ -778,12 +790,74 @@ function csvTransfers(name: string): HTMLElement {
             node?.selfLoops.length ? h("div", { class: "transfer" }, h("span", { class: "trigger" }, "stays on"), h("span", { class: "muted" }, node.selfLoops.map((k) => KIND_LABEL[k]).join(", ")), h("span")) : null));
 }
 
+function desiredStateLink(name: string, label?: string): HTMLElement {
+    return h("button", {
+        class: "link mono",
+        onclick: () => {
+            ui.selection = { type: "desired", id: name };
+            ui.leftTab = "desired";
+            persist();
+            renderAll(false);
+        },
+    }, label ?? name);
+}
+
 function desiredStateInspector(name: string): HTMLElement[] {
-    const members = data!.lifecycle.states.filter((s) => s.desiredState === name);
+    const d = data!;
+    const members = d.lifecycle.states.filter((s) => s.desiredState === name);
+    const option = d.states?.options.find((o) => o.name === name);
+    const header = h("header", { class: "title" }, badge(null, name), option ? h("span", { class: "muted" }, `row ${option.row + 2} of ${d.files.states}`) : null);
+    const states = section(`States (${members.length})`, members.length ? h("div", { class: "wrap" }, members.map((m) => stateLink(m.name))) : h("p", { class: "muted" }, "No state has this desired state"));
+    if (!(ui.mode === "edit" || ui.mode === "table") || !d.states || !option) {
+        return [header, states, section("Options", optionsTable(name) ?? h("p", { class: "muted" }, "No states csv"))];
+    }
+    const file = d.states;
+    const set = (column: string, value: string) => {
+        if (column === "name" && value.trim() && value.trim() !== name) {
+            ui.selection = ui.mode === "table" ? { type: "node", id: value.trim() } : { type: "desired", id: value.trim() };
+        }
+        changeFiles(() => planChanges(statesTable(file, d.issues), [{ row: name, column, value }], d.lifecycle, d.metadata));
+    };
+    const others = file.options.map((o) => o.name);
+    const input = (column: string, value: string) => {
+        const el = h("input", { value, "data-key": `ds-${column}`, onchange: (e: Event) => set(column, (e.target as HTMLInputElement).value) });
+        if (column === "web_icon") {
+            attachSuggestions(el, iconSuggestions, (v) => set(column, v), true);
+        } else {
+            // The values the other desired states use for this column
+            attachSuggestions(el, () => [...new Set(file.options.map((o) => o.columns[column] ?? o.annotations[column] ?? ""))].filter((v) => v !== "").map((value) => ({ value })), (v) => set(column, v));
+        }
+        return el;
+    };
+    const annotations = file.table.header.values.filter(isAnnotation);
     return [
-        h("header", { class: "title" }, badge(null, name)),
-        section("States", h("div", { class: "wrap" }, members.map((m) => stateLink(m.name)))),
-        section("Options", optionsTable(name) ?? h("p", { class: "muted" }, "No states csv")),
+        header,
+        section("Desired state",
+            h("div", { class: "form grid2" },
+                field("name", h("input", { value: name, "data-key": "ds-name", onchange: (e: Event) => set("name", (e.target as HTMLInputElement).value) })),
+                h("span"),
+                field("created_child", select(others, option.createdChild ?? "", (v) => set("created_child", v), "ds-created_child", "not allowed")),
+                field("removed_child", select(others, option.removedChild ?? "", (v) => set("removed_child", v), "ds-removed_child", "not allowed"))),
+            h("p", { class: "muted small" }, "Renaming it rewrites desired_state in the lifecycle csv.")),
+        states,
+        section(`Options (${file.columns.length})`,
+            file.columns.length
+                ? h("div", { class: "form" },
+                    file.columns.map((column) => isFlagColumn(file, column)
+                        ? h("label", { class: "check" },
+                            h("input", { type: "checkbox", checked: option.columns[column].toLowerCase() === "true", "data-key": `ds-${column}`, onchange: (e: Event) => set(column, (e.target as HTMLInputElement).checked ? "true" : "false") }),
+                            column)
+                        : field(column, input(column, option.columns[column]))))
+                : h("p", { class: "muted" }, `${file.table.header.values.length ? "No option columns" : "Empty"} in ${d.files.states}, add them in the Table mode.`)),
+        annotations.length
+            ? section("Annotation defaults",
+                h("div", { class: "form" },
+                    annotations.map((column) => {
+                        const known = annotationKey(column, "state");
+                        return field(column, input(column, option.annotations[column] ?? ""), undefined, known ? `${annotationHint(known)}. Default for the states with this desired state.` : undefined);
+                    })))
+            : h("span"),
+        section("Desired state actions", h("div", { class: "actions" }, h("button", { onclick: () => post({ type: "open", file: "states", line: option.line }) }, "Open csv row"))),
     ];
 }
 
@@ -943,7 +1017,7 @@ function editInspector(x: XState): HTMLElement[] {
             h("div", { class: "form grid2" },
                 field("name", nameInput),
                 field("label", select([...LABELS], x.label ?? "", (v) => set("label", v), "label")),
-                field("desired_state", select(desiredStates, x.desiredState, (v) => set("desired_state", v), "desired_state")),
+                field("desired_state", h("div", { class: "with-link" }, select(desiredStates, x.desiredState, (v) => set("desired_state", v), "desired_state"), desiredStateLink(x.desiredState, "Options"))),
                 field("current", select([...ATTRIBUTE_SETS], x.current ?? "", (v) => set("current", v), "current")),
                 field("previous", select([...ATTRIBUTE_SETS], x.previous ?? "", (v) => set("previous", v), "previous")))),
         section("Web console", consolePreview(x.name)),
@@ -1125,6 +1199,44 @@ function stageLink(id: string, label?: string): HTMLElement {
     }, label ?? id);
 }
 
+function statesPanel(): HTMLElement {
+    const d = data!;
+    const list = h("ol", { class: "stage-list state-list" });
+    const fill = () => {
+        const query = stateFilter.trim().toLowerCase();
+        clear(list);
+        add(list, d.lifecycle.states
+            .filter((x) => !query || x.name.includes(query) || x.desiredState.includes(query) || (x.annotations.web_label ?? "").toLowerCase().includes(query))
+            .map((x) => h("li", { class: ui.selection?.type === "node" && ui.selection.id === x.name ? "on" : "", title: x.annotations.web_description ?? "" },
+                h("span", { class: `grid-label l-${x.label ?? "none"}` }, stateLink(x.name)),
+                h("span", { class: "muted small" }, x.desiredState))));
+    };
+    const filter = h("input", { type: "search", placeholder: "Filter states", value: stateFilter, "data-key": "state-filter" });
+    filter.addEventListener("input", () => {
+        stateFilter = filter.value;
+        fill();
+    });
+    fill();
+    return h("section", null, filter, list,
+        h("p", { class: "muted small" }, `The rows of ${d.files.csv}, with their desired state. Add a state with + State in the toolbar.`));
+}
+
+function desiredStatesPanel(): HTMLElement {
+    const d = data!;
+    if (!d.states) {
+        return h("p", { class: "muted small" }, "No states csv next to the lifecycle csv.");
+    }
+    return h("section", null,
+        h("ol", { class: "stage-list desired-list" },
+            d.states.options.map((o) => {
+                const selected = ui.selection?.type === "desired" && ui.selection.id === o.name;
+                return h("li", { class: selected ? "on" : "" },
+                    desiredStateLink(o.name),
+                    h("span", { class: "muted small" }, String(d.lifecycle.states.filter((x) => x.desiredState === o.name).length)));
+            })),
+        h("p", { class: "muted small" }, `The rows of ${d.files.states}: what the model builds and the options it reads in each state.`));
+}
+
 function stagesPanel(): HTMLElement {
     const d = data!;
     const stages = allStages();
@@ -1148,7 +1260,7 @@ function stagesPanel(): HTMLElement {
             addNew();
         }
     });
-    return section("Stages",
+    return h("section", null,
         h("ol", { class: "stage-list" },
             stages.map((st, i) => {
                 const gridded = definition(st.id)?.column !== undefined;
@@ -1212,6 +1324,9 @@ function stageInspector(id: string): HTMLElement[] {
             ["grid", definition.column !== undefined ? `column ${definition.column}, row ${definition.row ?? 0}` : null],
             ["declared", stage?.declared ? `in ${d.files.stages}` : "no, only used by web_stage or a desired state"],
         ])));
+    }
+    if (d.states?.options.some((o) => o.name === id)) {
+        result.push(section("Desired state", h("p", { class: "muted small" }, "The options of the desired state with the same name:"), desiredStateLink(id)));
     }
     result.push(section(`States (${members.length})`,
         members.length ? h("div", { class: "wrap" }, members.map((x) => stateLink(x.name))) : h("p", { class: "muted" }, editable ? "Drop states on this stage in the canvas." : "None"),
@@ -1330,7 +1445,17 @@ function renderLeft(): void {
         return;
     }
     if (ui.mode === "edit") {
-        add(left, stagesPanel());
+        add(left,
+            h("div", { class: "left-tabs" }, seg<Ui["leftTab"]>([
+                ["states", `States (${data!.lifecycle.states.length})`, `The rows of ${data!.files.csv}`],
+                ["stages", `Stages (${allStages().length})`, "The stages that group the states on the canvas"],
+                ["desired", `Desired states (${data!.states?.options.length ?? 0})`, `The rows of ${data!.files.states}: the options of each desired state`],
+            ], ui.leftTab, (tab) => {
+                ui.leftTab = tab;
+                persist();
+                renderLeft();
+            })),
+            ui.leftTab === "states" ? statesPanel() : ui.leftTab === "stages" ? stagesPanel() : desiredStatesPanel());
         return;
     }
     if (ui.mode !== "simulate") {

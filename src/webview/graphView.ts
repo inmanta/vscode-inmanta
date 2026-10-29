@@ -2,7 +2,7 @@ import ELK, { ElkNode } from "elkjs/lib/elk.bundled.js";
 import { EdgeKind, Graph, GraphEdge, GraphNode } from "../lifecycle/graph";
 import { clear, s } from "./dom";
 
-export type GraphSelection = { type: "node"; id: string } | { type: "edge"; id: string } | { type: "stage"; id: string } | null;
+export type GraphSelection = { type: "node"; id: string } | { type: "edge"; id: string } | { type: "stage"; id: string } | { type: "desired"; id: string } | null;
 
 export interface GraphStyle {
     selection: GraphSelection;
@@ -498,6 +498,8 @@ export class GraphView {
             }
         } else if (selected?.type === "stage") {
             graph.nodes.filter((n) => n.stage === selected.id).forEach((n) => neighbours.add(n.id));
+        } else if (selected?.type === "desired") {
+            graph.nodes.filter((n) => n.desiredState === selected.id).forEach((n) => neighbours.add(n.id));
         }
         const simulating = style.current !== null;
         const routePairs = new Set<string>();
